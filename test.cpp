@@ -108,9 +108,8 @@ void t1()
     size_t lineCount = buffer->getLineCount();
     for (size_t lineNumber = 1; lineNumber <= lineCount; lineNumber++)
     {
-        SimpleString *str = buffer->getLineContent(lineNumber);
+        shared_ptr<String> str = buffer->getLineContent(lineNumber);
         f << str;
-        delete str;
     }
 
     f.close();

@@ -1,4 +1,6 @@
 #include <iostream>
+#include <memory>
+
 #include <fstream>
 #include <vector>
 #include <cstring>
@@ -23,12 +25,8 @@ std::ostream &operator<<(std::ostream &os, String *const &m)
     {
         return os << "[NULL]";
     }
+
     m->print(os);
-    // const char *data = m->getData();
-    // for (size_t i = 0, len = m->getLen(); i < len; i++)
-    // {
-    //     os << data[i];
-    // }
     return os;
 }
 
@@ -44,20 +42,10 @@ class SimpleString : public String
     {
     }
 
-    const char *getData() const
-    {
-        return this->data;
-    }
-
-    const size_t getLen() const
-    {
-        return this->len;
-    }
-
     void print(std::ostream &os)
     {
-        const char *data = this->getData();
-        for (size_t i = 0, len = this->getLen(); i < len; i++)
+        const char *data = this->data;
+        for (size_t i = 0, len = this->len; i < len; i++)
         {
             os << data[i];
         }
@@ -422,7 +410,7 @@ class BufferPiece
         return it->parent->rightChild->firstLeaf();
     }
 
-    SimpleString *getStrAt(const size_t _offset, const size_t _len)
+    shared_ptr<String> getStrAt(const size_t _offset, const size_t _len)
     {
         if (_offset < 0 || _len < 0 || _offset + _len > this->len)
         {
@@ -438,7 +426,7 @@ class BufferPiece
         return this->_getStrAt(node, offset, _len);
     }
 
-    SimpleString *_getStrAt(BufferPiece *node, size_t offset, const size_t _len)
+    shared_ptr<String> _getStrAt(BufferPiece *node, size_t offset, const size_t _len)
     {
         char *result = new char[_len];
 
@@ -462,7 +450,7 @@ class BufferPiece
             assert(node->isLeaf());
         } while (true);
 
-        return new SimpleString(result, _len);
+        return shared_ptr<SimpleString>(new SimpleString(result, _len));
     }
 
     BufferPiece *findPieceAtLineIndex(size_t &lineIndex)
@@ -576,7 +564,7 @@ class BufferPiece
         return result;
     }
 
-    SimpleString *getLineContent(const size_t _lineNumber)
+    shared_ptr<String> getLineContent(const size_t _lineNumber)
     {
         if (_lineNumber < 1 || _lineNumber > this->newLineCount + 1)
         {
@@ -630,7 +618,7 @@ class Buffer
         return this->root->getNewLineCount() + 1;
     }
 
-    SimpleString *getStrAt(size_t offset, size_t len)
+    shared_ptr<String> getStrAt(size_t offset, size_t len)
     {
         return this->root->getStrAt(offset, len);
     }
@@ -640,7 +628,7 @@ class Buffer
         return this->root->getLineLength(lineNumber);
     }
 
-    SimpleString *getLineContent(size_t lineNumber)
+    shared_ptr<String> getLineContent(size_t lineNumber)
     {
         return this->root->getLineContent(lineNumber);
     }
