@@ -63,6 +63,60 @@ class String
         this->data = data;
         this->len = len;
 
+        // size_t lineStartsCount = 0;
+        // // Do a first pass to count the number of line starts
+        // for (size_t i = 0; i < len; i++)
+        // {
+        //     char chr = data[i];
+        //     if (chr == '\r')
+        //     {
+        //         if (i + 1 < len && data[i + 1] == '\n')
+        //         {
+        //             // \r\n... case
+        //             lineStartsCount++;
+        //             i++; // skip \n
+        //         }
+        //         else
+        //         {
+        //             // \r... case
+        //             lineStartsCount++;
+        //         }
+        //     }
+        //     else if (chr == '\n')
+        //     {
+        //         lineStartsCount++;
+        //     }
+        // }
+        // this->lineStartsCount = lineStartsCount;
+
+        // this->lineStarts = new size_t[this->lineStartsCount];
+
+        // size_t *dest = 0;
+        // // Do a second pass to fill in the line starts
+        // for (size_t i = 0; i < len; i++)
+        // {
+        //     char chr = data[i];
+        //     if (chr == '\r')
+        //     {
+        //         if (i + 1 < len && data[i + 1] == '\n')
+        //         {
+        //             // \r\n... case
+        //             lineStartsCount++;
+        //             i++; // skip \n
+        //         }
+        //         else
+        //         {
+        //             // \r... case
+        //             lineStartsCount++;
+        //         }
+        //     }
+        //     else if (chr == '\n')
+        //     {
+        //         lineStartsCount++;
+        //     }
+        // }
+
+
         vector<size_t> lineStarts;
         for (size_t i = 0; i < len; i++)
         {
@@ -544,33 +598,6 @@ class BufferPiece
 
         size_t len = this->_getLineIndexLength(node, lineIndex);
         return this->_getStrAt(node, lineStartOffset, len);
-
-        // char *result = new char[_len];
-
-        // size_t len = _len;
-        // size_t resultOffset = 0;
-        // do
-        // {
-        //     const char *src = node->str->getData();
-        //     const size_t cnt = min(len, node->str->getLen() - offset);
-        //     memcpy(result + resultOffset, src + offset, cnt);
-        //     len -= cnt;
-        //     resultOffset += cnt;
-        //     offset = 0;
-
-        //     if (len == 0)
-        //     {
-        //         break;
-        //     }
-
-        //     node = node->next();
-        //     assert(node->isLeaf());
-        // } while (true);
-
-        cout << "TODO!" << endl;
-        cout << "remained lineIndex: " << lineIndex << endl;
-
-        return NULL;
     }
 };
 
@@ -676,15 +703,18 @@ Buffer *buildBufferFromFile(const char *filename)
 
 timespec diff(timespec start, timespec end)
 {
-	timespec temp;
-	if ((end.tv_nsec-start.tv_nsec)<0) {
-		temp.tv_sec = end.tv_sec-start.tv_sec-1;
-		temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
-	} else {
-		temp.tv_sec = end.tv_sec-start.tv_sec;
-		temp.tv_nsec = end.tv_nsec-start.tv_nsec;
-	}
-	return temp;
+    timespec temp;
+    if ((end.tv_nsec - start.tv_nsec) < 0)
+    {
+        temp.tv_sec = end.tv_sec - start.tv_sec - 1;
+        temp.tv_nsec = 1000000000 + end.tv_nsec - start.tv_nsec;
+    }
+    else
+    {
+        temp.tv_sec = end.tv_sec - start.tv_sec;
+        temp.tv_nsec = end.tv_nsec - start.tv_nsec;
+    }
+    return temp;
 }
 
 int main(void)
@@ -704,11 +734,11 @@ int main(void)
 
 #define BILLION 1E9
 
-timespec time1, time2;
+    timespec time1, time2;
 
-clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time1);
-// struct timespec requestStart, requestEnd;
-// clock_gettime(CLOCK_REALTIME, &requestStart);
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time1);
+    // struct timespec requestStart, requestEnd;
+    // clock_gettime(CLOCK_REALTIME, &requestStart);
     for (int i = 1; i <= buffer->getLineCount(); i++)
     {
         int len = buffer->getLineLength(i);
@@ -716,22 +746,22 @@ clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time1);
         // delete line;
         // cout << len << " ";
     }
-clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time2);
-timespec took = diff(time1,time2);
-double ms = took.tv_sec * 1000 + took.tv_nsec / (double)1000000;
-cout << "TOOK " << ms << "ms." << endl;
-	// cout<<diff(time1,time2).tv_sec<<":"<<diff(time1,time2).tv_nsec<<endl;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time2);
+    timespec took = diff(time1, time2);
+    double ms = took.tv_sec * 1000 + took.tv_nsec / (double)1000000;
+    cout << "TOOK " << ms << "ms." << endl;
+    // cout<<diff(time1,time2).tv_sec<<":"<<diff(time1,time2).tv_nsec<<endl;
     // clock_gettime(CLOCK_REALTIME, &requestEnd);
 
-//     if (requestEnd.tv_sec == requestStart.tv_sec)
-//     {
+    //     if (requestEnd.tv_sec == requestStart.tv_sec)
+    //     {
 
-//     }
-// // Calculate time it took
-// double accum = ( requestEnd.tv_sec - requestStart.tv_sec )
-//   + ( requestEnd.tv_nsec - requestStart.tv_nsec )
-//   / BILLION;
-// printf( "%lf seconds\n", accum );
+    //     }
+    // // Calculate time it took
+    // double accum = ( requestEnd.tv_sec - requestStart.tv_sec )
+    //   + ( requestEnd.tv_nsec - requestStart.tv_nsec )
+    //   / BILLION;
+    // printf( "%lf seconds\n", accum );
     // cout << endl;
 
     // str = buffer->getStrAt(0, buffer->getLen());
