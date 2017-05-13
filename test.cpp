@@ -103,21 +103,39 @@ void check(const char *testName, const char *actualFileName, const char *expecte
 void t1()
 {
     Buffer *buffer = checker();
-    size_t lineCount = buffer->getLineCount();
     ofstream f("tests/t1.actual", ofstream::binary);
+
+    size_t lineCount = buffer->getLineCount();
     for (size_t lineNumber = 1; lineNumber <= lineCount; lineNumber++)
     {
         SimpleString *str = buffer->getLineContent(lineNumber);
         f << str;
         delete str;
     }
+
     f.close();
     delete buffer;
-
     check("t1", "tests/t1.actual", "tests/t1.expected");
+}
+
+void t2()
+{
+    Buffer *buffer = checker();
+    ofstream f("tests/t2.actual", ofstream::binary);
+
+    size_t lineCount = buffer->getLineCount();
+    for (size_t lineNumber = 1; lineNumber <= lineCount; lineNumber++)
+    {
+        f << buffer->getLineLength(lineNumber) << endl;
+    }
+
+    f.close();
+    delete buffer;
+    check("t2", "tests/t2.actual", "tests/t2.expected");
 }
 
 int main(void)
 {
     t1();
+    t2();
 }
