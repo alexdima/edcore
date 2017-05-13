@@ -10,7 +10,29 @@ using namespace std;
 
 #define PIECE_SIZE 4 * 1024 // 4KB
 
-class SimpleString
+class String
+{
+
+  public:
+    virtual void print(std::ostream &os) = 0;
+};
+
+std::ostream &operator<<(std::ostream &os, String *const &m)
+{
+    if (m == NULL)
+    {
+        return os << "[NULL]";
+    }
+    m->print(os);
+    // const char *data = m->getData();
+    // for (size_t i = 0, len = m->getLen(); i < len; i++)
+    // {
+    //     os << data[i];
+    // }
+    return os;
+}
+
+class SimpleString : public String
 {
   private:
     const char *data;
@@ -31,21 +53,16 @@ class SimpleString
     {
         return this->len;
     }
-};
 
-std::ostream &operator<<(std::ostream &os, SimpleString *const &m)
-{
-    if (m == NULL)
+    void print(std::ostream &os)
     {
-        return os << "[NULL]";
+        const char *data = this->getData();
+        for (size_t i = 0, len = this->getLen(); i < len; i++)
+        {
+            os << data[i];
+        }
     }
-    const char *data = m->getData();
-    for (size_t i = 0, len = m->getLen(); i < len; i++)
-    {
-        os << data[i];
-    }
-    return os;
-}
+};
 
 class BufferString
 {
