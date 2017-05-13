@@ -33,13 +33,23 @@ std::ostream &operator<<(std::ostream &os, String *const &m)
 class SimpleString : public String
 {
   private:
-    const char *data;
-    const size_t len;
+    char *data;
+    size_t len;
 
   public:
     SimpleString(char *_data, size_t _len)
-        : data(_data), len(_len)
     {
+        this->data = _data;
+        this->len = _len;
+    }
+
+    ~SimpleString()
+    {
+        if (this->data != NULL)
+        {
+            delete[] this->data;
+            this->data = NULL;
+        }
     }
 
     void print(std::ostream &os)
@@ -52,7 +62,7 @@ class SimpleString : public String
     }
 };
 
-class BufferString
+class BufferString : public String
 {
   private:
     char *data;
@@ -60,6 +70,14 @@ class BufferString
 
     size_t *lineStarts;
     size_t lineStartsCount;
+
+    void _init(char *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
+    {
+        this->data = data;
+        this->len = len;
+        this->lineStarts = lineStarts;
+        this->lineStartsCount = lineStartsCount;
+    }
 
   public:
     BufferString(char *data, size_t len)
@@ -128,14 +146,6 @@ class BufferString
         this->_init(data, len, lineStarts, lineStartsCount);
     }
 
-    void _init(char *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
-    {
-        this->data = data;
-        this->len = len;
-        this->lineStarts = lineStarts;
-        this->lineStartsCount = lineStartsCount;
-    }
-
     ~BufferString()
     {
         if (this->data != NULL)
@@ -160,15 +170,6 @@ class BufferString
         return this->lineStartsCount;
     }
 
-    size_t getLastLineLen() const
-    {
-        if (this->lineStartsCount == 0)
-        {
-            return this->len;
-        }
-        return len - this->lineStarts[this->lineStartsCount - 1];
-    }
-
     bool getEndsWithCR() const
     {
         return (this->len > 0 && this->data[this->len - 1] == '\r');
@@ -179,7 +180,7 @@ class BufferString
         return (this->len > 0 && this->data[0] == '\n');
     }
 
-    const char *getData() const
+    const char *getData() const // TODO
     {
         return this->data;
     }
@@ -188,21 +189,17 @@ class BufferString
     {
         return this->lineStarts;
     }
-};
 
-std::ostream &operator<<(std::ostream &os, BufferString *const &m)
-{
-    if (m == NULL)
+    void print(std::ostream &os)
     {
-        return os << "[NULL]";
+        const char *data = this->data;
+        const size_t len = this->len;
+        for (size_t i = 0; i < len; i++)
+        {
+            os << data[i];
+        }
     }
-    const char *data = m->getData();
-    for (size_t i = 0, len = m->getLen(); i < len; i++)
-    {
-        os << data[i];
-    }
-    return os;
-}
+};
 
 class BufferPiece
 {
@@ -213,7 +210,6 @@ class BufferPiece
     BufferPiece *parent;
     size_t len;
     size_t newLineCount;
-    size_t lastLineLen;
     bool endsWithCR;
     bool startsWithLF;
 
@@ -227,7 +223,6 @@ class BufferPiece
         this->parent = NULL;
         this->len = str->getLen();
         this->newLineCount = str->getNewLineCount();
-        this->lastLineLen = str->getLastLineLen();
         this->endsWithCR = str->getEndsWithCR();
         this->startsWithLF = str->getStartsWithLF();
     }
@@ -250,7 +245,6 @@ class BufferPiece
                 this->newLineCount = this->leftChild->newLineCount + this->rightChild->newLineCount;
             }
             this->len = this->leftChild->len + this->rightChild->len;
-            this->lastLineLen = this->rightChild->lastLineLen;
             this->startsWithLF = this->leftChild->startsWithLF;
             this->endsWithCR = this->rightChild->endsWithCR;
         }
@@ -258,7 +252,6 @@ class BufferPiece
         {
             this->newLineCount = this->leftChild->newLineCount;
             this->len = this->leftChild->len;
-            this->lastLineLen = this->leftChild->lastLineLen;
             this->startsWithLF = this->leftChild->startsWithLF;
             this->endsWithCR = this->leftChild->endsWithCR;
         }
@@ -266,7 +259,6 @@ class BufferPiece
         {
             this->newLineCount = this->rightChild->newLineCount;
             this->len = this->rightChild->len;
-            this->lastLineLen = this->rightChild->lastLineLen;
             this->startsWithLF = this->rightChild->startsWithLF;
             this->endsWithCR = this->rightChild->endsWithCR;
         }
@@ -338,31 +330,42 @@ class BufferPiece
         this->parent = parent;
     }
 
-    size_t getLen()
+    size_t getLen() const
     {
         return this->len;
     }
 
-    size_t getNewLineCount()
+    size_t getNewLineCount() const
     {
         return this->newLineCount;
     }
 
     BufferPiece *findPieceAtOffset(size_t &offset)
     {
-        if (offset < 0)
+        if (offset < 0 || offset >= this->len)
         {
             return NULL;
         }
-        if (offset >= this->len)
-        {
-            return NULL;
-        }
+
         BufferPiece *it = this;
         while (!it->isLeaf())
         {
             BufferPiece *left = it->leftChild;
-            size_t leftLen = left->len;
+            BufferPiece *right = it->rightChild;
+
+            if (left == NULL)
+            {
+                it = right;
+                continue;
+            }
+
+            if (right == NULL)
+            {
+                it = left;
+                continue;
+            }
+
+            const size_t leftLen = left->len;
             if (offset < leftLen)
             {
                 // go left
@@ -380,6 +383,7 @@ class BufferPiece
 
     BufferPiece *firstLeaf()
     {
+        // TODO: this will not work for an unbalanced tree
         BufferPiece *res = this;
         while (res->leftChild != NULL)
         {
@@ -499,26 +503,22 @@ class BufferPiece
             return 0;
         }
 
-        return this->_getLineIndexLength(node, lineIndex);
+        const size_t *lineStarts = node->str->getLineStarts();
+        const size_t lineStartOffset = (lineIndex == 0 ? 0 : lineStarts[lineIndex - 1]);
+
+        return this->_getLineIndexLength(lineIndex, node, lineStartOffset);
     }
 
-    size_t _getLineIndexLength(BufferPiece *node, const size_t lineIndex)
+    size_t _getLineIndexLength(const size_t lineIndex, BufferPiece *node, const size_t lineStartOffset)
     {
-        size_t nodeLineCount = node->newLineCount;
+        const size_t nodeLineCount = node->newLineCount;
         assert(node->isLeaf());
         assert(nodeLineCount >= lineIndex);
-
-        const size_t *lineStarts = node->str->getLineStarts();
-        // for (int i = 0; i < nodeLineCount; i++)
-        // {
-        //     cout << i << " : " << lineStarts[i] << endl;
-        // }
-
-        const size_t lineStartOffset = (lineIndex == 0 ? 0 : lineStarts[lineIndex - 1]);
 
         if (lineIndex < nodeLineCount)
         {
             // lucky, the line ends in this same block
+            const size_t *lineStarts = node->str->getLineStarts();
             const size_t lineEndOffset = lineStarts[lineIndex];
             return lineEndOffset - lineStartOffset;
         }
@@ -529,36 +529,23 @@ class BufferPiece
         {
             // TODO: could probably optimize to not visit every leaf!!!
             node = node->next();
+
             if (node == NULL)
             {
                 // EOF
                 break;
             }
+
             if (node->newLineCount > 0)
             {
-                const size_t *lineStarts2 = node->str->getLineStarts();
-                result += lineStarts2[0];
+                const size_t *lineStarts = node->str->getLineStarts();
+                result += lineStarts[0];
                 break;
             }
-            else
-            {
-                // node does not contain newline
-                result += node->len;
-            }
-            // const char *src = node->str->getData();
-            // const size_t cnt = min(len, node->str->getLen() - offset);
-            // memcpy(result + resultOffset, src + offset, cnt);
-            // len -= cnt;
-            // resultOffset += cnt;
-            // offset = 0;
 
-            // if (len == 0)
-            // {
-            //     break;
-            // }
+            // node does not contain newline
+            result += node->len;
 
-            // node = node->next();
-            // assert(node->isLeaf());
         } while (true);
 
         return result;
@@ -586,7 +573,7 @@ class BufferPiece
 
         const size_t lineStartOffset = (lineIndex == 0 ? 0 : lineStarts[lineIndex - 1]);
 
-        size_t len = this->_getLineIndexLength(node, lineIndex);
+        size_t len = this->_getLineIndexLength(lineIndex, node, lineStartOffset);
         return this->_getStrAt(node, lineStartOffset, len);
     }
 };
