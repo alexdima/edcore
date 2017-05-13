@@ -47,107 +47,91 @@ std::ostream &operator<<(std::ostream &os, SimpleString *const &m)
     return os;
 }
 
-class String
+class BufferString
 {
   private:
     char *data;
     size_t len;
 
-    size_t lineStartsCount;
     size_t *lineStarts;
+    size_t lineStartsCount;
 
   public:
-    String(char *data, size_t len)
+    BufferString(char *data, size_t len)
     {
         assert(data != NULL && len != 0);
 
-        this->data = data;
-        this->len = len;
-
-        // size_t lineStartsCount = 0;
-        // // Do a first pass to count the number of line starts
-        // for (size_t i = 0; i < len; i++)
-        // {
-        //     char chr = data[i];
-        //     if (chr == '\r')
-        //     {
-        //         if (i + 1 < len && data[i + 1] == '\n')
-        //         {
-        //             // \r\n... case
-        //             lineStartsCount++;
-        //             i++; // skip \n
-        //         }
-        //         else
-        //         {
-        //             // \r... case
-        //             lineStartsCount++;
-        //         }
-        //     }
-        //     else if (chr == '\n')
-        //     {
-        //         lineStartsCount++;
-        //     }
-        // }
-        // this->lineStartsCount = lineStartsCount;
-
-        // this->lineStarts = new size_t[this->lineStartsCount];
-
-        // size_t *dest = 0;
-        // // Do a second pass to fill in the line starts
-        // for (size_t i = 0; i < len; i++)
-        // {
-        //     char chr = data[i];
-        //     if (chr == '\r')
-        //     {
-        //         if (i + 1 < len && data[i + 1] == '\n')
-        //         {
-        //             // \r\n... case
-        //             lineStartsCount++;
-        //             i++; // skip \n
-        //         }
-        //         else
-        //         {
-        //             // \r... case
-        //             lineStartsCount++;
-        //         }
-        //     }
-        //     else if (chr == '\n')
-        //     {
-        //         lineStartsCount++;
-        //     }
-        // }
-
-
-        vector<size_t> lineStarts;
+        // Do a first pass to count the number of line starts
+        size_t lineStartsCount = 0;
         for (size_t i = 0; i < len; i++)
         {
             char chr = data[i];
+
             if (chr == '\r')
             {
                 if (i + 1 < len && data[i + 1] == '\n')
                 {
                     // \r\n... case
-                    lineStarts.push_back(i + 2);
+                    lineStartsCount++;
                     i++; // skip \n
                 }
                 else
                 {
                     // \r... case
-                    lineStarts.push_back(i + 1);
+                    lineStartsCount++;
                 }
             }
             else if (chr == '\n')
             {
-                lineStarts.push_back(i + 1);
+                lineStartsCount++;
             }
         }
 
-        this->lineStartsCount = lineStarts.size();
-        this->lineStarts = new size_t[this->lineStartsCount];
-        std::copy(lineStarts.begin(), lineStarts.end(), this->lineStarts);
+        size_t *lineStarts = new size_t[lineStartsCount];
+
+        size_t dest = 0;
+        for (size_t i = 0; i < len; i++)
+        {
+            char chr = data[i];
+
+            if (chr == '\r')
+            {
+                if (i + 1 < len && data[i + 1] == '\n')
+                {
+                    // \r\n... case
+                    lineStarts[dest++] = i + 2;
+                    i++; // skip \n
+                }
+                else
+                {
+                    // \r... case
+                    lineStarts[dest++] = i + 1;
+                }
+            }
+            else if (chr == '\n')
+            {
+                lineStarts[dest++] = i + 1;
+            }
+        }
+        this->_init(data, len, lineStarts, lineStartsCount);
     }
 
-    ~String()
+    BufferString(char *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
+    {
+        assert(data != NULL && len != 0);
+        assert(lineStarts != NULL || lineStartsCount == 0);
+        this->_init(data, len, lineStarts, lineStartsCount);
+    }
+
+    void _init(char *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
+    {
+        this->data = data;
+        this->len = len;
+        this->lineStarts = lineStarts;
+        this->lineStartsCount = lineStartsCount;
+    }
+
+    ~BufferString()
     {
         if (this->data != NULL)
         {
@@ -201,7 +185,7 @@ class String
     }
 };
 
-std::ostream &operator<<(std::ostream &os, String *const &m)
+std::ostream &operator<<(std::ostream &os, BufferString *const &m)
 {
     if (m == NULL)
     {
@@ -218,7 +202,7 @@ std::ostream &operator<<(std::ostream &os, String *const &m)
 class BufferPiece
 {
   private:
-    String *str;
+    BufferString *str;
     BufferPiece *leftChild;
     BufferPiece *rightChild;
     BufferPiece *parent;
@@ -229,7 +213,7 @@ class BufferPiece
     bool startsWithLF;
 
   public:
-    BufferPiece(String *str)
+    BufferPiece(BufferString *str)
     {
         assert(str != NULL);
         this->str = str;
@@ -645,7 +629,7 @@ class Buffer
     }
 };
 
-BufferPiece *buildBufferFromPieces(vector<String *> &pieces, size_t start, size_t end)
+BufferPiece *buildBufferFromPieces(vector<BufferString *> &pieces, size_t start, size_t end)
 {
     size_t cnt = end - start;
 
@@ -678,7 +662,7 @@ Buffer *buildBufferFromFile(const char *filename)
     {
         return NULL;
     }
-    vector<String *> vPieces;
+    vector<BufferString *> vPieces;
     ifs.seekg(0, std::ios::beg);
     while (!ifs.eof())
     {
@@ -688,11 +672,11 @@ Buffer *buildBufferFromFile(const char *filename)
 
         if (ifs)
         {
-            vPieces.push_back(new String(piece, PIECE_SIZE));
+            vPieces.push_back(new BufferString(piece, PIECE_SIZE));
         }
         else
         {
-            vPieces.push_back(new String(piece, ifs.gcount()));
+            vPieces.push_back(new BufferString(piece, ifs.gcount()));
         }
     }
     ifs.close();
@@ -717,4 +701,3 @@ timespec diff(timespec start, timespec end)
     }
     return temp;
 }
-
