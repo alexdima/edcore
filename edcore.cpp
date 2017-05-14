@@ -18,6 +18,20 @@ class BufferSubstring;
 class BufferNode;
 class Buffer;
 
+#define TRACK_MEMORY
+
+#ifdef TRACK_MEMORY
+
+#define MM_REGISTER(what) this->_mm = mm; this->_mm->_register(this)
+#define MM_UNREGISTER(what) this->_mm->_unregister(this)
+
+#else
+
+#define MM_REGISTER(what) this->_mm = NULL
+#define MM_UNREGISTER(what)
+
+#endif
+
 class MemManager
 {
   private:
@@ -37,52 +51,52 @@ class MemManager
         this->_bufferCnt = 0;
     }
 
-    void registerSimpleString(SimpleString *simpleString)
+    void _register(SimpleString *simpleString)
     {
         this->_simpleStringCnt++;
     }
 
-    void unregisterSimpleString(SimpleString *simpleString)
+    void _unregister(SimpleString *simpleString)
     {
         this->_simpleStringCnt--;
     }
 
-    void registerBufferString(BufferString *bufferString)
+    void _register(BufferString *bufferString)
     {
         this->_bufferStringCnt++;
     }
 
-    void unregisterBufferString(BufferString *bufferString)
+    void _unregister(BufferString *bufferString)
     {
         this->_bufferStringCnt--;
     }
 
-    void registerBufferSubstring(BufferSubstring *bufferSubstring)
+    void _register(BufferSubstring *bufferSubstring)
     {
         this->_bufferSubstringCnt++;
     }
 
-    void unregisterBufferSubstring(BufferSubstring *bufferSubstring)
+    void _unregister(BufferSubstring *bufferSubstring)
     {
         this->_bufferSubstringCnt--;
     }
 
-    void registerBufferNode(BufferNode *bufferNode)
+    void _register(BufferNode *bufferNode)
     {
         this->_bufferNodeCnt++;
     }
 
-    void unregisterBufferNode(BufferNode *bufferNode)
+    void _unregister(BufferNode *bufferNode)
     {
         this->_bufferNodeCnt--;
     }
 
-    void registerBuffer(Buffer *buffer)
+    void _register(Buffer *buffer)
     {
         this->_bufferCnt++;
     }
 
-    void unregisterBuffer(Buffer *buffer)
+    void _unregister(Buffer *buffer)
     {
         this->_bufferCnt--;
     }
@@ -148,13 +162,12 @@ class SimpleString : public String
     {
         this->_data = data;
         this->_len = len;
-        this->_mm = mm;
-        this->_mm->registerSimpleString(this);
+        MM_REGISTER(SimpleString);
     }
 
     ~SimpleString()
     {
-        this->_mm->unregisterSimpleString(this);
+        MM_UNREGISTER(this);
         if (this->_data != NULL)
         {
             delete[] this->_data;
@@ -197,8 +210,7 @@ class BufferString : public String
         this->_len = len;
         this->_lineStarts = lineStarts;
         this->_lineStartsCount = lineStartsCount;
-        this->_mm = mm;
-        this->_mm->registerBufferString(this);
+        MM_REGISTER(this);
     }
 
   public:
@@ -263,7 +275,7 @@ class BufferString : public String
 
     ~BufferString()
     {
-        this->_mm->unregisterBufferString(this);
+        MM_UNREGISTER(this);
         if (this->_data != NULL)
         {
             delete[] this->_data;
@@ -410,13 +422,12 @@ class BufferSubstring : public String
         this->_bufferStringLinkedList = bufferStringLinkedList;
         this->_startOffset = startOffset;
         this->_len = len;
-        this->_mm = mm;
-        this->_mm->registerBufferSubstring(this);
+        MM_REGISTER(this);
     }
 
     ~BufferSubstring()
     {
-        this->_mm->unregisterBufferSubstring(this);
+        MM_UNREGISTER(this);
         if (this->_bufferStringLinkedList)
         {
             delete this->_bufferStringLinkedList;
@@ -510,8 +521,7 @@ class BufferNode
         this->_newLineCount = newLineCount;
         this->_startsWithLF = startsWithLF;
         this->_endsWithCR = endsWithCR;
-        this->_mm = mm;
-        this->_mm->registerBufferNode(this);
+        MM_REGISTER(this);
     }
 
   public:
@@ -536,7 +546,7 @@ class BufferNode
 
     ~BufferNode()
     {
-        this->_mm->unregisterBufferNode(this);
+        MM_UNREGISTER(this);
         // if (this->_str != NULL)
         // {
         //     delete this->_str;
@@ -882,13 +892,12 @@ class Buffer
     {
         assert(root != NULL);
         this->root = root;
-        this->_mm = mm;
-        this->_mm->registerBuffer(this);
+        MM_REGISTER(this);
     }
 
     ~Buffer()
     {
-        this->_mm->unregisterBuffer(this);
+        MM_UNREGISTER(this);
         delete this->root;
     }
 
