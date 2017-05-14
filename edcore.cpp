@@ -14,6 +14,7 @@ using namespace std;
 
 class SimpleString;
 class BufferString;
+class BufferStringSubstring;
 class BufferSubstring;
 class BufferStringLinkedListNode;
 class BufferStringLinkedList;
@@ -42,6 +43,7 @@ class MemManager
     size_t _simpleStringCnt;
     size_t _bufferStringCnt;
     size_t _bufferSubstringCnt;
+    size_t _bufferStringSubstringCnt;
     size_t _bufferStringLinkedListNodeCnt;
     size_t _bufferStringLinkedListCnt;
     size_t _bufferNodeCnt;
@@ -52,6 +54,7 @@ class MemManager
         this->_simpleStringCnt = 0;
         this->_bufferStringCnt = 0;
         this->_bufferSubstringCnt = 0;
+        this->_bufferStringSubstringCnt = 0;
         this->_bufferStringLinkedListNodeCnt = 0;
         this->_bufferStringLinkedListCnt = 0;
         this->_bufferNodeCnt = 0;
@@ -90,6 +93,15 @@ class MemManager
     void _unregister(BufferSubstring *bufferSubstring)
     {
         this->_bufferSubstringCnt--;
+    }
+
+    void _register(BufferStringSubstring *bufferStringSubstring)
+    {
+        this->_bufferStringSubstringCnt++;
+    }
+    void _unregister(BufferStringSubstring *bufferStringSubstring)
+    {
+        this->_bufferStringSubstringCnt--;
     }
 
     void _register(BufferStringLinkedListNode *bufferStringLinkedListNode)
@@ -133,6 +145,7 @@ class MemManager
         os << "MM [" << endl;
         os << "  -> simpleStringCnt: " << this->_simpleStringCnt << endl;
         os << "  -> bufferStringCnt: " << this->_bufferStringCnt << endl;
+        os << "  -> bufferStringSubstringCnt: " << this->_bufferStringSubstringCnt << endl;
         os << "  -> bufferStringLinkedListNodeCnt: " << this->_bufferStringLinkedListNodeCnt << endl;
         os << "  -> bufferStringLinkedListCnt: " << this->_bufferStringLinkedListCnt << endl;
         os << "  -> bufferSubstringCnt: " << this->_bufferSubstringCnt << endl;
@@ -346,6 +359,39 @@ class BufferString : public String
     }
 };
 
+class BufferStringSubstring : public String
+{
+  private:
+    shared_ptr<BufferString> _str;
+    size_t _offset;
+    size_t _len;
+
+  public:
+    BufferStringSubstring(shared_ptr<BufferString> str, size_t offset, size_t len)
+    {
+        this->_str = str;
+        this->_offset = offset;
+        this->_len = len;
+        MM_REGISTER(this);
+    }
+
+    ~BufferStringSubstring()
+    {
+        MM_UNREGISTER(this);
+    }
+
+    void print(std::ostream &os)
+    {
+        const char *data = this->_str->getData();
+        const size_t startOffset = this->_offset;
+        const size_t endOffset = this->_offset + this->_len;
+        for (size_t i = startOffset; i < endOffset; i++)
+        {
+            os << data[i];
+        }
+    }
+};
+
 class BufferStringLinkedListNode
 {
   private:
@@ -457,29 +503,6 @@ class BufferSubstring : public String
 
     void print(std::ostream &os)
     {
-        // char *result = new char[len];
-
-        // size_t resultOffset = 0;
-        // size_t remainingLen = len;
-        // do
-        // {
-        //     const char *src = node->_str->getData();
-        //     const size_t cnt = min(remainingLen, node->_str->getLen() - offset);
-        //     memcpy(result + resultOffset, src + offset, cnt);
-        //     remainingLen -= cnt;
-        //     resultOffset += cnt;
-        //     offset = 0;
-
-        //     if (remainingLen == 0)
-        //     {
-        //         break;
-        //     }
-
-        //     node = node->next();
-        //     assert(node->isLeaf());
-        // } while (true);
-
-        // return shared_ptr<SimpleString>(new SimpleString(result, len));
 
         BufferStringLinkedListNode *node = this->_bufferStringLinkedList->getFirst();
         size_t remainingLen = this->_len;
@@ -741,25 +764,23 @@ class BufferNode
 
     shared_ptr<String> _getStrAt(BufferNode *node, size_t offset, size_t len)
     {
-        BufferStringLinkedList *snapshot = new BufferStringLinkedList();
+        if (offset + len <= node->getLen())
+        {
+            // This is a simple substring
+            return shared_ptr<String>(new BufferStringSubstring(node->_str, offset, len));
+        }
 
-        // char *result = new char[len];
-
-        // size_t resultOffset = 0;
+        char *result = new char[len];
+        size_t resultOffset = 0;
         size_t remainingLen = len;
-        size_t startOffset = offset;
         do
         {
-            shared_ptr<BufferString> str = node->_str;
             const char *src = node->_str->getData();
-            const size_t cnt = min(remainingLen, node->_str->getLen() - startOffset);
-            //     memcpy(result + resultOffset, src + offset, cnt);
+            const size_t cnt = min(remainingLen, node->_str->getLen() - offset);
+            memcpy(result + resultOffset, src + offset, cnt);
             remainingLen -= cnt;
-            //     resultOffset += cnt;
-            startOffset = 0;
-
-            BufferStringLinkedListNode *node2 = new BufferStringLinkedListNode(str);
-            snapshot->append(node2);
+            resultOffset += cnt;
+            offset = 0;
 
             if (remainingLen == 0)
             {
@@ -767,10 +788,31 @@ class BufferNode
             }
 
             node = node->next();
-            //     assert(node->isLeaf());
+            assert(node->isLeaf());
         } while (true);
+        return shared_ptr<SimpleString>(new SimpleString(result, len));
 
-        return shared_ptr<BufferSubstring>(new BufferSubstring(snapshot, offset, len));
+        // BufferStringLinkedList *snapshot = new BufferStringLinkedList();
+        // size_t remainingLen = len;
+        // size_t startOffset = offset;
+        // do
+        // {
+        //     shared_ptr<BufferString> str = node->_str;
+        //     const size_t cnt = min(remainingLen, node->_str->getLen() - startOffset);
+        //     remainingLen -= cnt;
+        //     startOffset = 0;
+
+        //     BufferStringLinkedListNode *node2 = new BufferStringLinkedListNode(str);
+        //     snapshot->append(node2);
+
+        //     if (remainingLen == 0)
+        //     {
+        //         break;
+        //     }
+
+        //     node = node->next();
+        // } while (true);
+        // return shared_ptr<BufferSubstring>(new BufferSubstring(snapshot, offset, len));
     }
 
     BufferNode *findPieceAtLineIndex(size_t &lineIndex)

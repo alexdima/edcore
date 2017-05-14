@@ -1,6 +1,7 @@
 MM [
   -> simpleStringCnt: 0
   -> bufferStringCnt: 334
+  -> bufferStringSubstringCnt: 0
   -> bufferStringLinkedListNodeCnt: 0
   -> bufferStringLinkedListCnt: 0
   -> bufferSubstringCnt: 0
@@ -24504,6 +24505,7 @@ namespace ts {
 MM [
   -> simpleStringCnt: 0
   -> bufferStringCnt: 334
+  -> bufferStringSubstringCnt: 0
   -> bufferStringLinkedListNodeCnt: 0
   -> bufferStringLinkedListCnt: 0
   -> bufferSubstringCnt: 0
@@ -24513,6 +24515,7 @@ MM [
 MM [
   -> simpleStringCnt: 0
   -> bufferStringCnt: 0
+  -> bufferStringSubstringCnt: 0
   -> bufferStringLinkedListNodeCnt: 0
   -> bufferStringLinkedListCnt: 0
   -> bufferSubstringCnt: 0
