@@ -122,6 +122,8 @@ void t2()
     Buffer *buffer = checker();
     ofstream f("tests/t2.actual", ofstream::binary);
 
+    size_t t = buffer->getLineLength(161);
+
     size_t lineCount = buffer->getLineCount();
     for (size_t lineNumber = 1; lineNumber <= lineCount; lineNumber++)
     {

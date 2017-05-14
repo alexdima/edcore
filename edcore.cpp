@@ -14,7 +14,6 @@ using namespace std;
 
 class String
 {
-
   public:
     virtual void print(std::ostream &os) = 0;
 };
@@ -29,33 +28,44 @@ std::ostream &operator<<(std::ostream &os, String *const &m)
     m->print(os);
     return os;
 }
+std::ostream &operator<<(std::ostream &os, shared_ptr<String> const &m)
+{
+    if (m == NULL)
+    {
+        return os << "[NULL]";
+    }
+
+    m->print(os);
+    return os;
+}
 
 class SimpleString : public String
 {
   private:
-    char *data;
-    size_t len;
+    char *_data;
+    size_t _len;
 
   public:
-    SimpleString(char *_data, size_t _len)
+    SimpleString(char *data, size_t len)
     {
-        this->data = _data;
-        this->len = _len;
+        this->_data = data;
+        this->_len = len;
     }
 
     ~SimpleString()
     {
-        if (this->data != NULL)
+        if (this->_data != NULL)
         {
-            delete[] this->data;
-            this->data = NULL;
+            delete[] this->_data;
+            this->_data = NULL;
         }
     }
 
     void print(std::ostream &os)
     {
-        const char *data = this->data;
-        for (size_t i = 0, len = this->len; i < len; i++)
+        const char *data = this->_data;
+        const size_t len = this->_len;
+        for (size_t i = 0; i < len; i++)
         {
             os << data[i];
         }
@@ -65,18 +75,18 @@ class SimpleString : public String
 class BufferString : public String
 {
   private:
-    char *data;
-    size_t len;
+    char *_data;
+    size_t _len;
 
-    size_t *lineStarts;
-    size_t lineStartsCount;
+    size_t *_lineStarts;
+    size_t _lineStartsCount;
 
     void _init(char *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
     {
-        this->data = data;
-        this->len = len;
-        this->lineStarts = lineStarts;
-        this->lineStartsCount = lineStartsCount;
+        this->_data = data;
+        this->_len = len;
+        this->_lineStarts = lineStarts;
+        this->_lineStartsCount = lineStartsCount;
     }
 
   public:
@@ -148,52 +158,52 @@ class BufferString : public String
 
     ~BufferString()
     {
-        if (this->data != NULL)
+        if (this->_data != NULL)
         {
-            delete[] this->data;
-            this->data = NULL;
+            delete[] this->_data;
+            this->_data = NULL;
         }
-        if (this->lineStarts != NULL)
+        if (this->_lineStarts != NULL)
         {
-            delete[] this->lineStarts;
-            this->lineStarts = NULL;
+            delete[] this->_lineStarts;
+            this->_lineStarts = NULL;
         }
     }
 
     size_t getLen() const
     {
-        return this->len;
+        return this->_len;
     }
 
     size_t getNewLineCount() const
     {
-        return this->lineStartsCount;
+        return this->_lineStartsCount;
     }
 
     bool getEndsWithCR() const
     {
-        return (this->len > 0 && this->data[this->len - 1] == '\r');
+        return (this->_len > 0 && this->_data[this->_len - 1] == '\r');
     }
 
     bool getStartsWithLF() const
     {
-        return (this->len > 0 && this->data[0] == '\n');
+        return (this->_len > 0 && this->_data[0] == '\n');
     }
 
     const char *getData() const // TODO
     {
-        return this->data;
+        return this->_data;
     }
 
     const size_t *getLineStarts() const
     {
-        return this->lineStarts;
+        return this->_lineStarts;
     }
 
     void print(std::ostream &os)
     {
-        const char *data = this->data;
-        const size_t len = this->len;
+        const char *data = this->_data;
+        const size_t len = this->_len;
         for (size_t i = 0; i < len; i++)
         {
             os << data[i];
@@ -204,84 +214,75 @@ class BufferString : public String
 class BufferPiece
 {
   private:
-    BufferString *str;
-    BufferPiece *leftChild;
-    BufferPiece *rightChild;
-    BufferPiece *parent;
-    size_t len;
-    size_t newLineCount;
-    bool endsWithCR;
-    bool startsWithLF;
+    BufferString *_str;
+    shared_ptr<BufferPiece> _next;
+
+    BufferPiece *_leftChild;
+    BufferPiece *_rightChild;
+
+    BufferPiece *_parent;
+    size_t _len;
+    size_t _newLineCount;
+    bool _endsWithCR;
+    bool _startsWithLF;
+
+    void _init(
+        BufferString *str,
+        BufferPiece *leftChild,
+        BufferPiece *rightChild,
+        size_t len,
+        size_t newLineCount,
+        bool endsWithCR,
+        bool startsWithLF)
+    {
+        this->_str = str;
+        this->_leftChild = leftChild;
+        this->_rightChild = rightChild;
+        this->_parent = NULL;
+        this->_len = len;
+        this->_newLineCount = newLineCount;
+        this->_endsWithCR = endsWithCR;
+        this->_startsWithLF = startsWithLF;
+    }
 
   public:
     BufferPiece(BufferString *str)
     {
         assert(str != NULL);
-        this->str = str;
-        this->leftChild = NULL;
-        this->rightChild = NULL;
-        this->parent = NULL;
-        this->len = str->getLen();
-        this->newLineCount = str->getNewLineCount();
-        this->endsWithCR = str->getEndsWithCR();
-        this->startsWithLF = str->getStartsWithLF();
+        this->_init(str, NULL, NULL, str->getLen(), str->getNewLineCount(), str->getEndsWithCR(), str->getStartsWithLF());
     }
 
     BufferPiece(BufferPiece *leftChild, BufferPiece *rightChild)
     {
-        assert(leftChild != NULL);
-        this->str = NULL;
-        this->leftChild = leftChild;
-        this->rightChild = rightChild;
-        this->parent = NULL;
-        if (this->leftChild != NULL && this->rightChild != NULL)
-        {
-            if (this->leftChild->endsWithCR && this->rightChild->startsWithLF)
-            {
-                this->newLineCount = this->leftChild->newLineCount + this->rightChild->newLineCount - 1;
-            }
-            else
-            {
-                this->newLineCount = this->leftChild->newLineCount + this->rightChild->newLineCount;
-            }
-            this->len = this->leftChild->len + this->rightChild->len;
-            this->startsWithLF = this->leftChild->startsWithLF;
-            this->endsWithCR = this->rightChild->endsWithCR;
-        }
-        else if (this->leftChild != NULL)
-        {
-            this->newLineCount = this->leftChild->newLineCount;
-            this->len = this->leftChild->len;
-            this->startsWithLF = this->leftChild->startsWithLF;
-            this->endsWithCR = this->leftChild->endsWithCR;
-        }
-        else
-        {
-            this->newLineCount = this->rightChild->newLineCount;
-            this->len = this->rightChild->len;
-            this->startsWithLF = this->rightChild->startsWithLF;
-            this->endsWithCR = this->rightChild->endsWithCR;
-        }
+        assert(leftChild != NULL || rightChild != NULL);
+
+        const size_t len = (leftChild != NULL ? leftChild->_len : 0) + (rightChild != NULL ? rightChild->_len : 0);
+        const size_t newLineCount = (leftChild != NULL ? leftChild->_newLineCount : 0) + (rightChild != NULL ? rightChild->_newLineCount : 0);
+        const size_t discountNewLine = (leftChild != NULL && rightChild != NULL && leftChild->_endsWithCR && rightChild->_startsWithLF);
+        const bool startsWithLF = (leftChild != NULL ? leftChild->_startsWithLF : rightChild->_startsWithLF);
+        const bool endsWithCR = (rightChild != NULL ? rightChild->_endsWithCR : leftChild->_endsWithCR);
+
+        this->_init(NULL, leftChild, rightChild, len, newLineCount - (discountNewLine ? 1 : 0), startsWithLF, endsWithCR);
     }
 
     ~BufferPiece()
     {
-        if (this->str != NULL)
+        if (this->_str != NULL)
         {
-            delete this->str;
-            this->str = NULL;
+            delete this->_str;
+            this->_str = NULL;
         }
-        if (this->leftChild != NULL)
+        if (this->_leftChild != NULL)
         {
-            delete this->leftChild;
-            this->leftChild = NULL;
+            delete this->_leftChild;
+            this->_leftChild = NULL;
         }
-        if (this->rightChild != NULL)
+        if (this->_rightChild != NULL)
         {
-            delete this->rightChild;
-            this->rightChild = NULL;
+            delete this->_rightChild;
+            this->_rightChild = NULL;
         }
-        this->parent = NULL;
+        this->_parent = NULL;
     }
 
     void log()
@@ -302,7 +303,7 @@ class BufferPiece
         if (this->isLeaf())
         {
             printIndent(indent);
-            cout << "leaf with " << this->newLineCount << " lines." << endl;
+            cout << "leaf with " << this->_newLineCount << " lines." << endl;
             return;
         }
 
@@ -310,39 +311,39 @@ class BufferPiece
         cout << "[NODE]" << endl;
 
         indent += 4;
-        if (this->leftChild)
+        if (this->_leftChild)
         {
-            this->leftChild->log(indent);
+            this->_leftChild->log(indent);
         }
-        if (this->rightChild)
+        if (this->_rightChild)
         {
-            this->rightChild->log(indent);
+            this->_rightChild->log(indent);
         }
     }
 
     bool isLeaf() const
     {
-        return (this->str != NULL);
+        return (this->_str != NULL);
     }
 
     void setParent(BufferPiece *parent)
     {
-        this->parent = parent;
+        this->_parent = parent;
     }
 
     size_t getLen() const
     {
-        return this->len;
+        return this->_len;
     }
 
     size_t getNewLineCount() const
     {
-        return this->newLineCount;
+        return this->_newLineCount;
     }
 
     BufferPiece *findPieceAtOffset(size_t &offset)
     {
-        if (offset < 0 || offset >= this->len)
+        if (offset < 0 || offset >= this->_len)
         {
             return NULL;
         }
@@ -350,8 +351,8 @@ class BufferPiece
         BufferPiece *it = this;
         while (!it->isLeaf())
         {
-            BufferPiece *left = it->leftChild;
-            BufferPiece *right = it->rightChild;
+            BufferPiece *left = it->_leftChild;
+            BufferPiece *right = it->_rightChild;
 
             if (left == NULL)
             {
@@ -365,7 +366,7 @@ class BufferPiece
                 continue;
             }
 
-            const size_t leftLen = left->len;
+            const size_t leftLen = left->_len;
             if (offset < leftLen)
             {
                 // go left
@@ -375,7 +376,7 @@ class BufferPiece
 
             // go right
             offset -= leftLen;
-            it = it->rightChild;
+            it = right;
         }
 
         return it;
@@ -385,9 +386,9 @@ class BufferPiece
     {
         // TODO: this will not work for an unbalanced tree
         BufferPiece *res = this;
-        while (res->leftChild != NULL)
+        while (res->_leftChild != NULL)
         {
-            res = res->leftChild;
+            res = res->_leftChild;
         }
         return res;
     }
@@ -395,57 +396,57 @@ class BufferPiece
     BufferPiece *next()
     {
         assert(this->isLeaf());
-        if (this->parent->leftChild == this)
+        if (this->_parent->_leftChild == this)
         {
-            BufferPiece *sibling = this->parent->rightChild;
+            BufferPiece *sibling = this->_parent->_rightChild;
             return sibling->firstLeaf();
         }
 
         BufferPiece *it = this;
-        while (it->parent != NULL && it->parent->rightChild == it)
+        while (it->_parent != NULL && it->_parent->_rightChild == it)
         {
-            it = it->parent;
+            it = it->_parent;
         }
-        if (it->parent == NULL)
+        if (it->_parent == NULL)
         {
             // EOF
             return NULL;
         }
-        return it->parent->rightChild->firstLeaf();
+        return it->_parent->_rightChild->firstLeaf();
     }
 
-    shared_ptr<String> getStrAt(const size_t _offset, const size_t _len)
+    shared_ptr<String> getStrAt(size_t offset, size_t len)
     {
-        if (_offset < 0 || _len < 0 || _offset + _len > this->len)
+        if (offset < 0 || len < 0 || offset + len > this->_len)
         {
             return NULL;
         }
 
-        size_t offset = _offset;
         BufferPiece *node = this->findPieceAtOffset(offset);
         if (node == NULL)
         {
             return NULL;
         }
-        return this->_getStrAt(node, offset, _len);
+
+        return this->_getStrAt(node, offset, len);
     }
 
-    shared_ptr<String> _getStrAt(BufferPiece *node, size_t offset, const size_t _len)
+    shared_ptr<String> _getStrAt(BufferPiece *node, size_t offset, size_t len)
     {
-        char *result = new char[_len];
+        char *result = new char[len];
 
-        size_t len = _len;
         size_t resultOffset = 0;
+        size_t remainingLen = len;
         do
         {
-            const char *src = node->str->getData();
-            const size_t cnt = min(len, node->str->getLen() - offset);
+            const char *src = node->_str->getData();
+            const size_t cnt = min(remainingLen, node->_str->getLen() - offset);
             memcpy(result + resultOffset, src + offset, cnt);
-            len -= cnt;
+            remainingLen -= cnt;
             resultOffset += cnt;
             offset = 0;
 
-            if (len == 0)
+            if (remainingLen == 0)
             {
                 break;
             }
@@ -454,7 +455,7 @@ class BufferPiece
             assert(node->isLeaf());
         } while (true);
 
-        return shared_ptr<SimpleString>(new SimpleString(result, _len));
+        return shared_ptr<SimpleString>(new SimpleString(result, len));
     }
 
     BufferPiece *findPieceAtLineIndex(size_t &lineIndex)
@@ -462,48 +463,58 @@ class BufferPiece
         BufferPiece *it = this;
         while (!it->isLeaf())
         {
-            BufferPiece *left = it->leftChild;
-            BufferPiece *right = it->rightChild;
+            BufferPiece *left = it->_leftChild;
+            BufferPiece *right = it->_rightChild;
 
-            if (left != NULL && right != NULL)
+            if (left == NULL)
             {
-                if (left->endsWithCR && right->startsWithLF)
-                {
-                    // one newline is split between left and right
-                    // TODO
-                    assert(false);
-                }
-
-                if (lineIndex <= left->newLineCount)
-                {
-                    // go left
-                    it = left;
-                    continue;
-                }
-
                 // go right
-                lineIndex -= left->newLineCount;
-                it = it->rightChild;
+                it = right;
             }
+
+            if (right == NULL)
+            {
+                // go left
+                it = left;
+            }
+
+            if (left->_endsWithCR && right->_startsWithLF)
+            {
+                // one newline is split between left and right
+                // TODO
+                assert(false);
+            }
+
+            if (lineIndex <= left->_newLineCount)
+            {
+                // go left
+                it = left;
+                continue;
+            }
+
+            // go right
+            lineIndex -= left->_newLineCount;
+            it = right;
         }
+
         return it;
     }
 
-    size_t getLineLength(const size_t _lineNumber)
+    size_t getLineLength(size_t lineNumber)
     {
-        if (_lineNumber < 1 || _lineNumber > this->newLineCount + 1)
+        if (lineNumber < 1 || lineNumber > this->_newLineCount + 1)
         {
             return 0;
         }
 
-        size_t lineIndex = _lineNumber - 1;
+        size_t lineIndex = lineNumber - 1;
         BufferPiece *node = findPieceAtLineIndex(lineIndex);
         if (node == NULL)
         {
             return 0;
         }
 
-        const size_t *lineStarts = node->str->getLineStarts();
+        const size_t *lineStarts = node->_str->getLineStarts();
         const size_t lineStartOffset = (lineIndex == 0 ? 0 : lineStarts[lineIndex - 1]);
 
         return this->_getLineIndexLength(lineIndex, node, lineStartOffset);
@@ -511,20 +522,20 @@ class BufferPiece
 
     size_t _getLineIndexLength(const size_t lineIndex, BufferPiece *node, const size_t lineStartOffset)
     {
-        const size_t nodeLineCount = node->newLineCount;
+        const size_t nodeLineCount = node->_newLineCount;
         assert(node->isLeaf());
         assert(nodeLineCount >= lineIndex);
 
         if (lineIndex < nodeLineCount)
         {
             // lucky, the line ends in this same block
-            const size_t *lineStarts = node->str->getLineStarts();
+            const size_t *lineStarts = node->_str->getLineStarts();
             const size_t lineEndOffset = lineStarts[lineIndex];
             return lineEndOffset - lineStartOffset;
         }
 
         // find the first newline or EOF
-        size_t result = node->len - lineStartOffset;
+        size_t result = node->_len - lineStartOffset;
         do
         {
             // TODO: could probably optimize to not visit every leaf!!!
@@ -536,43 +547,37 @@ class BufferPiece
                 break;
             }
 
-            if (node->newLineCount > 0)
+            if (node->_newLineCount > 0)
             {
-                const size_t *lineStarts = node->str->getLineStarts();
+                const size_t *lineStarts = node->_str->getLineStarts();
                 result += lineStarts[0];
                 break;
             }
 
             // node does not contain newline
-            result += node->len;
+            result += node->_len;
 
         } while (true);
 
         return result;
     }
 
-    shared_ptr<String> getLineContent(const size_t _lineNumber)
+    shared_ptr<String> getLineContent(size_t lineNumber)
     {
-        if (_lineNumber < 1 || _lineNumber > this->newLineCount + 1)
+        if (lineNumber < 1 || lineNumber > this->_newLineCount + 1)
         {
             return NULL;
         }
 
-        size_t lineIndex = _lineNumber - 1;
+        size_t lineIndex = lineNumber - 1;
         BufferPiece *node = findPieceAtLineIndex(lineIndex);
         if (node == NULL)
         {
             return NULL;
         }
 
-        const size_t *lineStarts = node->str->getLineStarts();
-        // for (int i = 0; i < nodeLineCount; i++)
-        // {
-        //     cout << i << " : " << lineStarts[i] << endl;
-        // }
-
+        const size_t *lineStarts = node->_str->getLineStarts();
         const size_t lineStartOffset = (lineIndex == 0 ? 0 : lineStarts[lineIndex - 1]);
-
         size_t len = this->_getLineIndexLength(lineIndex, node, lineStartOffset);
         return this->_getStrAt(node, lineStartOffset, len);
     }
