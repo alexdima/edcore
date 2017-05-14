@@ -41,9 +41,9 @@
 
 // }
 
-Buffer *checker()
+Buffer *checker(MemManager *mm)
 {
-    return buildBufferFromFile("tests/checker.ts");
+    return buildBufferFromFile(mm, "tests/checker.ts");
 }
 
 int compareFiles(FILE *file_compared, FILE *file_checked)
@@ -102,8 +102,11 @@ void check(const char *testName, const char *actualFileName, const char *expecte
 // Get line one by one
 void t1()
 {
-    Buffer *buffer = checker();
+    MemManager *mm = new MemManager();
+    Buffer *buffer = checker(mm);
     ofstream f("tests/t1.actual", ofstream::binary);
+
+    f << mm;
 
     size_t lineCount = buffer->getLineCount();
     for (size_t lineNumber = 1; lineNumber <= lineCount; lineNumber++)
@@ -112,15 +115,23 @@ void t1()
         f << str;
     }
 
-    f.close();
+    f << mm;
+
     delete buffer;
+    f << mm;
+
+    delete mm;
+    f.close();
     check("t1", "tests/t1.actual", "tests/t1.expected");
 }
 
 void t2()
 {
-    Buffer *buffer = checker();
+    MemManager *mm = new MemManager();
+    Buffer *buffer = checker(mm);
     ofstream f("tests/t2.actual", ofstream::binary);
+
+    f << mm;
 
     size_t lineCount = buffer->getLineCount();
     for (size_t lineNumber = 1; lineNumber <= lineCount; lineNumber++)
@@ -128,20 +139,28 @@ void t2()
         f << buffer->getLineLength(lineNumber) << endl;
     }
 
-    f.close();
     delete buffer;
+    f << mm;
+
+    delete mm;
+    f.close();
     check("t2", "tests/t2.actual", "tests/t2.expected");
 }
 
 void t3()
 {
-    Buffer *buffer = checker();
+    MemManager *mm = new MemManager();
+    Buffer *buffer = checker(mm);
     ofstream f("tests/t3.actual", ofstream::binary);
+    f << mm;
 
     f << buffer;
 
-    f.close();
     delete buffer;
+    f << mm;
+
+    delete mm;
+    f.close();
     check("t3", "tests/t3.actual", "tests/t3.expected");
 }
 
