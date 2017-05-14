@@ -122,8 +122,6 @@ void t2()
     Buffer *buffer = checker();
     ofstream f("tests/t2.actual", ofstream::binary);
 
-    size_t t = buffer->getLineLength(161);
-
     size_t lineCount = buffer->getLineCount();
     for (size_t lineNumber = 1; lineNumber <= lineCount; lineNumber++)
     {
@@ -135,8 +133,21 @@ void t2()
     check("t2", "tests/t2.actual", "tests/t2.expected");
 }
 
+void t3()
+{
+    Buffer *buffer = checker();
+    ofstream f("tests/t3.actual", ofstream::binary);
+
+    f << buffer;
+
+    f.close();
+    delete buffer;
+    check("t3", "tests/t3.actual", "tests/t3.expected");
+}
+
 int main(void)
 {
     t1();
     t2();
+    t3();
 }

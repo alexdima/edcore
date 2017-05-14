@@ -72,6 +72,14 @@ class SimpleString : public String
     }
 };
 
+void printIndent(ostream &os, int indent)
+{
+    for (int i = 0; i < indent; i++)
+    {
+        os << " ";
+    }
+}
+
 class BufferString : public String
 {
   private:
@@ -232,8 +240,9 @@ class BufferPiece
         BufferPiece *rightChild,
         size_t len,
         size_t newLineCount,
-        bool endsWithCR,
-        bool startsWithLF)
+        bool startsWithLF,
+        bool endsWithCR
+        )
     {
         this->_str = str;
         this->_leftChild = leftChild;
@@ -241,15 +250,15 @@ class BufferPiece
         this->_parent = NULL;
         this->_len = len;
         this->_newLineCount = newLineCount;
-        this->_endsWithCR = endsWithCR;
         this->_startsWithLF = startsWithLF;
+        this->_endsWithCR = endsWithCR;
     }
 
   public:
     BufferPiece(BufferString *str)
     {
         assert(str != NULL);
-        this->_init(str, NULL, NULL, str->getLen(), str->getNewLineCount(), str->getEndsWithCR(), str->getStartsWithLF());
+        this->_init(str, NULL, NULL, str->getLen(), str->getNewLineCount(), str->getStartsWithLF(), str->getEndsWithCR());
     }
 
     BufferPiece(BufferPiece *leftChild, BufferPiece *rightChild)
@@ -285,39 +294,49 @@ class BufferPiece
         this->_parent = NULL;
     }
 
-    void log()
+    void print(ostream &os)
     {
-        this->log(0);
+        this->log(os, 0);
     }
 
-    void printIndent(int indent)
-    {
-        for (int i = 0; i < indent; i++)
-        {
-            cout << " ";
-        }
-    }
-
-    void log(int indent)
+    void log(ostream &os, int indent)
     {
         if (this->isLeaf())
         {
-            printIndent(indent);
-            cout << "leaf with " << this->_newLineCount << " lines." << endl;
+            printIndent(os, indent);
+            os << "[LEAF] (len:" << this->_len << ", newLineCount:" << this->_newLineCount;
+            if (this->_startsWithLF)
+            {
+                os << ", startsWithLF";
+            }
+            if (this->_endsWithCR)
+            {
+                os << ", endsWithCR";
+            }
+            os << ")" << endl;
             return;
         }
 
-        printIndent(indent);
-        cout << "[NODE]" << endl;
+        printIndent(os, indent);
+        os << "[NODE] (len:" << this->_len << ", newLineCount:" << this->_newLineCount;
+        if (this->_startsWithLF)
+        {
+            os << ", startsWithLF";
+        }
+        if (this->_endsWithCR)
+        {
+            os << ", endsWithCR";
+        }
+        os << ")" << endl;
 
         indent += 4;
         if (this->_leftChild)
         {
-            this->_leftChild->log(indent);
+            this->_leftChild->log(os, indent);
         }
         if (this->_rightChild)
         {
-            this->_rightChild->log(indent);
+            this->_rightChild->log(os, indent);
         }
     }
 
@@ -624,7 +643,22 @@ class Buffer
     {
         return this->root->getLineContent(lineNumber);
     }
+
+    void print(ostream &os)
+    {
+        this->root->print(os);
+    }
 };
+std::ostream &operator<<(std::ostream &os, Buffer *const &m)
+{
+    if (m == NULL)
+    {
+        return os << "[NULL]";
+    }
+
+    m->print(os);
+    return os;
+}
 
 BufferPiece *buildBufferFromPieces(vector<BufferString *> &pieces, size_t start, size_t end)
 {
