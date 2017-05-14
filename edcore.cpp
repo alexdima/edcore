@@ -15,6 +15,8 @@ using namespace std;
 class SimpleString;
 class BufferString;
 class BufferSubstring;
+class BufferStringLinkedListNode;
+class BufferStringLinkedList;
 class BufferNode;
 class Buffer;
 
@@ -28,8 +30,9 @@ class Buffer;
 
 #else
 
-#define MM_REGISTER(what) 
+#define MM_REGISTER(what)
 #define MM_UNREGISTER(what)
+#define MM_DUMP(os) os << "Memory not tracked" << endl
 
 #endif
 
@@ -39,6 +42,8 @@ class MemManager
     size_t _simpleStringCnt;
     size_t _bufferStringCnt;
     size_t _bufferSubstringCnt;
+    size_t _bufferStringLinkedListNodeCnt;
+    size_t _bufferStringLinkedListCnt;
     size_t _bufferNodeCnt;
     size_t _bufferCnt;
 
@@ -47,6 +52,8 @@ class MemManager
         this->_simpleStringCnt = 0;
         this->_bufferStringCnt = 0;
         this->_bufferSubstringCnt = 0;
+        this->_bufferStringLinkedListNodeCnt = 0;
+        this->_bufferStringLinkedListCnt = 0;
         this->_bufferNodeCnt = 0;
         this->_bufferCnt = 0;
     }
@@ -62,7 +69,6 @@ class MemManager
     {
         this->_simpleStringCnt++;
     }
-
     void _unregister(SimpleString *simpleString)
     {
         this->_simpleStringCnt--;
@@ -72,7 +78,6 @@ class MemManager
     {
         this->_bufferStringCnt++;
     }
-
     void _unregister(BufferString *bufferString)
     {
         this->_bufferStringCnt--;
@@ -82,17 +87,33 @@ class MemManager
     {
         this->_bufferSubstringCnt++;
     }
-
     void _unregister(BufferSubstring *bufferSubstring)
     {
         this->_bufferSubstringCnt--;
+    }
+
+    void _register(BufferStringLinkedListNode *bufferStringLinkedListNode)
+    {
+        this->_bufferStringLinkedListNodeCnt++;
+    }
+    void _unregister(BufferStringLinkedListNode *bufferStringLinkedListNode)
+    {
+        this->_bufferStringLinkedListNodeCnt--;
+    }
+
+    void _register(BufferStringLinkedList *bufferStringLinkedList)
+    {
+        this->_bufferStringLinkedListCnt++;
+    }
+    void _unregister(BufferStringLinkedList *bufferStringLinkedList)
+    {
+        this->_bufferStringLinkedListCnt--;
     }
 
     void _register(BufferNode *bufferNode)
     {
         this->_bufferNodeCnt++;
     }
-
     void _unregister(BufferNode *bufferNode)
     {
         this->_bufferNodeCnt--;
@@ -102,7 +123,6 @@ class MemManager
     {
         this->_bufferCnt++;
     }
-
     void _unregister(Buffer *buffer)
     {
         this->_bufferCnt--;
@@ -113,6 +133,8 @@ class MemManager
         os << "MM [" << endl;
         os << "  -> simpleStringCnt: " << this->_simpleStringCnt << endl;
         os << "  -> bufferStringCnt: " << this->_bufferStringCnt << endl;
+        os << "  -> bufferStringLinkedListNodeCnt: " << this->_bufferStringLinkedListNodeCnt << endl;
+        os << "  -> bufferStringLinkedListCnt: " << this->_bufferStringLinkedListCnt << endl;
         os << "  -> bufferSubstringCnt: " << this->_bufferSubstringCnt << endl;
         os << "  -> bufferNodeCnt: " << this->_bufferNodeCnt << endl;
         os << "  -> bufferCnt: " << this->_bufferCnt << endl;
@@ -158,7 +180,7 @@ class SimpleString : public String
     {
         this->_data = data;
         this->_len = len;
-        MM_REGISTER(SimpleString);
+        MM_REGISTER(this);
     }
 
     ~SimpleString()
@@ -335,10 +357,12 @@ class BufferStringLinkedListNode
     {
         this->_str = str;
         this->_next = NULL;
+        MM_REGISTER(this);
     }
 
     ~BufferStringLinkedListNode()
     {
+        MM_UNREGISTER(this);
         this->_next = NULL;
     }
 
@@ -369,10 +393,12 @@ class BufferStringLinkedList
     {
         this->_first = NULL;
         this->_last = NULL;
+        MM_REGISTER(this);
     }
 
     ~BufferStringLinkedList()
     {
+        MM_UNREGISTER(this);
         BufferStringLinkedListNode *node = this->_first;
         while (node != NULL)
         {
@@ -958,19 +984,6 @@ BufferNode *buildBufferFromPieces(vector<shared_ptr<BufferString>> &pieces, size
     return result;
 }
 
-// class _BufferString
-// {
-//   public:
-//     char *data;
-//     size_t len;
-
-//     _BufferString(char *data, size_t len)
-//     {
-//         this->data = data;
-//         this->len = len;
-//     }
-// };
-
 Buffer *buildBufferFromFile(const char *filename)
 {
     ifstream ifs(filename, ifstream::binary);
@@ -998,21 +1011,7 @@ Buffer *buildBufferFromFile(const char *filename)
     ifs.close();
 
     size_t pieceCount = rawPieces.size();
-
-    // Build BufferString
-    // shared_ptr<BufferString> *vPieces = new shared_ptr<BufferString>[ pieceCount ];
-    // shared_ptr<BufferString> next = NULL;
-    // for (int i = pieceCount - 1; i >= 0; i--)
-    // {
-    //     shared_ptr<_BufferString> src = rawPieces[i];
-    //     next = shared_ptr<BufferString>(new BufferString(next, src->data, src->len));
-    //     vPieces[i] = next;
-    // }
-
     BufferNode *root = buildBufferFromPieces(rawPieces, 0, pieceCount);
-    // delete[] vPieces;
-
-    // root->log();
     return new Buffer(root);
 }
 
