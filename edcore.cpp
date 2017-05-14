@@ -22,12 +22,13 @@ class Buffer;
 
 #ifdef TRACK_MEMORY
 
-#define MM_REGISTER(what) this->_mm = mm; this->_mm->_register(this)
-#define MM_UNREGISTER(what) this->_mm->_unregister(this)
+#define MM_REGISTER(what) MemManager::getInstance()._register(this)
+#define MM_UNREGISTER(what) MemManager::getInstance()._unregister(this)
+#define MM_DUMP(os) MemManager::getInstance().print(os)
 
 #else
 
-#define MM_REGISTER(what) this->_mm = NULL
+#define MM_REGISTER(what) 
 #define MM_UNREGISTER(what)
 
 #endif
@@ -41,7 +42,6 @@ class MemManager
     size_t _bufferNodeCnt;
     size_t _bufferCnt;
 
-  public:
     MemManager()
     {
         this->_simpleStringCnt = 0;
@@ -49,6 +49,13 @@ class MemManager
         this->_bufferSubstringCnt = 0;
         this->_bufferNodeCnt = 0;
         this->_bufferCnt = 0;
+    }
+
+  public:
+    static MemManager &getInstance()
+    {
+        static MemManager mm;
+        return mm;
     }
 
     void _register(SimpleString *simpleString)
@@ -112,16 +119,6 @@ class MemManager
         os << "]" << endl;
     }
 };
-std::ostream &operator<<(std::ostream &os, MemManager *const &m)
-{
-    if (m == NULL)
-    {
-        return os << "[NULL]";
-    }
-
-    m->print(os);
-    return os;
-}
 
 class String
 {
@@ -153,12 +150,11 @@ std::ostream &operator<<(std::ostream &os, shared_ptr<String> const &m)
 class SimpleString : public String
 {
   private:
-    MemManager *_mm;
     char *_data;
     size_t _len;
 
   public:
-    SimpleString(MemManager *mm, char *data, size_t len)
+    SimpleString(char *data, size_t len)
     {
         this->_data = data;
         this->_len = len;
@@ -197,14 +193,13 @@ void printIndent(ostream &os, int indent)
 class BufferString : public String
 {
   private:
-    MemManager *_mm;
     char *_data;
     size_t _len;
 
     size_t *_lineStarts;
     size_t _lineStartsCount;
 
-    void _init(MemManager *mm, char *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
+    void _init(char *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
     {
         this->_data = data;
         this->_len = len;
@@ -214,7 +209,7 @@ class BufferString : public String
     }
 
   public:
-    BufferString(MemManager *mm, char *data, size_t len)
+    BufferString(char *data, size_t len)
     {
         assert(data != NULL && len != 0);
 
@@ -270,7 +265,7 @@ class BufferString : public String
                 lineStarts[dest++] = i + 1;
             }
         }
-        this->_init(mm, data, len, lineStarts, lineStartsCount);
+        this->_init(data, len, lineStarts, lineStartsCount);
     }
 
     ~BufferString()
@@ -336,7 +331,7 @@ class BufferStringLinkedListNode
     BufferStringLinkedListNode *_next;
 
   public:
-    BufferStringLinkedListNode(MemManager *mm, shared_ptr<BufferString> str)
+    BufferStringLinkedListNode(shared_ptr<BufferString> str)
     {
         this->_str = str;
         this->_next = NULL;
@@ -370,7 +365,7 @@ class BufferStringLinkedList
     BufferStringLinkedListNode *_last;
 
   public:
-    BufferStringLinkedList(MemManager *mm)
+    BufferStringLinkedList()
     {
         this->_first = NULL;
         this->_last = NULL;
@@ -411,13 +406,12 @@ class BufferStringLinkedList
 class BufferSubstring : public String
 {
   private:
-    MemManager *_mm;
     BufferStringLinkedList *_bufferStringLinkedList;
     size_t _startOffset;
     size_t _len;
 
   public:
-    BufferSubstring(MemManager *mm, BufferStringLinkedList *bufferStringLinkedList, size_t startOffset, size_t len)
+    BufferSubstring(BufferStringLinkedList *bufferStringLinkedList, size_t startOffset, size_t len)
     {
         this->_bufferStringLinkedList = bufferStringLinkedList;
         this->_startOffset = startOffset;
@@ -459,7 +453,7 @@ class BufferSubstring : public String
         //     assert(node->isLeaf());
         // } while (true);
 
-        // return shared_ptr<SimpleString>(new SimpleString(this->_mm, result, len));
+        // return shared_ptr<SimpleString>(new SimpleString(result, len));
 
         BufferStringLinkedListNode *node = this->_bufferStringLinkedList->getFirst();
         size_t remainingLen = this->_len;
@@ -491,7 +485,6 @@ class BufferSubstring : public String
 class BufferNode
 {
   private:
-    MemManager *_mm;
     shared_ptr<BufferString> _str;
 
     BufferNode *_leftChild;
@@ -504,7 +497,6 @@ class BufferNode
     bool _startsWithLF;
 
     void _init(
-        MemManager *mm,
         shared_ptr<BufferString> str,
         BufferNode *leftChild,
         BufferNode *rightChild,
@@ -525,13 +517,13 @@ class BufferNode
     }
 
   public:
-    BufferNode(MemManager *mm, shared_ptr<BufferString> str)
+    BufferNode(shared_ptr<BufferString> str)
     {
         assert(str != NULL);
-        this->_init(mm, str, NULL, NULL, str->getLen(), str->getNewLineCount(), str->getStartsWithLF(), str->getEndsWithCR());
+        this->_init(str, NULL, NULL, str->getLen(), str->getNewLineCount(), str->getStartsWithLF(), str->getEndsWithCR());
     }
 
-    BufferNode(MemManager *mm, BufferNode *leftChild, BufferNode *rightChild)
+    BufferNode(BufferNode *leftChild, BufferNode *rightChild)
     {
         assert(leftChild != NULL || rightChild != NULL);
 
@@ -541,7 +533,7 @@ class BufferNode
         const bool startsWithLF = (leftChild != NULL ? leftChild->_startsWithLF : rightChild->_startsWithLF);
         const bool endsWithCR = (rightChild != NULL ? rightChild->_endsWithCR : leftChild->_endsWithCR);
 
-        this->_init(mm, NULL, leftChild, rightChild, len, newLineCount - (discountNewLine ? 1 : 0), startsWithLF, endsWithCR);
+        this->_init(NULL, leftChild, rightChild, len, newLineCount - (discountNewLine ? 1 : 0), startsWithLF, endsWithCR);
     }
 
     ~BufferNode()
@@ -723,9 +715,9 @@ class BufferNode
 
     shared_ptr<String> _getStrAt(BufferNode *node, size_t offset, size_t len)
     {
-        BufferStringLinkedList *snapshot = new BufferStringLinkedList(this->_mm);
+        BufferStringLinkedList *snapshot = new BufferStringLinkedList();
 
-                // char *result = new char[len];
+        // char *result = new char[len];
 
         // size_t resultOffset = 0;
         size_t remainingLen = len;
@@ -735,12 +727,12 @@ class BufferNode
             shared_ptr<BufferString> str = node->_str;
             const char *src = node->_str->getData();
             const size_t cnt = min(remainingLen, node->_str->getLen() - startOffset);
-        //     memcpy(result + resultOffset, src + offset, cnt);
+            //     memcpy(result + resultOffset, src + offset, cnt);
             remainingLen -= cnt;
-        //     resultOffset += cnt;
+            //     resultOffset += cnt;
             startOffset = 0;
 
-            BufferStringLinkedListNode *node2 = new BufferStringLinkedListNode(this->_mm, str);
+            BufferStringLinkedListNode *node2 = new BufferStringLinkedListNode(str);
             snapshot->append(node2);
 
             if (remainingLen == 0)
@@ -749,11 +741,10 @@ class BufferNode
             }
 
             node = node->next();
-        //     assert(node->isLeaf());
+            //     assert(node->isLeaf());
         } while (true);
 
-
-        return shared_ptr<BufferSubstring>(new BufferSubstring(this->_mm, snapshot, offset, len));
+        return shared_ptr<BufferSubstring>(new BufferSubstring(snapshot, offset, len));
     }
 
     BufferNode *findPieceAtLineIndex(size_t &lineIndex)
@@ -884,11 +875,10 @@ class BufferNode
 class Buffer
 {
   private:
-    MemManager *_mm;
     BufferNode *root;
 
   public:
-    Buffer(MemManager *mm, BufferNode *root)
+    Buffer(BufferNode *root)
     {
         assert(root != NULL);
         this->root = root;
@@ -942,7 +932,7 @@ std::ostream &operator<<(std::ostream &os, Buffer *const &m)
     return os;
 }
 
-BufferNode *buildBufferFromPieces(MemManager *mm, vector<shared_ptr<BufferString>> &pieces, size_t start, size_t end)
+BufferNode *buildBufferFromPieces(vector<shared_ptr<BufferString>> &pieces, size_t start, size_t end)
 {
     size_t cnt = end - start;
 
@@ -953,15 +943,15 @@ BufferNode *buildBufferFromPieces(MemManager *mm, vector<shared_ptr<BufferString
 
     if (cnt == 1)
     {
-        return new BufferNode(mm, pieces[start]);
+        return new BufferNode(pieces[start]);
     }
 
     size_t mid = (start + cnt / 2);
 
-    BufferNode *left = buildBufferFromPieces(mm, pieces, start, mid);
-    BufferNode *right = buildBufferFromPieces(mm, pieces, mid, end);
+    BufferNode *left = buildBufferFromPieces(pieces, start, mid);
+    BufferNode *right = buildBufferFromPieces(pieces, mid, end);
 
-    BufferNode *result = new BufferNode(mm, left, right);
+    BufferNode *result = new BufferNode(left, right);
     left->setParent(result);
     right->setParent(result);
 
@@ -981,7 +971,7 @@ BufferNode *buildBufferFromPieces(MemManager *mm, vector<shared_ptr<BufferString
 //     }
 // };
 
-Buffer *buildBufferFromFile(MemManager *mm, const char *filename)
+Buffer *buildBufferFromFile(const char *filename)
 {
     ifstream ifs(filename, ifstream::binary);
     if (!ifs)
@@ -998,11 +988,11 @@ Buffer *buildBufferFromFile(MemManager *mm, const char *filename)
 
         if (ifs)
         {
-            rawPieces.push_back(shared_ptr<BufferString>(new BufferString(mm, piece, PIECE_SIZE)));
+            rawPieces.push_back(shared_ptr<BufferString>(new BufferString(piece, PIECE_SIZE)));
         }
         else
         {
-            rawPieces.push_back(shared_ptr<BufferString>(new BufferString(mm, piece, ifs.gcount())));
+            rawPieces.push_back(shared_ptr<BufferString>(new BufferString(piece, ifs.gcount())));
         }
     }
     ifs.close();
@@ -1015,15 +1005,15 @@ Buffer *buildBufferFromFile(MemManager *mm, const char *filename)
     // for (int i = pieceCount - 1; i >= 0; i--)
     // {
     //     shared_ptr<_BufferString> src = rawPieces[i];
-    //     next = shared_ptr<BufferString>(new BufferString(mm, next, src->data, src->len));
+    //     next = shared_ptr<BufferString>(new BufferString(next, src->data, src->len));
     //     vPieces[i] = next;
     // }
 
-    BufferNode *root = buildBufferFromPieces(mm, rawPieces, 0, pieceCount);
+    BufferNode *root = buildBufferFromPieces(rawPieces, 0, pieceCount);
     // delete[] vPieces;
 
     // root->log();
-    return new Buffer(mm, root);
+    return new Buffer(root);
 }
 
 timespec diff(timespec start, timespec end)
