@@ -48,10 +48,6 @@ Buffer *checker()
     return buildBufferFromFile("tests/checker.ts");
 }
 
-int compareFiles(FILE *file_compared, FILE *file_checked)
-{
-}
-
 int compareFiles(const char *filename1, const char *filename2)
 {
     FILE *f1 = fopen(filename1, "rb");

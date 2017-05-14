@@ -1,0 +1,19 @@
+{
+  "name": "edcore",
+  "version": "0.0.0",
+  "description": "Ed Core",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test/test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Microsoft/node-native-keymap.git"
+  },
+  "author": "Microsoft Corporation",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Microsoft/node-native-keymap/issues"
+  },
+  "homepage": "https://github.com/Microsoft/node-native-keymap#readme"
+}
