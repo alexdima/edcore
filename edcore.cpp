@@ -247,13 +247,6 @@ class BufferString : public String
         this->_init(mm, data, len, lineStarts, lineStartsCount);
     }
 
-    // BufferString(MemManager *mm, char *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
-    // {
-    //     assert(data != NULL && len != 0);
-    //     assert(lineStarts != NULL || lineStartsCount == 0);
-    //     this->_init(mm, data, len, lineStarts, lineStartsCount);
-    // }
-
     ~BufferString()
     {
         this->_mm->unregisterBufferString(this);
@@ -314,8 +307,7 @@ class BufferNode
 {
   private:
     MemManager *_mm;
-    BufferString *_str;
-    shared_ptr<BufferNode> _next;
+    shared_ptr<BufferString> _str;
 
     BufferNode *_leftChild;
     BufferNode *_rightChild;
@@ -328,7 +320,7 @@ class BufferNode
 
     void _init(
         MemManager *mm,
-        BufferString *str,
+        shared_ptr<BufferString>str,
         BufferNode *leftChild,
         BufferNode *rightChild,
         size_t len,
@@ -349,7 +341,7 @@ class BufferNode
     }
 
   public:
-    BufferNode(MemManager *mm, BufferString *str)
+    BufferNode(MemManager *mm, shared_ptr<BufferString> str)
     {
         assert(str != NULL);
         this->_init(mm, str, NULL, NULL, str->getLen(), str->getNewLineCount(), str->getStartsWithLF(), str->getEndsWithCR());
@@ -371,11 +363,11 @@ class BufferNode
     ~BufferNode()
     {
         this->_mm->unregisterBufferNode(this);
-        if (this->_str != NULL)
-        {
-            delete this->_str;
-            this->_str = NULL;
-        }
+        // if (this->_str != NULL)
+        // {
+        //     delete this->_str;
+        //     this->_str = NULL;
+        // }
         if (this->_leftChild != NULL)
         {
             delete this->_leftChild;
@@ -759,7 +751,7 @@ std::ostream &operator<<(std::ostream &os, Buffer *const &m)
     return os;
 }
 
-BufferNode *buildBufferFromPieces(MemManager *mm, vector<BufferString *> &pieces, size_t start, size_t end)
+BufferNode *buildBufferFromPieces(MemManager *mm, vector<shared_ptr<BufferString>> &pieces, size_t start, size_t end)
 {
     size_t cnt = end - start;
 
@@ -792,7 +784,7 @@ Buffer *buildBufferFromFile(MemManager *mm, const char *filename)
     {
         return NULL;
     }
-    vector<BufferString *> vPieces;
+    vector<shared_ptr<BufferString>> vPieces;
     ifs.seekg(0, std::ios::beg);
     while (!ifs.eof())
     {
@@ -802,11 +794,11 @@ Buffer *buildBufferFromFile(MemManager *mm, const char *filename)
 
         if (ifs)
         {
-            vPieces.push_back(new BufferString(mm, piece, PIECE_SIZE));
+            vPieces.push_back(shared_ptr<BufferString>(new BufferString(mm, piece, PIECE_SIZE)));
         }
         else
         {
-            vPieces.push_back(new BufferString(mm, piece, ifs.gcount()));
+            vPieces.push_back(shared_ptr<BufferString>(new BufferString(mm, piece, ifs.gcount())));
         }
     }
     ifs.close();
