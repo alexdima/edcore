@@ -1030,3 +1030,19 @@ timespec diff(timespec start, timespec end)
     }
     return temp;
 }
+
+double took(timespec start, timespec end)
+{
+    timespec d = diff(start, end);
+    return d.tv_sec * 1000 + d.tv_nsec / (double)1000000;
+}
+
+timespec _tmp_timespec;
+
+#define TIME_START(name) \
+    timespec name;       \
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &name)
+
+#define TIME_END(os, name, explanation)                      \
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &_tmp_timespec); \
+    os << explanation << " took " << took(name, _tmp_timespec) << " ms." << endl

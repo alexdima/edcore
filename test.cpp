@@ -114,6 +114,13 @@ void t1()
         f << str;
     }
 
+    TIME_START(t1);
+    for (size_t lineNumber = 1; lineNumber <= lineCount; lineNumber++)
+    {
+        shared_ptr<String> str = buffer->getLineContent(lineNumber);
+    }
+    TIME_END(cout, t1, "t1 - getLineContent multiple times");
+
     MM_DUMP(f);
 
     delete buffer;
