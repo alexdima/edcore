@@ -1,4 +1,6 @@
 
+#define TRACK_MEMORY
+
 #include "edcore.cpp"
 
 // typedef void (*TestCase)();

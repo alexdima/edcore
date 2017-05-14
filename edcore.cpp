@@ -21,8 +21,6 @@ class BufferStringLinkedList;
 class BufferNode;
 class Buffer;
 
-#define TRACK_MEMORY
-
 #ifdef TRACK_MEMORY
 
 #define MM_REGISTER(what) MemManager::getInstance()._register(this)
