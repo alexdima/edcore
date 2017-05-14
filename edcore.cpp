@@ -219,16 +219,16 @@ class BufferString : public String
     }
 };
 
-class BufferPiece
+class BufferNode
 {
   private:
     BufferString *_str;
-    shared_ptr<BufferPiece> _next;
+    shared_ptr<BufferNode> _next;
 
-    BufferPiece *_leftChild;
-    BufferPiece *_rightChild;
+    BufferNode *_leftChild;
+    BufferNode *_rightChild;
 
-    BufferPiece *_parent;
+    BufferNode *_parent;
     size_t _len;
     size_t _newLineCount;
     bool _endsWithCR;
@@ -236,8 +236,8 @@ class BufferPiece
 
     void _init(
         BufferString *str,
-        BufferPiece *leftChild,
-        BufferPiece *rightChild,
+        BufferNode *leftChild,
+        BufferNode *rightChild,
         size_t len,
         size_t newLineCount,
         bool startsWithLF,
@@ -255,13 +255,13 @@ class BufferPiece
     }
 
   public:
-    BufferPiece(BufferString *str)
+    BufferNode(BufferString *str)
     {
         assert(str != NULL);
         this->_init(str, NULL, NULL, str->getLen(), str->getNewLineCount(), str->getStartsWithLF(), str->getEndsWithCR());
     }
 
-    BufferPiece(BufferPiece *leftChild, BufferPiece *rightChild)
+    BufferNode(BufferNode *leftChild, BufferNode *rightChild)
     {
         assert(leftChild != NULL || rightChild != NULL);
 
@@ -274,7 +274,7 @@ class BufferPiece
         this->_init(NULL, leftChild, rightChild, len, newLineCount - (discountNewLine ? 1 : 0), startsWithLF, endsWithCR);
     }
 
-    ~BufferPiece()
+    ~BufferNode()
     {
         if (this->_str != NULL)
         {
@@ -345,7 +345,7 @@ class BufferPiece
         return (this->_str != NULL);
     }
 
-    void setParent(BufferPiece *parent)
+    void setParent(BufferNode *parent)
     {
         this->_parent = parent;
     }
@@ -360,18 +360,18 @@ class BufferPiece
         return this->_newLineCount;
     }
 
-    BufferPiece *findPieceAtOffset(size_t &offset)
+    BufferNode *findPieceAtOffset(size_t &offset)
     {
         if (offset < 0 || offset >= this->_len)
         {
             return NULL;
         }
 
-        BufferPiece *it = this;
+        BufferNode *it = this;
         while (!it->isLeaf())
         {
-            BufferPiece *left = it->_leftChild;
-            BufferPiece *right = it->_rightChild;
+            BufferNode *left = it->_leftChild;
+            BufferNode *right = it->_rightChild;
 
             if (left == NULL)
             {
@@ -401,10 +401,10 @@ class BufferPiece
         return it;
     }
 
-    BufferPiece *firstLeaf()
+    BufferNode *firstLeaf()
     {
         // TODO: this will not work for an unbalanced tree
-        BufferPiece *res = this;
+        BufferNode *res = this;
         while (res->_leftChild != NULL)
         {
             res = res->_leftChild;
@@ -412,16 +412,16 @@ class BufferPiece
         return res;
     }
 
-    BufferPiece *next()
+    BufferNode *next()
     {
         assert(this->isLeaf());
         if (this->_parent->_leftChild == this)
         {
-            BufferPiece *sibling = this->_parent->_rightChild;
+            BufferNode *sibling = this->_parent->_rightChild;
             return sibling->firstLeaf();
         }
 
-        BufferPiece *it = this;
+        BufferNode *it = this;
         while (it->_parent != NULL && it->_parent->_rightChild == it)
         {
             it = it->_parent;
@@ -441,7 +441,7 @@ class BufferPiece
             return NULL;
         }
 
-        BufferPiece *node = this->findPieceAtOffset(offset);
+        BufferNode *node = this->findPieceAtOffset(offset);
         if (node == NULL)
         {
             return NULL;
@@ -450,7 +450,7 @@ class BufferPiece
         return this->_getStrAt(node, offset, len);
     }
 
-    shared_ptr<String> _getStrAt(BufferPiece *node, size_t offset, size_t len)
+    shared_ptr<String> _getStrAt(BufferNode *node, size_t offset, size_t len)
     {
         char *result = new char[len];
 
@@ -477,13 +477,13 @@ class BufferPiece
         return shared_ptr<SimpleString>(new SimpleString(result, len));
     }
 
-    BufferPiece *findPieceAtLineIndex(size_t &lineIndex)
+    BufferNode *findPieceAtLineIndex(size_t &lineIndex)
     {
-        BufferPiece *it = this;
+        BufferNode *it = this;
         while (!it->isLeaf())
         {
-            BufferPiece *left = it->_leftChild;
-            BufferPiece *right = it->_rightChild;
+            BufferNode *left = it->_leftChild;
+            BufferNode *right = it->_rightChild;
 
             if (left == NULL)
             {
@@ -527,7 +527,7 @@ class BufferPiece
         }
 
         size_t lineIndex = lineNumber - 1;
-        BufferPiece *node = findPieceAtLineIndex(lineIndex);
+        BufferNode *node = findPieceAtLineIndex(lineIndex);
         if (node == NULL)
         {
             return 0;
@@ -539,7 +539,7 @@ class BufferPiece
         return this->_getLineIndexLength(lineIndex, node, lineStartOffset);
     }
 
-    size_t _getLineIndexLength(const size_t lineIndex, BufferPiece *node, const size_t lineStartOffset)
+    size_t _getLineIndexLength(const size_t lineIndex, BufferNode *node, const size_t lineStartOffset)
     {
         const size_t nodeLineCount = node->_newLineCount;
         assert(node->isLeaf());
@@ -589,7 +589,7 @@ class BufferPiece
         }
 
         size_t lineIndex = lineNumber - 1;
-        BufferPiece *node = findPieceAtLineIndex(lineIndex);
+        BufferNode *node = findPieceAtLineIndex(lineIndex);
         if (node == NULL)
         {
             return NULL;
@@ -605,10 +605,10 @@ class BufferPiece
 class Buffer
 {
   private:
-    BufferPiece *root;
+    BufferNode *root;
 
   public:
-    Buffer(BufferPiece *root)
+    Buffer(BufferNode *root)
     {
         assert(root != NULL);
         this->root = root;
@@ -660,7 +660,7 @@ std::ostream &operator<<(std::ostream &os, Buffer *const &m)
     return os;
 }
 
-BufferPiece *buildBufferFromPieces(vector<BufferString *> &pieces, size_t start, size_t end)
+BufferNode *buildBufferFromPieces(vector<BufferString *> &pieces, size_t start, size_t end)
 {
     size_t cnt = end - start;
 
@@ -671,15 +671,15 @@ BufferPiece *buildBufferFromPieces(vector<BufferString *> &pieces, size_t start,
 
     if (cnt == 1)
     {
-        return new BufferPiece(pieces[start]);
+        return new BufferNode(pieces[start]);
     }
 
     size_t mid = (start + cnt / 2);
 
-    BufferPiece *left = buildBufferFromPieces(pieces, start, mid);
-    BufferPiece *right = buildBufferFromPieces(pieces, mid, end);
+    BufferNode *left = buildBufferFromPieces(pieces, start, mid);
+    BufferNode *right = buildBufferFromPieces(pieces, mid, end);
 
-    BufferPiece *result = new BufferPiece(left, right);
+    BufferNode *result = new BufferNode(left, right);
     left->setParent(result);
     right->setParent(result);
 
@@ -712,7 +712,7 @@ Buffer *buildBufferFromFile(const char *filename)
     }
     ifs.close();
 
-    BufferPiece *root = buildBufferFromPieces(vPieces, 0, vPieces.size());
+    BufferNode *root = buildBufferFromPieces(vPieces, 0, vPieces.size());
     // root->log();
     return new Buffer(root);
 }
