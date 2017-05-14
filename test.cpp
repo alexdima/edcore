@@ -165,9 +165,39 @@ void t3()
     check("t3", "tests/t3.actual", "tests/t3.expected");
 }
 
+void t4()
+{
+    Buffer *buffer = checker();
+    ofstream f("tests/t4.actual", ofstream::binary);
+
+    MM_DUMP(f);
+
+    vector<shared_ptr<String>> lines;
+    size_t lineCount = buffer->getLineCount();
+    for (size_t lineNumber = 1; lineNumber <= lineCount; lineNumber++)
+    {
+        lines.push_back(buffer->getLineContent(lineNumber));
+    }
+
+    delete buffer;
+    MM_DUMP(f);
+
+    for (size_t i = 0; i < lines.size(); i++)
+    {
+        f << lines[i];
+    }
+
+    lines.clear();
+    MM_DUMP(f);
+
+    f.close();
+    check("t4", "tests/t4.actual", "tests/t4.expected");
+}
+
 int main(void)
 {
     t1();
     t2();
     t3();
+    t4();
 }
