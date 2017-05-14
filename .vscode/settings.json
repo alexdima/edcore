@@ -3,6 +3,8 @@
         "initializer_list": "cpp",
         "iosfwd": "cpp",
         "array": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "istream": "cpp",
+        "limits": "cpp"
     }
 }
