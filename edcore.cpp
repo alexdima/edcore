@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 #include <iostream>
 #include <memory>
 
@@ -156,7 +161,9 @@ class MemManager
 class String
 {
   public:
-    virtual void print(std::ostream &os) = 0;
+    virtual void print(std::ostream &os) const = 0;
+    virtual size_t getLen() const = 0;
+    virtual void writeTo(char *dest) const = 0;
 };
 
 std::ostream &operator<<(std::ostream &os, String *const &m)
@@ -204,7 +211,7 @@ class SimpleString : public String
         }
     }
 
-    void print(std::ostream &os)
+    void print(std::ostream &os) const
     {
         const char *data = this->_data;
         const size_t len = this->_len;
@@ -212,6 +219,16 @@ class SimpleString : public String
         {
             os << data[i];
         }
+    }
+
+    size_t getLen() const
+    {
+        return this->_len;
+    }
+
+    void writeTo(char *dest) const
+    {
+        memcpy(dest, this->_data, this->_len);
     }
 };
 
@@ -346,7 +363,7 @@ class BufferString : public String
         return this->_lineStarts;
     }
 
-    void print(std::ostream &os)
+    void print(std::ostream &os) const
     {
         const char *data = this->_data;
         const size_t len = this->_len;
@@ -354,6 +371,11 @@ class BufferString : public String
         {
             os << data[i];
         }
+    }
+
+    void writeTo(char *dest) const
+    {
+        memcpy(dest, this->_data, this->_len);
     }
 };
 
@@ -378,7 +400,7 @@ class BufferStringSubstring : public String
         MM_UNREGISTER(this);
     }
 
-    void print(std::ostream &os)
+    void print(std::ostream &os) const
     {
         const char *data = this->_str->getData();
         const size_t startOffset = this->_offset;
@@ -387,6 +409,18 @@ class BufferStringSubstring : public String
         {
             os << data[i];
         }
+    }
+
+    size_t getLen() const
+    {
+        return this->_len;
+    }
+
+    void writeTo(char *dest) const
+    {
+        const char *data = this->_str->getData();
+        const size_t startOffset = this->_offset;
+        memcpy(dest, data + startOffset, this->_len);
     }
 };
 

@@ -4,7 +4,7 @@
   "description": "Ed Core",
   "main": "index.js",
   "scripts": {
-    "test": "node test/test.js"
+    "test": "node test.js"
   },
   "repository": {
     "type": "git",
