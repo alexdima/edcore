@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-var binding = require('./build/Release/edcore');
+var binding = require('./build/Debug/edcore');
 
 console.log('OK');
 
