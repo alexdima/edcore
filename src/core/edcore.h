@@ -57,22 +57,34 @@ class BufferString : public String
 
 class BufferNode;
 
+// class BufferCoordinate {
+//     size_t offset;
+//     BufferNode
+// }
+
 class BufferCursor
 {
   public:
     size_t offset;
-    size_t linesBefore;
-    BufferNode *node;
-    size_t nodeOffset;
 
-    BufferCursor() : BufferCursor(0, 0, NULL, 0) {}
-    
-    BufferCursor(size_t offset, size_t linesBefore, BufferNode *node, size_t nodeOffset)
+    BufferNode *node;
+    size_t nodeStartOffset;
+
+    BufferCursor()
+        : BufferCursor(0, NULL, 0)
+    {
+    }
+
+    BufferCursor(BufferCursor &src)
+        : BufferCursor(src.offset, src.node, src.nodeStartOffset)
+    {
+    }
+
+    BufferCursor(size_t offset, BufferNode *node, size_t nodeStartOffset)
     {
         this->offset = offset;
-        this->linesBefore = linesBefore;
         this->node = node;
-        this->nodeOffset = nodeOffset;
+        this->nodeStartOffset = nodeStartOffset;
     }
 };
 
@@ -130,7 +142,14 @@ class BufferNode
     shared_ptr<String> getLineContent(size_t lineNumber);
 
     bool findOffset(size_t offset, BufferCursor &result);
-    bool findLineStart(size_t lineNumber, BufferCursor &result);
+    bool findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end);
+
+
+    bool _findLineStart(size_t &lineIndex, BufferCursor &result);
+    void _findLineEnd(BufferNode *node, size_t nodeStartOffset, size_t innerLineIndex, BufferCursor &result);
+    void extractString(BufferCursor start, size_t len, uint16_t *dest);
+    // bool findLineStart(size_t lineNumber, BufferCursor &result);
+    // void moveToLineEnd(BufferCursor &cursor);
     // bool findOffset(size_t offset, BufferCursor &result);
 };
 
@@ -151,7 +170,10 @@ class Buffer
 
     // BufferCursor& findOffset(size_t offset);
     bool findOffset(size_t offset, BufferCursor &result);
-    bool findLineStart(size_t lineNumber, BufferCursor &result);
+    bool findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end);
+    void extractString(BufferCursor start, size_t len, uint16_t *dest);
+    // bool findLineStart(size_t lineNumber, BufferCursor &result);
+    // void moveToLineEnd(BufferCursor &cursor);
 };
 
 class BufferBuilder

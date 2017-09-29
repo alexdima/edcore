@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+#include <iostream>
 #include "ed-buffer.h"
+
+using namespace std;
 
 EdBuffer::EdBuffer(EdBufferBuilder *builder)
 {
@@ -31,10 +34,20 @@ void EdBuffer::GetLineContent(const v8::FunctionCallbackInfo<v8::Value> &args)
     size_t lineNumber = args[0]->IsUndefined() ? 0 : args[0]->NumberValue();
 
 
-
     shared_ptr<edcore::String> str = obj->_actual->getLineContent(lineNumber);
     uint16_t *tmp = new uint16_t[str->getLen()];
     str->writeTo(tmp);
+
+
+
+    edcore::BufferCursor start, end;
+    if (obj->_actual->findLine(lineNumber, start, end))
+    {
+        cout << "FOUND LINE START FOR " << lineNumber << " AT (" << start.offset << "," << start.nodeStartOffset << ") up to (" << end.offset << "," << end.nodeStartOffset << ")" << endl;
+        uint16_t *alt = new uint16_t[end.offset - start.offset];
+        obj->_actual->extractString(start, end.offset - start.offset, alt);
+    }
+
     v8::MaybeLocal<v8::String> res = v8::String::NewFromTwoByte(isolate, tmp, v8::NewStringType::kNormal, str->getLen());
     delete[] tmp;
     args.GetReturnValue().Set(res.ToLocalChecked() /*TODO*/);
