@@ -15,6 +15,8 @@
 #include <assert.h>
 // #include <stdlib.h>
 
+#include "mem-manager.h"
+
 using namespace std;
 
 #define PIECE_SIZE 4 * 1024 // 4KB
@@ -28,109 +30,8 @@ class BufferStringSubstring;
 class BufferNode;
 class Buffer;
 
-#ifdef TRACK_MEMORY
 
-#define MM_REGISTER(what) MemManager::getInstance()._register(this)
-#define MM_UNREGISTER(what) MemManager::getInstance()._unregister(this)
-#define MM_DUMP(os) MemManager::getInstance().print(os)
 
-#else
-
-#define MM_REGISTER(what)
-#define MM_UNREGISTER(what)
-#define MM_DUMP(os) os << "Memory not tracked" << endl
-
-#endif
-
-class MemManager
-{
-  private:
-    size_t _simpleStringCnt;
-    size_t _bufferStringCnt;
-    size_t _bufferStringSubstringCnt;
-    size_t _bufferNodeCnt;
-    size_t _bufferCnt;
-
-    MemManager()
-    {
-        this->_simpleStringCnt = 0;
-        this->_bufferStringCnt = 0;
-        this->_bufferStringSubstringCnt = 0;
-        this->_bufferNodeCnt = 0;
-        this->_bufferCnt = 0;
-    }
-
-  public:
-    static MemManager &getInstance()
-    {
-        static MemManager mm;
-        return mm;
-    }
-
-    void _register(SimpleString *simpleString)
-    {
-        this->_simpleStringCnt++;
-    }
-    void _unregister(SimpleString *simpleString)
-    {
-        this->_simpleStringCnt--;
-    }
-
-    void _register(BufferString *bufferString)
-    {
-        this->_bufferStringCnt++;
-    }
-    void _unregister(BufferString *bufferString)
-    {
-        this->_bufferStringCnt--;
-    }
-
-    void _register(BufferStringSubstring *bufferStringSubstring)
-    {
-        this->_bufferStringSubstringCnt++;
-    }
-    void _unregister(BufferStringSubstring *bufferStringSubstring)
-    {
-        this->_bufferStringSubstringCnt--;
-    }
-
-    void _register(BufferNode *bufferNode)
-    {
-        this->_bufferNodeCnt++;
-    }
-    void _unregister(BufferNode *bufferNode)
-    {
-        this->_bufferNodeCnt--;
-    }
-
-    void _register(Buffer *buffer)
-    {
-        this->_bufferCnt++;
-    }
-    void _unregister(Buffer *buffer)
-    {
-        this->_bufferCnt--;
-    }
-
-    void print(ostream &os) const
-    {
-        os << "MM [" << endl;
-        os << "  -> simpleStringCnt: " << this->_simpleStringCnt << endl;
-        os << "  -> bufferStringCnt: " << this->_bufferStringCnt << endl;
-        os << "  -> bufferStringSubstringCnt: " << this->_bufferStringSubstringCnt << endl;
-        os << "  -> bufferNodeCnt: " << this->_bufferNodeCnt << endl;
-        os << "  -> bufferCnt: " << this->_bufferCnt << endl;
-        os << "]" << endl;
-    }
-};
-
-// class String
-// {
-//   public:
-//     virtual void print(std::ostream &os) const = 0;
-//     virtual size_t getLen() const = 0;
-//     virtual void writeTo(uint16_t *dest) const = 0;
-// };
 
 std::ostream &operator<<(std::ostream &os, String *const &m)
 {
