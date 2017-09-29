@@ -10,9 +10,9 @@ v8::Persistent<v8::Function> EdBufferBuilder::constructor;
 
 void init(v8::Local<v8::Object> exports)
 {
-  // NODE_SET_METHOD(exports, "createBuffer", _createBuffer);
-  EdBuffer::Init(exports);
-  EdBufferBuilder::Init(exports);
+    // NODE_SET_METHOD(exports, "createBuffer", _createBuffer);
+    EdBuffer::Init(exports);
+    EdBufferBuilder::Init(exports);
 }
 
 NODE_MODULE(addon, init);

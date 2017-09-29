@@ -8,22 +8,22 @@
 
 class EdBufferBuilder : public node::ObjectWrap
 {
-private:
-  edcore::BufferBuilder *_actual;
+  private:
+    edcore::BufferBuilder *_actual;
 
-  explicit EdBufferBuilder();
-  ~EdBufferBuilder();
+    explicit EdBufferBuilder();
+    ~EdBufferBuilder();
 
-  static v8::Persistent<v8::Function> constructor;
-  static void New(const v8::FunctionCallbackInfo<v8::Value> &args);
-  static void AcceptChunk(const v8::FunctionCallbackInfo<v8::Value> &args);
-  static void Finish(const v8::FunctionCallbackInfo<v8::Value> &args);
-  static void Build(const v8::FunctionCallbackInfo<v8::Value> &args);
+    static v8::Persistent<v8::Function> constructor;
+    static void New(const v8::FunctionCallbackInfo<v8::Value> &args);
+    static void AcceptChunk(const v8::FunctionCallbackInfo<v8::Value> &args);
+    static void Finish(const v8::FunctionCallbackInfo<v8::Value> &args);
+    static void Build(const v8::FunctionCallbackInfo<v8::Value> &args);
 
-public:
-  static void Init(v8::Local<v8::Object> exports);
+  public:
+    static void Init(v8::Local<v8::Object> exports);
 
-  edcore::Buffer *Build();
+    edcore::Buffer *Build();
 };
 
 #endif
