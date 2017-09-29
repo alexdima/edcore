@@ -481,11 +481,11 @@ void BufferNode::extractString(BufferCursor start, size_t len, uint16_t *dest)
     size_t innerNodeOffset = start.offset - start.nodeStartOffset;
     BufferNode* node = start.node;
     
-    if (innerNodeOffset + len <= node->getLen())
+    if (innerNodeOffset + len <= node->_len)
     {
         // This is a simple substring
         const uint16_t *data = node->_str->getData();
-        memcpy(dest, data + innerNodeOffset, sizeof(uint16_t) * this->_len);
+        memcpy(dest, data + innerNodeOffset, sizeof(uint16_t) * len);
         return;
     }
 
@@ -664,8 +664,8 @@ void BufferNode::_findLineEnd(BufferNode *node, size_t nodeStartOffset, size_t i
             break;
         }
 
-        node = next;
         nodeStartOffset += node->_len;
+        node = next;
 
         if (node->_newLineCount > 0)
         {

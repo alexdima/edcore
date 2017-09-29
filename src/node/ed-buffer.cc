@@ -43,9 +43,21 @@ void EdBuffer::GetLineContent(const v8::FunctionCallbackInfo<v8::Value> &args)
     edcore::BufferCursor start, end;
     if (obj->_actual->findLine(lineNumber, start, end))
     {
-        cout << "FOUND LINE START FOR " << lineNumber << " AT (" << start.offset << "," << start.nodeStartOffset << ") up to (" << end.offset << "," << end.nodeStartOffset << ")" << endl;
+        cout << "FOUND LINE START FOR " << lineNumber << " AT (" << start.offset << "," << start.nodeStartOffset << ") up to (" << end.offset << "," << end.nodeStartOffset << ") i.e. " << (end.offset - start.offset) << endl;
+        assert(start.offset >= start.nodeStartOffset);
+        assert(start.offset <= start.nodeStartOffset + start.node->getLen());
+        assert(end.offset >= end.nodeStartOffset);
+        assert(end.offset <= end.nodeStartOffset + end.node->getLen());
+        assert(end.offset >= start.offset);
         uint16_t *alt = new uint16_t[end.offset - start.offset];
         obj->_actual->extractString(start, end.offset - start.offset, alt);
+
+        assert(str->getLen() == (end.offset - start.offset));
+        for (int i = 0; i < str->getLen(); i++) {
+            assert(tmp[i] == alt[i]);
+        }
+
+        delete []alt;
     }
 
     v8::MaybeLocal<v8::String> res = v8::String::NewFromTwoByte(isolate, tmp, v8::NewStringType::kNormal, str->getLen());
