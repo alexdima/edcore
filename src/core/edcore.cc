@@ -24,9 +24,7 @@ using namespace std;
 namespace edcore
 {
 
-class SimpleString;
 class BufferString;
-class BufferStringSubstring;
 class BufferNode;
 class Buffer;
 
@@ -50,51 +48,6 @@ std::ostream &operator<<(std::ostream &os, shared_ptr<String> const &m)
     m->print(os);
     return os;
 }
-
-class SimpleString : public String
-{
-  private:
-    uint16_t *_data;
-    size_t _len;
-
-  public:
-    SimpleString(uint16_t *data, size_t len)
-    {
-        this->_data = data;
-        this->_len = len;
-        MM_REGISTER(this);
-    }
-
-    ~SimpleString()
-    {
-        MM_UNREGISTER(this);
-        if (this->_data != NULL)
-        {
-            delete[] this->_data;
-            this->_data = NULL;
-        }
-    }
-
-    void print(std::ostream &os) const
-    {
-        const uint16_t *data = this->_data;
-        const size_t len = this->_len;
-        for (size_t i = 0; i < len; i++)
-        {
-            os << data[i];
-        }
-    }
-
-    size_t getLen() const
-    {
-        return this->_len;
-    }
-
-    void writeTo(uint16_t *dest) const
-    {
-        memcpy(dest, this->_data, sizeof(uint16_t) * this->_len);
-    }
-};
 
 void printIndent(ostream &os, int indent)
 {
@@ -232,50 +185,6 @@ void BufferString::writeTo(uint16_t *dest) const
     memcpy(dest, this->_data, sizeof(uint16_t) * this->_len);
 }
 
-class BufferStringSubstring : public String
-{
-  private:
-    shared_ptr<BufferString> _str;
-    size_t _offset;
-    size_t _len;
-
-  public:
-    BufferStringSubstring(shared_ptr<BufferString> str, size_t offset, size_t len)
-    {
-        this->_str = str;
-        this->_offset = offset;
-        this->_len = len;
-        MM_REGISTER(this);
-    }
-
-    ~BufferStringSubstring()
-    {
-        MM_UNREGISTER(this);
-    }
-
-    void print(std::ostream &os) const
-    {
-        const uint16_t *data = this->_str->getData();
-        const size_t startOffset = this->_offset;
-        const size_t endOffset = this->_offset + this->_len;
-        for (size_t i = startOffset; i < endOffset; i++)
-        {
-            os << data[i];
-        }
-    }
-
-    size_t getLen() const
-    {
-        return this->_len;
-    }
-
-    void writeTo(uint16_t *dest) const
-    {
-        const uint16_t *data = this->_str->getData();
-        const size_t startOffset = this->_offset;
-        memcpy(dest, data + startOffset, sizeof(uint16_t) * this->_len);
-    }
-};
 void BufferNode::_init(
     shared_ptr<BufferString> str,
     BufferNode *leftChild,
@@ -509,25 +418,6 @@ void BufferNode::extractString(BufferCursor start, size_t len, uint16_t *dest)
         node = node->next();
         assert(node->isLeaf());
     } while (true);
-
-    // return shared_ptr<SimpleString>(new SimpleString(result, len));
-    // return this->root->extractString(offset, len ,dest);
-}
-
-shared_ptr<String> BufferNode::getStrAt(size_t offset, size_t len)
-{
-    if (offset + len > this->_len)
-    {
-        return NULL;
-    }
-
-    BufferNode *node = this->findPieceAtOffset(offset);
-    if (node == NULL)
-    {
-        return NULL;
-    }
-
-    return this->_getStrAt(node, offset, len);
 }
 
 bool BufferNode::findOffset(size_t offset, BufferCursor &result)
@@ -693,307 +583,7 @@ bool BufferNode::findLine(size_t lineNumber, BufferCursor &start, BufferCursor &
     }
 
     _findLineEnd(start.node, start.nodeStartOffset, innerLineIndex, end);
-
-    // return this->_getLineIndexLength(lineIndex, node, lineStartOffset);
-
-    // if (lineNumber < 1 || lineNumber > this->_newLineCount + 1)
-    // {
-    //     return false;
-    // }
-
-    // size_t searchLineIndex = lineNumber - 1;
-    // size_t offset = 0;
-    // size_t linesBefore = 0;
-    // BufferNode *it = this;
-    // while (!it->isLeaf())
-    // {
-    //     BufferNode *left = it->_leftChild;
-    //     BufferNode *right = it->_rightChild;
-
-    //     if (left == NULL)
-    //     {
-    //         // go right
-    //         it = right;
-    //     }
-
-    //     if (right == NULL)
-    //     {
-    //         // go left
-    //         it = left;
-    //     }
-
-    //     if (left->_endsWithCR && right->_startsWithLF)
-    //     {
-    //         // one newline is split between left and right
-    //         // TODO
-    //         assert(false);
-    //     }
-
-    //     if (searchLineIndex <= left->_newLineCount)
-    //     {
-    //         // go left
-    //         it = left;
-    //         continue;
-    //     }
-
-    //     // go right
-    //     searchLineIndex -= left->_newLineCount;
-    //     offset += left->_len;
-    //     linesBefore += left->_newLineCount;
-    //     it = right;
-    // }
-
-    // const size_t *lineStarts = it->_str->getLineStarts();
-    // const size_t nodeOffset = (searchLineIndex == 0 ? 0 : lineStarts[searchLineIndex - 1]);
-
-    // result.offset = offset + nodeOffset;
-    // result.linesBefore = linesBefore;
-    // result.node = it;
-    // result.nodeOffset = nodeOffset;
-
     return true;
-}
-
-// bool BufferNode::findLineStart(size_t lineNumber, BufferCursor &result)
-// {
-//     if (lineNumber < 1 || lineNumber > this->_newLineCount + 1)
-//     {
-//         return false;
-//     }
-
-//     size_t searchLineIndex = lineNumber - 1;
-//     size_t offset = 0;
-//     size_t linesBefore = 0;
-//     BufferNode *it = this;
-//     while (!it->isLeaf())
-//     {
-//         BufferNode *left = it->_leftChild;
-//         BufferNode *right = it->_rightChild;
-
-//         if (left == NULL)
-//         {
-//             // go right
-//             it = right;
-//         }
-
-//         if (right == NULL)
-//         {
-//             // go left
-//             it = left;
-//         }
-
-//         if (left->_endsWithCR && right->_startsWithLF)
-//         {
-//             // one newline is split between left and right
-//             // TODO
-//             assert(false);
-//         }
-
-//         if (searchLineIndex <= left->_newLineCount)
-//         {
-//             // go left
-//             it = left;
-//             continue;
-//         }
-
-//         // go right
-//         searchLineIndex -= left->_newLineCount;
-//         offset += left->_len;
-//         linesBefore += left->_newLineCount;
-//         it = right;
-//     }
-
-//     const size_t *lineStarts = it->_str->getLineStarts();
-//     const size_t nodeOffset = (searchLineIndex == 0 ? 0 : lineStarts[searchLineIndex - 1]);
-
-//     result.offset = offset + nodeOffset;
-//     result.linesBefore = linesBefore;
-//     result.node = it;
-//     result.nodeOffset = nodeOffset;
-
-//     return true;
-// }
-
-// void BufferNode::moveToLineEnd(BufferCursor &cursor)
-// {
-//     const size_t nodeLineCount = cursor.node->_newLineCount;
-//     assert(cursor.node->isLeaf());
-//     // assert(nodeLineCount >= lineIndex);
-
-//     if (lineIndex < nodeLineCount)
-//     {
-//         // lucky, the line ends in this same block
-//         const size_t *lineStarts = node->_str->getLineStarts();
-//         const size_t lineEndOffset = lineStarts[lineIndex];
-//         return lineEndOffset - lineStartOffset;
-//     }
-
-//     // find the first newline or EOF
-//     size_t result = node->_len - lineStartOffset;
-//     do
-//     {
-//         // TODO: could probably optimize to not visit every leaf!!!
-//         node = node->next();
-
-//         if (node == NULL)
-//         {
-//             // EOF
-//             break;
-//         }
-
-//         if (node->_newLineCount > 0)
-//         {
-//             const size_t *lineStarts = node->_str->getLineStarts();
-//             result += lineStarts[0];
-//             break;
-//         }
-
-//         // node does not contain newline
-//         result += node->_len;
-
-//     } while (true);
-
-//     return result;
-// }
-
-shared_ptr<String> BufferNode::_getStrAt(BufferNode *node, size_t offset, size_t len)
-{
-    if (offset + len <= node->getLen())
-    {
-        // This is a simple substring
-        return shared_ptr<String>(new BufferStringSubstring(node->_str, offset, len));
-    }
-
-    uint16_t *result = new uint16_t[len];
-    size_t resultOffset = 0;
-    size_t remainingLen = len;
-    do
-    {
-        const uint16_t *src = node->_str->getData();
-        const size_t cnt = min(remainingLen, node->_str->getLen() - offset);
-        memcpy(result + resultOffset, src + offset, sizeof(uint16_t) * cnt);
-        remainingLen -= cnt;
-        resultOffset += cnt;
-        offset = 0;
-
-        if (remainingLen == 0)
-        {
-            break;
-        }
-
-        node = node->next();
-        assert(node->isLeaf());
-    } while (true);
-    return shared_ptr<SimpleString>(new SimpleString(result, len));
-}
-
-BufferNode *BufferNode::findPieceAtLineIndex(size_t &lineIndex)
-{
-    if (lineIndex > this->_newLineCount)
-    {
-        return NULL;
-    }
-
-    BufferNode *it = this;
-    while (!it->isLeaf())
-    {
-        BufferNode *left = it->_leftChild;
-        BufferNode *right = it->_rightChild;
-
-        if (left == NULL)
-        {
-            // go right
-            it = right;
-        }
-
-        if (right == NULL)
-        {
-            // go left
-            it = left;
-        }
-
-        if (left->_endsWithCR && right->_startsWithLF)
-        {
-            // one newline is split between left and right
-            // TODO
-            assert(false);
-        }
-
-        if (lineIndex <= left->_newLineCount)
-        {
-            // go left
-            it = left;
-            continue;
-        }
-
-        // go right
-        lineIndex -= left->_newLineCount;
-        it = right;
-    }
-
-    return it;
-}
-
-size_t BufferNode::getLineLength(size_t lineNumber)
-{
-    if (lineNumber < 1 || lineNumber > this->_newLineCount + 1)
-    {
-        return 0;
-    }
-
-    size_t lineIndex = lineNumber - 1;
-    BufferNode *node = findPieceAtLineIndex(lineIndex);
-    if (node == NULL)
-    {
-        return 0;
-    }
-
-    const size_t *lineStarts = node->_str->getLineStarts();
-    const size_t lineStartOffset = (lineIndex == 0 ? 0 : lineStarts[lineIndex - 1]);
-
-    return this->_getLineIndexLength(lineIndex, node, lineStartOffset);
-}
-
-size_t BufferNode::_getLineIndexLength(const size_t lineIndex, BufferNode *node, const size_t lineStartOffset)
-{
-    const size_t nodeLineCount = node->_newLineCount;
-    assert(node->isLeaf());
-    assert(nodeLineCount >= lineIndex);
-
-    if (lineIndex < nodeLineCount)
-    {
-        // lucky, the line ends in this same block
-        const size_t *lineStarts = node->_str->getLineStarts();
-        const size_t lineEndOffset = lineStarts[lineIndex];
-        return lineEndOffset - lineStartOffset;
-    }
-
-    // find the first newline or EOF
-    size_t result = node->_len - lineStartOffset;
-    do
-    {
-        // TODO: could probably optimize to not visit every leaf!!!
-        node = node->next();
-
-        if (node == NULL)
-        {
-            // EOF
-            break;
-        }
-
-        if (node->_newLineCount > 0)
-        {
-            const size_t *lineStarts = node->_str->getLineStarts();
-            result += lineStarts[0];
-            break;
-        }
-
-        // node does not contain newline
-        result += node->_len;
-
-    } while (true);
-
-    return result;
 }
 
 Buffer::Buffer(BufferNode *root)
@@ -1019,11 +609,6 @@ size_t Buffer::getLineCount() const
     return this->root->getNewLineCount() + 1;
 }
 
-shared_ptr<String> Buffer::getStrAt(size_t offset, size_t len)
-{
-    return this->root->getStrAt(offset, len);
-}
-
 void Buffer::extractString(BufferCursor start, size_t len, uint16_t *dest)
 {
     this->root->extractString(start, len ,dest);
@@ -1037,23 +622,6 @@ bool Buffer::findOffset(size_t offset, BufferCursor &result)
 bool Buffer::findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end)
 {
     return this->root->findLine(lineNumber, start, end);
-}
-
-// (" << start.offset << "," << start.nodeStartOffset <<")
-
-// bool Buffer::findLineStart(size_t lineNumber, BufferCursor &result)
-// {
-//     return this->root->findLineStart(lineNumber, result);
-// }
-
-// void Buffer::moveToLineEnd(BufferCursor &cursor)
-// {
-//     this->root->moveToLineEnd(cursor);
-// }
-
-size_t Buffer::getLineLength(size_t lineNumber)
-{
-    return this->root->getLineLength(lineNumber);
 }
 
 void Buffer::print(ostream &os)

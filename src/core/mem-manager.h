@@ -14,18 +14,14 @@ using namespace std;
 namespace edcore
 {
 
-class SimpleString;
 class BufferString;
-class BufferStringSubstring;
 class BufferNode;
 class Buffer;
 
 class MemManager
 {
   private:
-    size_t _simpleStringCnt;
     size_t _bufferStringCnt;
-    size_t _bufferStringSubstringCnt;
     size_t _bufferNodeCnt;
     size_t _bufferCnt;
 
@@ -34,14 +30,8 @@ class MemManager
   public:
     static MemManager &getInstance();
 
-    void _register(SimpleString *simpleString);
-    void _unregister(SimpleString *simpleString);
-
     void _register(BufferString *bufferString);
     void _unregister(BufferString *bufferString);
-
-    void _register(BufferStringSubstring *bufferStringSubstring);
-    void _unregister(BufferStringSubstring *bufferStringSubstring);
 
     void _register(BufferNode *bufferNode);
     void _unregister(BufferNode *bufferNode);

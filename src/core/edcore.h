@@ -134,11 +134,6 @@ class BufferNode
 
     BufferNode *firstLeaf();
     BufferNode *next();
-    shared_ptr<String> getStrAt(size_t offset, size_t len);
-    shared_ptr<String> _getStrAt(BufferNode *node, size_t offset, size_t len);
-    BufferNode *findPieceAtLineIndex(size_t &lineIndex);
-    size_t getLineLength(size_t lineNumber);
-    size_t _getLineIndexLength(const size_t lineIndex, BufferNode *node, const size_t lineStartOffset);
 
     bool findOffset(size_t offset, BufferCursor &result);
     bool findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end);
@@ -147,9 +142,6 @@ class BufferNode
     bool _findLineStart(size_t &lineIndex, BufferCursor &result);
     void _findLineEnd(BufferNode *node, size_t nodeStartOffset, size_t innerLineIndex, BufferCursor &result);
     void extractString(BufferCursor start, size_t len, uint16_t *dest);
-    // bool findLineStart(size_t lineNumber, BufferCursor &result);
-    // void moveToLineEnd(BufferCursor &cursor);
-    // bool findOffset(size_t offset, BufferCursor &result);
 };
 
 class Buffer
@@ -162,16 +154,11 @@ class Buffer
     ~Buffer();
     size_t getLen() const;
     size_t getLineCount() const;
-    shared_ptr<String> getStrAt(size_t offset, size_t len);
-    size_t getLineLength(size_t lineNumber);
     void print(ostream &os);
 
-    // BufferCursor& findOffset(size_t offset);
     bool findOffset(size_t offset, BufferCursor &result);
     bool findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end);
     void extractString(BufferCursor start, size_t len, uint16_t *dest);
-    // bool findLineStart(size_t lineNumber, BufferCursor &result);
-    // void moveToLineEnd(BufferCursor &cursor);
 };
 
 class BufferBuilder
