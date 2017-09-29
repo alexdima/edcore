@@ -19,8 +19,8 @@ class BufferNodeString
     BufferNodeString(uint16_t *data, size_t len);
     ~BufferNodeString();
 
-    const uint16_t *getData() const; // TODO
-    size_t getLen() const;
+    const uint16_t *data() const { return this->data_; }
+    size_t length() const;
 
     const size_t *getLineStarts() const;
     size_t getNewLineCount() const;

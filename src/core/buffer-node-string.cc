@@ -87,7 +87,7 @@ BufferNodeString::~BufferNodeString()
     delete[] this->lineStarts_;
 }
 
-size_t BufferNodeString::getLen() const
+size_t BufferNodeString::length() const
 {
     return this->length_;
 }
@@ -95,11 +95,6 @@ size_t BufferNodeString::getLen() const
 size_t BufferNodeString::getNewLineCount() const
 {
     return this->lineStartsCount_;
-}
-
-const uint16_t *BufferNodeString::getData() const // TODO
-{
-    return this->data_;
 }
 
 const size_t *BufferNodeString::getLineStarts() const

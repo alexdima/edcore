@@ -56,7 +56,7 @@ void BufferNode::_init(
 BufferNode::BufferNode(shared_ptr<BufferNodeString> str)
 {
     assert(str != NULL);
-    this->_init(str, NULL, NULL, str->getLen(), str->getNewLineCount());
+    this->_init(str, NULL, NULL, str->length(), str->getNewLineCount());
 }
 
 BufferNode::BufferNode(BufferNode *leftChild, BufferNode *rightChild)
@@ -128,7 +128,7 @@ void BufferNode::setParent(BufferNode *parent)
     this->_parent = parent;
 }
 
-size_t BufferNode::getLen() const
+size_t BufferNode::length() const
 {
     return this->_len;
 }
@@ -220,7 +220,7 @@ void BufferNode::extractString(BufferCursor start, size_t len, uint16_t *dest)
     if (innerNodeOffset + len <= node->_len)
     {
         // This is a simple substring
-        const uint16_t *data = node->_str->getData();
+        const uint16_t *data = node->_str->data();
         memcpy(dest, data + innerNodeOffset, sizeof(uint16_t) * len);
         return;
     }
@@ -230,8 +230,8 @@ void BufferNode::extractString(BufferCursor start, size_t len, uint16_t *dest)
     size_t remainingLen = len;
     do
     {
-        const uint16_t *src = node->_str->getData();
-        const size_t cnt = min(remainingLen, node->_str->getLen() - innerNodeOffset);
+        const uint16_t *src = node->_str->data();
+        const size_t cnt = min(remainingLen, node->_str->length() - innerNodeOffset);
         memcpy(dest + resultOffset, src + innerNodeOffset, sizeof(uint16_t) * cnt);
         remainingLen -= cnt;
         resultOffset += cnt;
@@ -419,9 +419,9 @@ Buffer::~Buffer()
     delete this->root;
 }
 
-size_t Buffer::getLen() const
+size_t Buffer::length() const
 {
-    return this->root->getLen();
+    return this->root->length();
 }
 
 size_t Buffer::getLineCount() const
@@ -559,8 +559,8 @@ void BufferBuilder::Finish()
         // recreate last chunk
 
         shared_ptr<BufferNodeString> lastPiece = _rawPieces[_rawPieces.size() - 1];
-        size_t prevDataLen = lastPiece->getLen();
-        const uint16_t *prevData = lastPiece->getData();
+        size_t prevDataLen = lastPiece->length();
+        const uint16_t *prevData = lastPiece->data();
 
         size_t dataLen = prevDataLen + 1;
         uint16_t *data = new uint16_t[dataLen];

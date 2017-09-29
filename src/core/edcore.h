@@ -80,7 +80,7 @@ class BufferNode
 
     void setParent(BufferNode *parent);
 
-    size_t getLen() const;
+    size_t length() const;
 
     size_t getNewLineCount() const;
 
@@ -106,7 +106,7 @@ class Buffer
   public:
     Buffer(BufferNode *root);
     ~Buffer();
-    size_t getLen() const;
+    size_t length() const;
     size_t getLineCount() const;
     void print(ostream &os);
 
