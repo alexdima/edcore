@@ -9,6 +9,8 @@
         "src/core/buffer-cursor.h",
         "src/core/buffer-node-string.cc",
         "src/core/buffer-node-string.h",
+        "src/core/buffer-node.cc",
+        "src/core/buffer-node.h",
         "src/core/edcore.cc",
         "src/core/edcore.h",
         "src/node/ed-buffer-builder.cc",
