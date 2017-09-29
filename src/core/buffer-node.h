@@ -19,14 +19,14 @@ namespace edcore
 class BufferNode
 {
   private:
-    shared_ptr<BufferNodeString> _str;
+    shared_ptr<BufferNodeString> str_;
 
-    BufferNode *_leftChild;
-    BufferNode *_rightChild;
+    BufferNode *leftChild_;
+    BufferNode *rightChild_;
 
-    BufferNode *_parent;
-    size_t _len;
-    size_t _newLineCount;
+    BufferNode *parent_;
+    size_t length_;
+    size_t newLineCount_;
 
     void _init(shared_ptr<BufferNodeString> str, BufferNode *leftChild, BufferNode *rightChild, size_t len, size_t newLineCount);
 
@@ -41,13 +41,13 @@ class BufferNode
 
     void log(ostream &os, int indent);
 
-    bool isLeaf() const { return (this->_str != NULL); }
+    bool isLeaf() const { return (this->str_ != NULL); }
 
-    void setParent(BufferNode *parent) { this->_parent = parent; }
+    void setParent(BufferNode *parent) { this->parent_ = parent; }
 
-    size_t length() const { return this->_len; }
+    size_t length() const { return this->length_; }
 
-    size_t newLinesCount() const { return this->_newLineCount; }
+    size_t newLinesCount() const { return this->newLineCount_; }
 
     BufferNode *firstLeaf();
     BufferNode *next();

@@ -10,26 +10,19 @@
 
 using namespace std;
 
-
 namespace edcore
 {
 
 void printIndent(ostream &os, int indent);
 
-
-void BufferNode::_init(
-    shared_ptr<BufferNodeString> str,
-    BufferNode *leftChild,
-    BufferNode *rightChild,
-    size_t len,
-    size_t newLineCount)
+void BufferNode::_init(shared_ptr<BufferNodeString> str, BufferNode *leftChild, BufferNode *rightChild, size_t len, size_t newLineCount)
 {
-    this->_str = str;
-    this->_leftChild = leftChild;
-    this->_rightChild = rightChild;
-    this->_parent = NULL;
-    this->_len = len;
-    this->_newLineCount = newLineCount;
+    this->str_ = str;
+    this->leftChild_ = leftChild;
+    this->rightChild_ = rightChild;
+    this->parent_ = NULL;
+    this->length_ = len;
+    this->newLineCount_ = newLineCount;
     MM_REGISTER(this);
 }
 
@@ -43,8 +36,8 @@ BufferNode::BufferNode(BufferNode *leftChild, BufferNode *rightChild)
 {
     assert(leftChild != NULL || rightChild != NULL);
 
-    const size_t len = (leftChild != NULL ? leftChild->_len : 0) + (rightChild != NULL ? rightChild->_len : 0);
-    const size_t newLineCount = (leftChild != NULL ? leftChild->_newLineCount : 0) + (rightChild != NULL ? rightChild->_newLineCount : 0);
+    const size_t len = (leftChild != NULL ? leftChild->length_ : 0) + (rightChild != NULL ? rightChild->length_ : 0);
+    const size_t newLineCount = (leftChild != NULL ? leftChild->newLineCount_ : 0) + (rightChild != NULL ? rightChild->newLineCount_ : 0);
 
     this->_init(NULL, leftChild, rightChild, len, newLineCount);
 }
@@ -52,22 +45,22 @@ BufferNode::BufferNode(BufferNode *leftChild, BufferNode *rightChild)
 BufferNode::~BufferNode()
 {
     MM_UNREGISTER(this);
-    // if (this->_str != NULL)
+    // if (this->str_ != NULL)
     // {
-    //     delete this->_str;
-    //     this->_str = NULL;
+    //     delete this->str_;
+    //     this->str_ = NULL;
     // }
-    if (this->_leftChild != NULL)
+    if (this->leftChild_ != NULL)
     {
-        delete this->_leftChild;
-        this->_leftChild = NULL;
+        delete this->leftChild_;
+        this->leftChild_ = NULL;
     }
-    if (this->_rightChild != NULL)
+    if (this->rightChild_ != NULL)
     {
-        delete this->_rightChild;
-        this->_rightChild = NULL;
+        delete this->rightChild_;
+        this->rightChild_ = NULL;
     }
-    this->_parent = NULL;
+    this->parent_ = NULL;
 }
 
 void BufferNode::print(ostream &os)
@@ -80,21 +73,21 @@ void BufferNode::log(ostream &os, int indent)
     if (this->isLeaf())
     {
         printIndent(os, indent);
-        os << "[LEAF] (len:" << this->_len << ", newLineCount:" << this->_newLineCount << ")" << endl;
+        os << "[LEAF] (len:" << this->length_ << ", newLineCount:" << this->newLineCount_ << ")" << endl;
         return;
     }
 
     printIndent(os, indent);
-    os << "[NODE] (len:" << this->_len << ", newLineCount:" << this->_newLineCount << ")" << endl;
+    os << "[NODE] (len:" << this->length_ << ", newLineCount:" << this->newLineCount_ << ")" << endl;
 
     indent += 4;
-    if (this->_leftChild)
+    if (this->leftChild_)
     {
-        this->_leftChild->log(os, indent);
+        this->leftChild_->log(os, indent);
     }
-    if (this->_rightChild)
+    if (this->rightChild_)
     {
-        this->_rightChild->log(os, indent);
+        this->rightChild_->log(os, indent);
     }
 }
 
@@ -102,9 +95,9 @@ BufferNode *BufferNode::firstLeaf()
 {
     // TODO: this will not work for an unbalanced tree
     BufferNode *res = this;
-    while (res->_leftChild != NULL)
+    while (res->leftChild_ != NULL)
     {
-        res = res->_leftChild;
+        res = res->leftChild_;
     }
     return res;
 }
@@ -112,23 +105,23 @@ BufferNode *BufferNode::firstLeaf()
 BufferNode *BufferNode::next()
 {
     assert(this->isLeaf());
-    if (this->_parent->_leftChild == this)
+    if (this->parent_->leftChild_ == this)
     {
-        BufferNode *sibling = this->_parent->_rightChild;
+        BufferNode *sibling = this->parent_->rightChild_;
         return sibling->firstLeaf();
     }
 
     BufferNode *it = this;
-    while (it->_parent != NULL && it->_parent->_rightChild == it)
+    while (it->parent_ != NULL && it->parent_->rightChild_ == it)
     {
-        it = it->_parent;
+        it = it->parent_;
     }
-    if (it->_parent == NULL)
+    if (it->parent_ == NULL)
     {
         // EOF
         return NULL;
     }
-    return it->_parent->_rightChild->firstLeaf();
+    return it->parent_->rightChild_->firstLeaf();
 }
 
 void BufferNode::extractString(BufferCursor start, size_t len, uint16_t *dest)
@@ -136,10 +129,10 @@ void BufferNode::extractString(BufferCursor start, size_t len, uint16_t *dest)
     size_t innerNodeOffset = start.offset - start.nodeStartOffset;
     BufferNode *node = start.node;
 
-    if (innerNodeOffset + len <= node->_len)
+    if (innerNodeOffset + len <= node->length_)
     {
         // This is a simple substring
-        const uint16_t *data = node->_str->data();
+        const uint16_t *data = node->str_->data();
         memcpy(dest, data + innerNodeOffset, sizeof(uint16_t) * len);
         return;
     }
@@ -149,8 +142,8 @@ void BufferNode::extractString(BufferCursor start, size_t len, uint16_t *dest)
     size_t remainingLen = len;
     do
     {
-        const uint16_t *src = node->_str->data();
-        const size_t cnt = min(remainingLen, node->_str->length() - innerNodeOffset);
+        const uint16_t *src = node->str_->data();
+        const size_t cnt = min(remainingLen, node->str_->length() - innerNodeOffset);
         memcpy(dest + resultOffset, src + innerNodeOffset, sizeof(uint16_t) * cnt);
         remainingLen -= cnt;
         resultOffset += cnt;
@@ -168,7 +161,7 @@ void BufferNode::extractString(BufferCursor start, size_t len, uint16_t *dest)
 
 bool BufferNode::findOffset(size_t offset, BufferCursor &result)
 {
-    if (offset > this->_len)
+    if (offset > this->length_)
     {
         return false;
     }
@@ -178,8 +171,8 @@ bool BufferNode::findOffset(size_t offset, BufferCursor &result)
     size_t nodeStartOffset = 0;
     while (!it->isLeaf())
     {
-        BufferNode *left = it->_leftChild;
-        BufferNode *right = it->_rightChild;
+        BufferNode *left = it->leftChild_;
+        BufferNode *right = it->rightChild_;
 
         if (left == NULL)
         {
@@ -193,7 +186,7 @@ bool BufferNode::findOffset(size_t offset, BufferCursor &result)
             continue;
         }
 
-        if (searchOffset < left->_len)
+        if (searchOffset < left->length_)
         {
             // go left
             it = left;
@@ -201,8 +194,8 @@ bool BufferNode::findOffset(size_t offset, BufferCursor &result)
         }
 
         // go right
-        searchOffset -= left->_len;
-        nodeStartOffset += left->_len;
+        searchOffset -= left->length_;
+        nodeStartOffset += left->length_;
         it = right;
     }
 
@@ -215,7 +208,7 @@ bool BufferNode::findOffset(size_t offset, BufferCursor &result)
 
 bool BufferNode::_findLineStart(size_t &lineIndex, BufferCursor &result)
 {
-    if (lineIndex > this->_newLineCount)
+    if (lineIndex > this->newLineCount_)
     {
         return false;
     }
@@ -224,8 +217,8 @@ bool BufferNode::_findLineStart(size_t &lineIndex, BufferCursor &result)
     size_t nodeStartOffset = 0;
     while (!it->isLeaf())
     {
-        BufferNode *left = it->_leftChild;
-        BufferNode *right = it->_rightChild;
+        BufferNode *left = it->leftChild_;
+        BufferNode *right = it->rightChild_;
 
         if (left == NULL)
         {
@@ -239,7 +232,7 @@ bool BufferNode::_findLineStart(size_t &lineIndex, BufferCursor &result)
             it = left;
         }
 
-        if (lineIndex <= left->_newLineCount)
+        if (lineIndex <= left->newLineCount_)
         {
             // go left
             it = left;
@@ -247,12 +240,12 @@ bool BufferNode::_findLineStart(size_t &lineIndex, BufferCursor &result)
         }
 
         // go right
-        lineIndex -= left->_newLineCount;
-        nodeStartOffset += left->_len;
+        lineIndex -= left->newLineCount_;
+        nodeStartOffset += left->length_;
         it = right;
     }
 
-    const size_t *lineStarts = it->_str->lineStarts();
+    const size_t *lineStarts = it->str_->lineStarts();
     const size_t innerLineStartOffset = (lineIndex == 0 ? 0 : lineStarts[lineIndex - 1]);
 
     result.offset = nodeStartOffset + innerLineStartOffset;
@@ -264,14 +257,14 @@ bool BufferNode::_findLineStart(size_t &lineIndex, BufferCursor &result)
 
 void BufferNode::_findLineEnd(BufferNode *node, size_t nodeStartOffset, size_t innerLineIndex, BufferCursor &result)
 {
-    const size_t nodeLineCount = node->_newLineCount;
+    const size_t nodeLineCount = node->newLineCount_;
     assert(node->isLeaf());
     assert(nodeLineCount >= innerLineIndex);
 
     if (innerLineIndex < nodeLineCount)
     {
         // lucky, the line ends in this same node
-        const size_t *lineStarts = node->_str->lineStarts();
+        const size_t *lineStarts = node->str_->lineStarts();
         size_t lineEndOffset = lineStarts[innerLineIndex];
 
         result.offset = nodeStartOffset + lineEndOffset;
@@ -281,7 +274,7 @@ void BufferNode::_findLineEnd(BufferNode *node, size_t nodeStartOffset, size_t i
     }
 
     // find the first newline or EOF
-    size_t offset = nodeStartOffset + node->_len;
+    size_t offset = nodeStartOffset + node->length_;
     do
     {
         // TODO: could probably optimize to not visit every leaf!!!
@@ -293,18 +286,18 @@ void BufferNode::_findLineEnd(BufferNode *node, size_t nodeStartOffset, size_t i
             break;
         }
 
-        nodeStartOffset += node->_len;
+        nodeStartOffset += node->length_;
         node = next;
 
-        if (node->_newLineCount > 0)
+        if (node->newLineCount_ > 0)
         {
-            const size_t *lineStarts = node->_str->lineStarts();
+            const size_t *lineStarts = node->str_->lineStarts();
             offset = nodeStartOffset + lineStarts[0];
             break;
         }
         else
         {
-            offset = nodeStartOffset + node->_len;
+            offset = nodeStartOffset + node->length_;
         }
     } while (true);
 
