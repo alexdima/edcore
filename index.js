@@ -5,6 +5,5 @@
 
 var binding = require('./build/Debug/edcore');
 
-console.log('OK');
-
 exports.EdBuffer = binding.EdBuffer;
+exports.EdBufferBuilder = binding.EdBufferBuilder;

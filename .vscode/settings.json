@@ -1,11 +1,3 @@
 {
-    "files.associations": {
-        "initializer_list": "cpp",
-        "iosfwd": "cpp",
-        "array": "cpp",
-        "iostream": "cpp",
-        "istream": "cpp",
-        "limits": "cpp",
-        "ostream": "cpp"
-    }
+    "files.insertFinalNewline": true
 }
