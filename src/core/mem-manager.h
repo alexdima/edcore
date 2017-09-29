@@ -21,9 +21,9 @@ class Buffer;
 class MemManager
 {
   private:
-    size_t _bufferStringCnt;
-    size_t _bufferNodeCnt;
-    size_t _bufferCnt;
+    size_t cntBufferString_;
+    size_t cntBufferNode_;
+    size_t cntBuffer_;
 
     MemManager();
 

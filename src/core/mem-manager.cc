@@ -9,9 +9,9 @@ namespace edcore {
 
 MemManager::MemManager()
 {
-    this->_bufferStringCnt = 0;
-    this->_bufferNodeCnt = 0;
-    this->_bufferCnt = 0;
+    this->cntBufferString_ = 0;
+    this->cntBufferNode_ = 0;
+    this->cntBuffer_ = 0;
 }
 
 MemManager &MemManager::getInstance()
@@ -22,37 +22,37 @@ MemManager &MemManager::getInstance()
 
 void MemManager::_register(BufferString *bufferString)
 {
-    this->_bufferStringCnt++;
+    this->cntBufferString_++;
 }
 void MemManager::_unregister(BufferString *bufferString)
 {
-    this->_bufferStringCnt--;
+    this->cntBufferString_--;
 }
 
 void MemManager::_register(BufferNode *bufferNode)
 {
-    this->_bufferNodeCnt++;
+    this->cntBufferNode_++;
 }
 void MemManager::_unregister(BufferNode *bufferNode)
 {
-    this->_bufferNodeCnt--;
+    this->cntBufferNode_--;
 }
 
 void MemManager::_register(Buffer *buffer)
 {
-    this->_bufferCnt++;
+    this->cntBuffer_++;
 }
 void MemManager::_unregister(Buffer *buffer)
 {
-    this->_bufferCnt--;
+    this->cntBuffer_--;
 }
 
 void MemManager::print(ostream &os) const
 {
     os << "MM [" << endl;
-    os << "  -> bufferStringCnt: " << this->_bufferStringCnt << endl;
-    os << "  -> bufferNodeCnt: " << this->_bufferNodeCnt << endl;
-    os << "  -> bufferCnt: " << this->_bufferCnt << endl;
+    os << "  -> bufferStringCnt: " << this->cntBufferString_ << endl;
+    os << "  -> bufferNodeCnt: " << this->cntBufferNode_ << endl;
+    os << "  -> bufferCnt: " << this->cntBuffer_ << endl;
     os << "]" << endl;
 }
 
