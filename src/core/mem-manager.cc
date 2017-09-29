@@ -9,7 +9,7 @@ namespace edcore {
 
 MemManager::MemManager()
 {
-    this->cntBufferString_ = 0;
+    this->cntBufferNodeString_ = 0;
     this->cntBufferNode_ = 0;
     this->cntBuffer_ = 0;
 }
@@ -20,13 +20,13 @@ MemManager &MemManager::getInstance()
     return mm;
 }
 
-void MemManager::_register(BufferString *bufferString)
+void MemManager::_register(BufferNodeString *bufferString)
 {
-    this->cntBufferString_++;
+    this->cntBufferNodeString_++;
 }
-void MemManager::_unregister(BufferString *bufferString)
+void MemManager::_unregister(BufferNodeString *bufferString)
 {
-    this->cntBufferString_--;
+    this->cntBufferNodeString_--;
 }
 
 void MemManager::_register(BufferNode *bufferNode)
@@ -50,9 +50,9 @@ void MemManager::_unregister(Buffer *buffer)
 void MemManager::print(ostream &os) const
 {
     os << "MM [" << endl;
-    os << "  -> bufferStringCnt: " << this->cntBufferString_ << endl;
-    os << "  -> bufferNodeCnt: " << this->cntBufferNode_ << endl;
-    os << "  -> bufferCnt: " << this->cntBuffer_ << endl;
+    os << "  -> BufferNodeString: " << this->cntBufferNodeString_ << endl;
+    os << "  -> BufferNode: " << this->cntBufferNode_ << endl;
+    os << "  -> Buffer: " << this->cntBuffer_ << endl;
     os << "]" << endl;
 }
 

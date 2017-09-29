@@ -14,7 +14,7 @@ using namespace std;
 namespace edcore
 {
 
-class BufferString
+class BufferNodeString
 {
   private:
     uint16_t *_data;
@@ -26,9 +26,9 @@ class BufferString
     void _init(uint16_t *data, size_t len, size_t *lineStarts, size_t lineStartsCount);
 
   public:
-    BufferString(uint16_t *data, size_t len);
+    BufferNodeString(uint16_t *data, size_t len);
 
-    ~BufferString();
+    ~BufferNodeString();
 
     size_t getLen() const;
 
@@ -72,7 +72,7 @@ class BufferCursor
 class BufferNode
 {
   private:
-    shared_ptr<BufferString> _str;
+    shared_ptr<BufferNodeString> _str;
 
     BufferNode *_leftChild;
     BufferNode *_rightChild;
@@ -82,14 +82,14 @@ class BufferNode
     size_t _newLineCount;
 
     void _init(
-        shared_ptr<BufferString> str,
+        shared_ptr<BufferNodeString> str,
         BufferNode *leftChild,
         BufferNode *rightChild,
         size_t len,
         size_t newLineCount);
 
   public:
-    BufferNode(shared_ptr<BufferString> str);
+    BufferNode(shared_ptr<BufferNodeString> str);
 
     BufferNode(BufferNode *leftChild, BufferNode *rightChild);
 
@@ -141,7 +141,7 @@ class Buffer
 class BufferBuilder
 {
   private:
-    vector<shared_ptr<BufferString>> _rawPieces;
+    vector<shared_ptr<BufferNodeString>> _rawPieces;
     bool _hasPreviousChar;
     uint16_t _previousChar;
 

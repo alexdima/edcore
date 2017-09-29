@@ -24,11 +24,11 @@ using namespace std;
 namespace edcore
 {
 
-class BufferString;
+class BufferNodeString;
 class BufferNode;
 class Buffer;
 
-std::ostream &operator<<(std::ostream &os, BufferString *const &m)
+std::ostream &operator<<(std::ostream &os, BufferNodeString *const &m)
 {
     if (m == NULL)
     {
@@ -38,7 +38,7 @@ std::ostream &operator<<(std::ostream &os, BufferString *const &m)
     m->print(os);
     return os;
 }
-std::ostream &operator<<(std::ostream &os, shared_ptr<BufferString> const &m)
+std::ostream &operator<<(std::ostream &os, shared_ptr<BufferNodeString> const &m)
 {
     if (m == NULL)
     {
@@ -57,7 +57,7 @@ void printIndent(ostream &os, int indent)
     }
 }
 
-void BufferString::_init(uint16_t *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
+void BufferNodeString::_init(uint16_t *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
 {
     this->_data = data;
     this->_len = len;
@@ -66,7 +66,7 @@ void BufferString::_init(uint16_t *data, size_t len, size_t *lineStarts, size_t 
     MM_REGISTER(this);
 }
 
-BufferString::BufferString(uint16_t *data, size_t len)
+BufferNodeString::BufferNodeString(uint16_t *data, size_t len)
 {
     assert(data != NULL && len != 0);
 
@@ -125,34 +125,34 @@ BufferString::BufferString(uint16_t *data, size_t len)
     this->_init(data, len, lineStarts, lineStartsCount);
 }
 
-BufferString::~BufferString()
+BufferNodeString::~BufferNodeString()
 {
     MM_UNREGISTER(this);
     delete[] this->_data;
     delete[] this->_lineStarts;
 }
 
-size_t BufferString::getLen() const
+size_t BufferNodeString::getLen() const
 {
     return this->_len;
 }
 
-size_t BufferString::getNewLineCount() const
+size_t BufferNodeString::getNewLineCount() const
 {
     return this->_lineStartsCount;
 }
 
-const uint16_t *BufferString::getData() const // TODO
+const uint16_t *BufferNodeString::getData() const // TODO
 {
     return this->_data;
 }
 
-const size_t *BufferString::getLineStarts() const
+const size_t *BufferNodeString::getLineStarts() const
 {
     return this->_lineStarts;
 }
 
-void BufferString::print(std::ostream &os) const
+void BufferNodeString::print(std::ostream &os) const
 {
     const uint16_t *data = this->_data;
     const size_t len = this->_len;
@@ -163,7 +163,7 @@ void BufferString::print(std::ostream &os) const
 }
 
 void BufferNode::_init(
-    shared_ptr<BufferString> str,
+    shared_ptr<BufferNodeString> str,
     BufferNode *leftChild,
     BufferNode *rightChild,
     size_t len,
@@ -178,7 +178,7 @@ void BufferNode::_init(
     MM_REGISTER(this);
 }
 
-BufferNode::BufferNode(shared_ptr<BufferString> str)
+BufferNode::BufferNode(shared_ptr<BufferNodeString> str)
 {
     assert(str != NULL);
     this->_init(str, NULL, NULL, str->getLen(), str->getNewLineCount());
@@ -585,7 +585,7 @@ std::ostream &operator<<(std::ostream &os, Buffer *const &m)
     return os;
 }
 
-BufferNode *buildBufferFromPieces(vector<shared_ptr<BufferString>> &pieces, size_t start, size_t end)
+BufferNode *buildBufferFromPieces(vector<shared_ptr<BufferNodeString>> &pieces, size_t start, size_t end)
 {
     size_t cnt = end - start;
 
@@ -646,7 +646,7 @@ void BufferBuilder::AcceptChunk(uint16_t *chunk, size_t chunkLen)
     }
     memcpy(data + (_hasPreviousChar ? 1 : 0), chunk, sizeof(uint16_t) * (chunkLen - (holdBackLastChar ? 1 : 0)));
 
-    _rawPieces.push_back(shared_ptr<BufferString>(new BufferString(data, dataLen)));
+    _rawPieces.push_back(shared_ptr<BufferNodeString>(new BufferNodeString(data, dataLen)));
     _hasPreviousChar = holdBackLastChar;
     _previousChar = lastChar;
 }
@@ -673,7 +673,7 @@ void BufferBuilder::Finish()
             data = new uint16_t[0];
         }
 
-        _rawPieces.push_back(shared_ptr<BufferString>(new BufferString(data, dataLen)));
+        _rawPieces.push_back(shared_ptr<BufferNodeString>(new BufferNodeString(data, dataLen)));
 
         return;
     }
@@ -683,7 +683,7 @@ void BufferBuilder::Finish()
         _hasPreviousChar = false;
         // recreate last chunk
 
-        shared_ptr<BufferString> lastPiece = _rawPieces[_rawPieces.size() - 1];
+        shared_ptr<BufferNodeString> lastPiece = _rawPieces[_rawPieces.size() - 1];
         size_t prevDataLen = lastPiece->getLen();
         const uint16_t *prevData = lastPiece->getData();
 
@@ -692,7 +692,7 @@ void BufferBuilder::Finish()
         memcpy(data, prevData, sizeof(uint16_t) * prevDataLen);
         data[dataLen - 1] = _previousChar;
 
-        _rawPieces[_rawPieces.size() - 1] = shared_ptr<BufferString>(new BufferString(data, dataLen));
+        _rawPieces[_rawPieces.size() - 1] = shared_ptr<BufferNodeString>(new BufferNodeString(data, dataLen));
     }
 }
 
@@ -710,7 +710,7 @@ Buffer *BufferBuilder::Build()
 //     {
 //         return NULL;
 //     }
-//     vector<shared_ptr<BufferString>> rawPieces;
+//     vector<shared_ptr<BufferNodeString>> rawPieces;
 //     ifs.seekg(0, std::ios::beg);
 //     while (!ifs.eof())
 //     {
@@ -720,11 +720,11 @@ Buffer *BufferBuilder::Build()
 
 //         if (ifs)
 //         {
-//             rawPieces.push_back(shared_ptr<BufferString>(new BufferString(piece, PIECE_SIZE)));
+//             rawPieces.push_back(shared_ptr<BufferNodeString>(new BufferNodeString(piece, PIECE_SIZE)));
 //         }
 //         else
 //         {
-//             rawPieces.push_back(shared_ptr<BufferString>(new BufferString(piece, ifs.gcount())));
+//             rawPieces.push_back(shared_ptr<BufferNodeString>(new BufferNodeString(piece, ifs.gcount())));
 //         }
 //     }
 //     ifs.close();
