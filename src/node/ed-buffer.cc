@@ -26,42 +26,65 @@ void EdBuffer::GetLineCount(const v8::FunctionCallbackInfo<v8::Value> &args)
     args.GetReturnValue().Set(v8::Number::New(isolate, obj->_actual->getLineCount()));
 }
 
+class MyString : public v8::String::ExternalStringResource
+{
+  public:
+    MyString(const uint16_t *data, size_t length) : data_(data), length_(length) {}
+    ~MyString() { delete[] data_; }
+    virtual const uint16_t *data() const { return data_; }
+    virtual size_t length() const { return length_; }
+
+  private:
+    const uint16_t *data_;
+    size_t length_;
+};
+
 void EdBuffer::GetLineContent(const v8::FunctionCallbackInfo<v8::Value> &args)
 {
     v8::Isolate *isolate = args.GetIsolate();
     EdBuffer *obj = ObjectWrap::Unwrap<EdBuffer>(args.Holder());
 
-    size_t lineNumber = args[0]->IsUndefined() ? 0 : args[0]->NumberValue();
-
-
-    shared_ptr<edcore::String> str = obj->_actual->getLineContent(lineNumber);
-    uint16_t *tmp = new uint16_t[str->getLen()];
-    str->writeTo(tmp);
-
-
-
-    edcore::BufferCursor start, end;
-    if (obj->_actual->findLine(lineNumber, start, end))
+    if (!args[0]->IsNumber())
     {
-        cout << "FOUND LINE START FOR " << lineNumber << " AT (" << start.offset << "," << start.nodeStartOffset << ") up to (" << end.offset << "," << end.nodeStartOffset << ") i.e. " << (end.offset - start.offset) << endl;
-        assert(start.offset >= start.nodeStartOffset);
-        assert(start.offset <= start.nodeStartOffset + start.node->getLen());
-        assert(end.offset >= end.nodeStartOffset);
-        assert(end.offset <= end.nodeStartOffset + end.node->getLen());
-        assert(end.offset >= start.offset);
-        uint16_t *alt = new uint16_t[end.offset - start.offset];
-        obj->_actual->extractString(start, end.offset - start.offset, alt);
-
-        assert(str->getLen() == (end.offset - start.offset));
-        for (int i = 0; i < str->getLen(); i++) {
-            assert(tmp[i] == alt[i]);
-        }
-
-        delete []alt;
+        isolate->ThrowException(v8::Exception::TypeError(
+            v8::String::NewFromUtf8(isolate, "Argument must be a number")));
+        return;
     }
 
-    v8::MaybeLocal<v8::String> res = v8::String::NewFromTwoByte(isolate, tmp, v8::NewStringType::kNormal, str->getLen());
-    delete[] tmp;
+    size_t lineNumber = args[0]->NumberValue();
+
+    edcore::BufferCursor start, end;
+
+    if (!obj->_actual->findLine(lineNumber, start, end))
+    {
+        isolate->ThrowException(v8::Exception::Error(
+            v8::String::NewFromUtf8(isolate, "Line not found")));
+        return;
+    }
+
+    // cout << "FOUND LINE START FOR " << lineNumber << " AT (" << start.offset << "," << start.nodeStartOffset << ") up to (" << end.offset << "," << end.nodeStartOffset << ") i.e. " << (end.offset - start.offset) << endl;
+    // assert(start.offset >= start.nodeStartOffset);
+    // assert(start.offset <= start.nodeStartOffset + start.node->getLen());
+    // assert(end.offset >= end.nodeStartOffset);
+    // assert(end.offset <= end.nodeStartOffset + end.node->getLen());
+    // assert(end.offset >= start.offset);
+    size_t len = end.offset - start.offset;
+    uint16_t *alt = new uint16_t[len];
+    obj->_actual->extractString(start, len, alt);
+
+    // assert(str->getLen() == (end.offset - start.offset));
+    // for (int i = 0; i < str->getLen(); i++)
+    // {
+    //     assert(tmp[i] == alt[i]);
+    // }
+
+    // v8::Local<v8::String> = 
+
+    v8::MaybeLocal<v8::String> res = v8::String::NewExternalTwoByte(isolate, new MyString(alt, len));
+    // delete[] alt;
+    // }
+
+    // delete[] tmp;
     args.GetReturnValue().Set(res.ToLocalChecked() /*TODO*/);
 }
 
