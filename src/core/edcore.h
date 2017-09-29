@@ -14,15 +14,7 @@ using namespace std;
 namespace edcore
 {
 
-class String
-{
-  public:
-    virtual void print(ostream &os) const = 0;
-    virtual size_t getLen() const = 0;
-    virtual void writeTo(uint16_t *dest) const = 0;
-};
-
-class BufferString : public String
+class BufferString
 {
   private:
     uint16_t *_data;

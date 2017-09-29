@@ -28,7 +28,7 @@ class BufferString;
 class BufferNode;
 class Buffer;
 
-std::ostream &operator<<(std::ostream &os, String *const &m)
+std::ostream &operator<<(std::ostream &os, BufferString *const &m)
 {
     if (m == NULL)
     {
@@ -38,7 +38,7 @@ std::ostream &operator<<(std::ostream &os, String *const &m)
     m->print(os);
     return os;
 }
-std::ostream &operator<<(std::ostream &os, shared_ptr<String> const &m)
+std::ostream &operator<<(std::ostream &os, shared_ptr<BufferString> const &m)
 {
     if (m == NULL)
     {
