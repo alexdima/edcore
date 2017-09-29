@@ -128,16 +128,8 @@ BufferString::BufferString(uint16_t *data, size_t len)
 BufferString::~BufferString()
 {
     MM_UNREGISTER(this);
-    if (this->_data != NULL)
-    {
-        delete[] this->_data;
-        this->_data = NULL;
-    }
-    if (this->_lineStarts != NULL)
-    {
-        delete[] this->_lineStarts;
-        this->_lineStarts = NULL;
-    }
+    delete[] this->_data;
+    delete[] this->_lineStarts;
 }
 
 size_t BufferString::getLen() const
@@ -148,16 +140,6 @@ size_t BufferString::getLen() const
 size_t BufferString::getNewLineCount() const
 {
     return this->_lineStartsCount;
-}
-
-bool BufferString::getEndsWithCR() const
-{
-    return (this->_len > 0 && this->_data[this->_len - 1] == '\r');
-}
-
-bool BufferString::getStartsWithLF() const
-{
-    return (this->_len > 0 && this->_data[0] == '\n');
 }
 
 const uint16_t *BufferString::getData() const // TODO
@@ -180,19 +162,12 @@ void BufferString::print(std::ostream &os) const
     }
 }
 
-void BufferString::writeTo(uint16_t *dest) const
-{
-    memcpy(dest, this->_data, sizeof(uint16_t) * this->_len);
-}
-
 void BufferNode::_init(
     shared_ptr<BufferString> str,
     BufferNode *leftChild,
     BufferNode *rightChild,
     size_t len,
-    size_t newLineCount,
-    bool startsWithLF,
-    bool endsWithCR)
+    size_t newLineCount)
 {
     this->_str = str;
     this->_leftChild = leftChild;
@@ -200,15 +175,13 @@ void BufferNode::_init(
     this->_parent = NULL;
     this->_len = len;
     this->_newLineCount = newLineCount;
-    this->_startsWithLF = startsWithLF;
-    this->_endsWithCR = endsWithCR;
     MM_REGISTER(this);
 }
 
 BufferNode::BufferNode(shared_ptr<BufferString> str)
 {
     assert(str != NULL);
-    this->_init(str, NULL, NULL, str->getLen(), str->getNewLineCount(), str->getStartsWithLF(), str->getEndsWithCR());
+    this->_init(str, NULL, NULL, str->getLen(), str->getNewLineCount());
 }
 
 BufferNode::BufferNode(BufferNode *leftChild, BufferNode *rightChild)
@@ -217,11 +190,8 @@ BufferNode::BufferNode(BufferNode *leftChild, BufferNode *rightChild)
 
     const size_t len = (leftChild != NULL ? leftChild->_len : 0) + (rightChild != NULL ? rightChild->_len : 0);
     const size_t newLineCount = (leftChild != NULL ? leftChild->_newLineCount : 0) + (rightChild != NULL ? rightChild->_newLineCount : 0);
-    const size_t discountNewLine = (leftChild != NULL && rightChild != NULL && leftChild->_endsWithCR && rightChild->_startsWithLF);
-    const bool startsWithLF = (leftChild != NULL ? leftChild->_startsWithLF : rightChild->_startsWithLF);
-    const bool endsWithCR = (rightChild != NULL ? rightChild->_endsWithCR : leftChild->_endsWithCR);
 
-    this->_init(NULL, leftChild, rightChild, len, newLineCount - (discountNewLine ? 1 : 0), startsWithLF, endsWithCR);
+    this->_init(NULL, leftChild, rightChild, len, newLineCount);
 }
 
 BufferNode::~BufferNode()
@@ -255,30 +225,12 @@ void BufferNode::log(ostream &os, int indent)
     if (this->isLeaf())
     {
         printIndent(os, indent);
-        os << "[LEAF] (len:" << this->_len << ", newLineCount:" << this->_newLineCount;
-        if (this->_startsWithLF)
-        {
-            os << ", startsWithLF";
-        }
-        if (this->_endsWithCR)
-        {
-            os << ", endsWithCR";
-        }
-        os << ")" << endl;
+        os << "[LEAF] (len:" << this->_len << ", newLineCount:" << this->_newLineCount << ")" << endl;
         return;
     }
 
     printIndent(os, indent);
-    os << "[NODE] (len:" << this->_len << ", newLineCount:" << this->_newLineCount;
-    if (this->_startsWithLF)
-    {
-        os << ", startsWithLF";
-    }
-    if (this->_endsWithCR)
-    {
-        os << ", endsWithCR";
-    }
-    os << ")" << endl;
+    os << "[NODE] (len:" << this->_len << ", newLineCount:" << this->_newLineCount << ")" << endl;
 
     indent += 4;
     if (this->_leftChild)
@@ -388,8 +340,8 @@ BufferNode *BufferNode::next()
 void BufferNode::extractString(BufferCursor start, size_t len, uint16_t *dest)
 {
     size_t innerNodeOffset = start.offset - start.nodeStartOffset;
-    BufferNode* node = start.node;
-    
+    BufferNode *node = start.node;
+
     if (innerNodeOffset + len <= node->_len)
     {
         // This is a simple substring
@@ -491,13 +443,6 @@ bool BufferNode::_findLineStart(size_t &lineIndex, BufferCursor &result)
         {
             // go left
             it = left;
-        }
-
-        if (left->_endsWithCR && right->_startsWithLF)
-        {
-            // one newline is split between left and right
-            // TODO
-            assert(false);
         }
 
         if (lineIndex <= left->_newLineCount)
@@ -611,7 +556,7 @@ size_t Buffer::getLineCount() const
 
 void Buffer::extractString(BufferCursor start, size_t len, uint16_t *dest)
 {
-    this->root->extractString(start, len ,dest);
+    this->root->extractString(start, len, dest);
 }
 
 bool Buffer::findOffset(size_t offset, BufferCursor &result)

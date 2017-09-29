@@ -34,25 +34,14 @@ class BufferString
 
     size_t getNewLineCount() const;
 
-    bool getEndsWithCR() const;
-
-    bool getStartsWithLF() const;
-
     const uint16_t *getData() const; // TODO
 
     const size_t *getLineStarts() const;
 
     void print(ostream &os) const;
-
-    void writeTo(uint16_t *dest) const;
 };
 
 class BufferNode;
-
-// class BufferCoordinate {
-//     size_t offset;
-//     BufferNode
-// }
 
 class BufferCursor
 {
@@ -91,17 +80,13 @@ class BufferNode
     BufferNode *_parent;
     size_t _len;
     size_t _newLineCount;
-    bool _endsWithCR;
-    bool _startsWithLF;
 
     void _init(
         shared_ptr<BufferString> str,
         BufferNode *leftChild,
         BufferNode *rightChild,
         size_t len,
-        size_t newLineCount,
-        bool startsWithLF,
-        bool endsWithCR);
+        size_t newLineCount);
 
   public:
     BufferNode(shared_ptr<BufferString> str);
