@@ -82,7 +82,7 @@ class BufferNode
 
     size_t length() const;
 
-    size_t getNewLineCount() const;
+    size_t newLinesCount() const;
 
     BufferNode *findPieceAtOffset(size_t &offset);
 

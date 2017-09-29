@@ -87,21 +87,6 @@ BufferNodeString::~BufferNodeString()
     delete[] this->lineStarts_;
 }
 
-size_t BufferNodeString::length() const
-{
-    return this->length_;
-}
-
-size_t BufferNodeString::getNewLineCount() const
-{
-    return this->lineStartsCount_;
-}
-
-const size_t *BufferNodeString::getLineStarts() const
-{
-    return this->lineStarts_;
-}
-
 void BufferNodeString::print(std::ostream &os) const
 {
     const uint16_t *data = this->data_;

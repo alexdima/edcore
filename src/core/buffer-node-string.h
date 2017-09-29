@@ -20,10 +20,9 @@ class BufferNodeString
     ~BufferNodeString();
 
     const uint16_t *data() const { return this->data_; }
-    size_t length() const;
-
-    const size_t *getLineStarts() const;
-    size_t getNewLineCount() const;
+    size_t length() const { return this->length_; }
+    const size_t *lineStarts() const { return this->lineStarts_; }
+    size_t newLinesCount() const { return this->lineStartsCount_; }
 
     void print(ostream &os) const;
 

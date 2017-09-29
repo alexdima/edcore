@@ -56,7 +56,7 @@ void BufferNode::_init(
 BufferNode::BufferNode(shared_ptr<BufferNodeString> str)
 {
     assert(str != NULL);
-    this->_init(str, NULL, NULL, str->length(), str->getNewLineCount());
+    this->_init(str, NULL, NULL, str->length(), str->newLinesCount());
 }
 
 BufferNode::BufferNode(BufferNode *leftChild, BufferNode *rightChild)
@@ -133,7 +133,7 @@ size_t BufferNode::length() const
     return this->_len;
 }
 
-size_t BufferNode::getNewLineCount() const
+size_t BufferNode::newLinesCount() const
 {
     return this->_newLineCount;
 }
@@ -333,7 +333,7 @@ bool BufferNode::_findLineStart(size_t &lineIndex, BufferCursor &result)
         it = right;
     }
 
-    const size_t *lineStarts = it->_str->getLineStarts();
+    const size_t *lineStarts = it->_str->lineStarts();
     const size_t innerLineStartOffset = (lineIndex == 0 ? 0 : lineStarts[lineIndex - 1]);
 
     result.offset = nodeStartOffset + innerLineStartOffset;
@@ -352,7 +352,7 @@ void BufferNode::_findLineEnd(BufferNode *node, size_t nodeStartOffset, size_t i
     if (innerLineIndex < nodeLineCount)
     {
         // lucky, the line ends in this same node
-        const size_t *lineStarts = node->_str->getLineStarts();
+        const size_t *lineStarts = node->_str->lineStarts();
         size_t lineEndOffset = lineStarts[innerLineIndex];
 
         result.offset = nodeStartOffset + lineEndOffset;
@@ -379,7 +379,7 @@ void BufferNode::_findLineEnd(BufferNode *node, size_t nodeStartOffset, size_t i
 
         if (node->_newLineCount > 0)
         {
-            const size_t *lineStarts = node->_str->getLineStarts();
+            const size_t *lineStarts = node->_str->lineStarts();
             offset = nodeStartOffset + lineStarts[0];
             break;
         }
@@ -426,7 +426,7 @@ size_t Buffer::length() const
 
 size_t Buffer::getLineCount() const
 {
-    return this->root->getNewLineCount() + 1;
+    return this->root->newLinesCount() + 1;
 }
 
 void Buffer::extractString(BufferCursor start, size_t len, uint16_t *dest)
