@@ -9,7 +9,7 @@
 class EdBufferBuilder : public node::ObjectWrap
 {
   private:
-    BufferBuilder *_actual;
+    edcore::BufferBuilder *_actual;
 
     explicit EdBufferBuilder();
     ~EdBufferBuilder();
@@ -23,7 +23,7 @@ class EdBufferBuilder : public node::ObjectWrap
   public:
     static void Init(v8::Local<v8::Object> exports);
 
-    Buffer* Build();
+    edcore::Buffer* Build();
 };
 
 #endif

@@ -10,7 +10,7 @@
 class EdBuffer : public node::ObjectWrap
 {
   private:
-    Buffer *_actual;
+    edcore::Buffer *_actual;
 
     explicit EdBuffer(EdBufferBuilder *builder);
     ~EdBuffer();

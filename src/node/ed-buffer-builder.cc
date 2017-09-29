@@ -4,7 +4,7 @@
 
 EdBufferBuilder::EdBufferBuilder()
 {
-    this->_actual = new BufferBuilder();
+    this->_actual = new edcore::BufferBuilder();
 }
 
 EdBufferBuilder::~EdBufferBuilder()
@@ -123,7 +123,7 @@ void EdBufferBuilder::Init(v8::Local<v8::Object> exports)
                  tpl->GetFunction());
 }
 
-Buffer *EdBufferBuilder::Build()
+edcore::Buffer *EdBufferBuilder::Build()
 {
     return this->_actual->Build();
 }

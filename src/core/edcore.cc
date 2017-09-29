@@ -19,6 +19,9 @@ using namespace std;
 
 #define PIECE_SIZE 4 * 1024 // 4KB
 
+namespace edcore
+{
+
 class SimpleString;
 class BufferString;
 class BufferStringSubstring;
@@ -980,3 +983,4 @@ timespec _tmp_timespec;
 #define TIME_END(os, name, explanation)                      \
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &_tmp_timespec); \
     os << explanation << " took " << took(name, _tmp_timespec) << " ms." << endl
+}

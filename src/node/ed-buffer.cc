@@ -59,7 +59,7 @@ void EdBuffer::GetLineContent(const v8::FunctionCallbackInfo<v8::Value> &args)
 
     size_t lineNumber = args[0]->IsUndefined() ? 0 : args[0]->NumberValue();
 
-    shared_ptr<String> str = obj->_actual->getLineContent(lineNumber);
+    shared_ptr<edcore::String> str = obj->_actual->getLineContent(lineNumber);
     uint16_t *tmp = new uint16_t[str->getLen()];
     str->writeTo(tmp);
     v8::MaybeLocal<v8::String> res = v8::String::NewFromTwoByte(isolate, tmp, v8::NewStringType::kNormal, str->getLen());
