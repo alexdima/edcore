@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 #ifndef SRC_EDCORE_H_
 #define SRC_EDCORE_H_
 
@@ -50,6 +55,18 @@ class BufferString : public String
     void writeTo(uint16_t *dest) const;
 };
 
+class BufferNode;
+
+class BufferCursor
+{
+  public:
+    size_t offset;
+    BufferNode *node;
+    size_t nodeOffset;
+
+    BufferCursor(size_t offset, BufferNode *node, size_t nodeOffset);
+};
+
 class BufferNode
 {
   private:
@@ -92,6 +109,8 @@ class BufferNode
 
     size_t getNewLineCount() const;
 
+    bool findOffset(size_t offset, BufferCursor &result);
+
     BufferNode *findPieceAtOffset(size_t &offset);
 
     BufferNode *firstLeaf();
@@ -118,6 +137,9 @@ class Buffer
     size_t getLineLength(size_t lineNumber);
     shared_ptr<String> getLineContent(size_t lineNumber);
     void print(ostream &os);
+
+    // BufferCursor& findOffset(size_t offset);
+    bool findOffset(size_t offset, BufferCursor &result);
 };
 
 class BufferBuilder

@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 #ifndef SRC_ED_BUFFER_BUILDER_H_
 #define SRC_ED_BUFFER_BUILDER_H_
 

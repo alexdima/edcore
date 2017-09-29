@@ -495,6 +495,52 @@ shared_ptr<String> BufferNode::getStrAt(size_t offset, size_t len)
     return this->_getStrAt(node, offset, len);
 }
 
+bool BufferNode::findOffset(size_t offset, BufferCursor& result)
+{
+    if (offset > this->_len)
+    {
+        return false;
+    }
+
+    BufferNode *it = this;
+    size_t nodeOffset = offset;
+    while (!it->isLeaf())
+    {
+        BufferNode *left = it->_leftChild;
+        BufferNode *right = it->_rightChild;
+
+        if (left == NULL)
+        {
+            it = right;
+            continue;
+        }
+
+        if (right == NULL)
+        {
+            it = left;
+            continue;
+        }
+
+        const size_t leftLen = left->_len;
+        if (nodeOffset < leftLen)
+        {
+            // go left
+            it = left;
+            continue;
+        }
+
+        // go right
+        nodeOffset -= leftLen;
+        it = right;
+    }
+
+    result.offset = offset;
+    result.node = it;
+    result.nodeOffset = nodeOffset;
+
+    return true;
+}
+
 shared_ptr<String> BufferNode::_getStrAt(BufferNode *node, size_t offset, size_t len)
 {
     if (offset + len <= node->getLen())
@@ -678,6 +724,11 @@ shared_ptr<String> Buffer::getStrAt(size_t offset, size_t len)
     return this->root->getStrAt(offset, len);
 }
 
+bool Buffer::findOffset(size_t offset, BufferCursor& result)
+{
+    return this->root->findOffset(offset, result);
+}
+
 size_t Buffer::getLineLength(size_t lineNumber)
 {
     return this->root->getLineLength(lineNumber);
@@ -853,6 +904,12 @@ Buffer *BufferBuilder::Build()
 //     return new Buffer(root);
 // }
 
+BufferCursor::BufferCursor(size_t offset, BufferNode *node, size_t nodeOffset) {
+    this->offset = offset;
+    this->node = node;
+    this->nodeOffset = nodeOffset;
+}
+
 timespec diff(timespec start, timespec end)
 {
     timespec temp;
@@ -885,3 +942,5 @@ timespec _tmp_timespec;
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &_tmp_timespec); \
     os << explanation << " took " << took(name, _tmp_timespec) << " ms." << endl
 }
+
+
