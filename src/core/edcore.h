@@ -9,37 +9,14 @@
 #include <memory>
 #include <vector>
 
+#include "buffer-node-string.h"
+
 using namespace std;
 
 namespace edcore
 {
 
-class BufferNodeString
-{
-  private:
-    uint16_t *_data;
-    size_t _len;
 
-    size_t *_lineStarts;
-    size_t _lineStartsCount;
-
-    void _init(uint16_t *data, size_t len, size_t *lineStarts, size_t lineStartsCount);
-
-  public:
-    BufferNodeString(uint16_t *data, size_t len);
-
-    ~BufferNodeString();
-
-    size_t getLen() const;
-
-    size_t getNewLineCount() const;
-
-    const uint16_t *getData() const; // TODO
-
-    const size_t *getLineStarts() const;
-
-    void print(ostream &os) const;
-};
 
 class BufferNode;
 
