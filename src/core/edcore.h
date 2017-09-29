@@ -61,10 +61,19 @@ class BufferCursor
 {
   public:
     size_t offset;
+    size_t linesBefore;
     BufferNode *node;
     size_t nodeOffset;
 
-    BufferCursor(size_t offset, BufferNode *node, size_t nodeOffset);
+    BufferCursor() : BufferCursor(0, 0, NULL, 0) {}
+    
+    BufferCursor(size_t offset, size_t linesBefore, BufferNode *node, size_t nodeOffset)
+    {
+        this->offset = offset;
+        this->linesBefore = linesBefore;
+        this->node = node;
+        this->nodeOffset = nodeOffset;
+    }
 };
 
 class BufferNode
@@ -109,8 +118,6 @@ class BufferNode
 
     size_t getNewLineCount() const;
 
-    bool findOffset(size_t offset, BufferCursor &result);
-
     BufferNode *findPieceAtOffset(size_t &offset);
 
     BufferNode *firstLeaf();
@@ -121,6 +128,10 @@ class BufferNode
     size_t getLineLength(size_t lineNumber);
     size_t _getLineIndexLength(const size_t lineIndex, BufferNode *node, const size_t lineStartOffset);
     shared_ptr<String> getLineContent(size_t lineNumber);
+
+    bool findOffset(size_t offset, BufferCursor &result);
+    bool findLineStart(size_t lineNumber, BufferCursor &result);
+    // bool findOffset(size_t offset, BufferCursor &result);
 };
 
 class Buffer
@@ -140,6 +151,7 @@ class Buffer
 
     // BufferCursor& findOffset(size_t offset);
     bool findOffset(size_t offset, BufferCursor &result);
+    bool findLineStart(size_t lineNumber, BufferCursor &result);
 };
 
 class BufferBuilder

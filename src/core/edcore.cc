@@ -30,9 +30,6 @@ class BufferStringSubstring;
 class BufferNode;
 class Buffer;
 
-
-
-
 std::ostream &operator<<(std::ostream &os, String *const &m)
 {
     if (m == NULL)
@@ -495,7 +492,7 @@ shared_ptr<String> BufferNode::getStrAt(size_t offset, size_t len)
     return this->_getStrAt(node, offset, len);
 }
 
-bool BufferNode::findOffset(size_t offset, BufferCursor& result)
+bool BufferNode::findOffset(size_t offset, BufferCursor &result)
 {
     if (offset > this->_len)
     {
@@ -503,7 +500,8 @@ bool BufferNode::findOffset(size_t offset, BufferCursor& result)
     }
 
     BufferNode *it = this;
-    size_t nodeOffset = offset;
+    size_t searchOffset = offset;
+    size_t linesBefore = 0;
     while (!it->isLeaf())
     {
         BufferNode *left = it->_leftChild;
@@ -522,7 +520,7 @@ bool BufferNode::findOffset(size_t offset, BufferCursor& result)
         }
 
         const size_t leftLen = left->_len;
-        if (nodeOffset < leftLen)
+        if (searchOffset < leftLen)
         {
             // go left
             it = left;
@@ -530,11 +528,73 @@ bool BufferNode::findOffset(size_t offset, BufferCursor& result)
         }
 
         // go right
-        nodeOffset -= leftLen;
+        searchOffset -= leftLen;
+        linesBefore += left->_newLineCount;
         it = right;
     }
 
     result.offset = offset;
+    result.linesBefore = linesBefore;
+    result.node = it;
+    result.nodeOffset = searchOffset;
+
+    return true;
+}
+
+bool BufferNode::findLineStart(size_t lineNumber, BufferCursor &result)
+{
+    if (lineNumber < 1 || lineNumber > this->_newLineCount + 1)
+    {
+        return false;
+    }
+
+    size_t searchLineIndex = lineNumber - 1;
+    size_t offset = 0;
+    size_t linesBefore = 0;
+    BufferNode *it = this;
+    while (!it->isLeaf())
+    {
+        BufferNode *left = it->_leftChild;
+        BufferNode *right = it->_rightChild;
+
+        if (left == NULL)
+        {
+            // go right
+            it = right;
+        }
+
+        if (right == NULL)
+        {
+            // go left
+            it = left;
+        }
+
+        if (left->_endsWithCR && right->_startsWithLF)
+        {
+            // one newline is split between left and right
+            // TODO
+            assert(false);
+        }
+
+        if (searchLineIndex <= left->_newLineCount)
+        {
+            // go left
+            it = left;
+            continue;
+        }
+
+        // go right
+        searchLineIndex -= left->_newLineCount;
+        offset += left->_len;
+        linesBefore += left->_newLineCount;
+        it = right;
+    }
+
+    const size_t *lineStarts = it->_str->getLineStarts();
+    const size_t nodeOffset = (searchLineIndex == 0 ? 0 : lineStarts[searchLineIndex - 1]);
+
+    result.offset = offset + nodeOffset;
+    result.linesBefore = linesBefore;
     result.node = it;
     result.nodeOffset = nodeOffset;
 
@@ -724,9 +784,14 @@ shared_ptr<String> Buffer::getStrAt(size_t offset, size_t len)
     return this->root->getStrAt(offset, len);
 }
 
-bool Buffer::findOffset(size_t offset, BufferCursor& result)
+bool Buffer::findOffset(size_t offset, BufferCursor &result)
 {
     return this->root->findOffset(offset, result);
+}
+
+bool Buffer::findLineStart(size_t lineNumber, BufferCursor &result)
+{
+    return this->root->findLineStart(lineNumber, result);
 }
 
 size_t Buffer::getLineLength(size_t lineNumber)
@@ -904,12 +969,6 @@ Buffer *BufferBuilder::Build()
 //     return new Buffer(root);
 // }
 
-BufferCursor::BufferCursor(size_t offset, BufferNode *node, size_t nodeOffset) {
-    this->offset = offset;
-    this->node = node;
-    this->nodeOffset = nodeOffset;
-}
-
 timespec diff(timespec start, timespec end)
 {
     timespec temp;
@@ -942,5 +1001,3 @@ timespec _tmp_timespec;
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &_tmp_timespec); \
     os << explanation << " took " << took(name, _tmp_timespec) << " ms." << endl
 }
-
-
