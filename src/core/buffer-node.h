@@ -18,6 +18,25 @@ namespace edcore
 
 class BufferNode
 {
+  public:
+    BufferNode(shared_ptr<BufferNodeString> str);
+    BufferNode(BufferNode *leftChild, BufferNode *rightChild);
+    ~BufferNode();
+
+    void print(ostream &os);
+
+    bool isLeaf() const { return (this->str_ != NULL); }
+    void setParent(BufferNode *parent) { this->parent_ = parent; }
+    size_t length() const { return this->length_; }
+    size_t newLinesCount() const { return this->newLineCount_; }
+
+    BufferNode *firstLeaf();
+    BufferNode *next();
+
+    bool findOffset(size_t offset, BufferCursor &result);
+    bool findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end);
+    void extractString(BufferCursor start, size_t len, uint16_t *dest);
+
   private:
     shared_ptr<BufferNodeString> str_;
 
@@ -29,35 +48,9 @@ class BufferNode
     size_t newLineCount_;
 
     void _init(shared_ptr<BufferNodeString> str, BufferNode *leftChild, BufferNode *rightChild, size_t len, size_t newLineCount);
-
-  public:
-    BufferNode(shared_ptr<BufferNodeString> str);
-
-    BufferNode(BufferNode *leftChild, BufferNode *rightChild);
-
-    ~BufferNode();
-
-    void print(ostream &os);
-
-    void log(ostream &os, int indent);
-
-    bool isLeaf() const { return (this->str_ != NULL); }
-
-    void setParent(BufferNode *parent) { this->parent_ = parent; }
-
-    size_t length() const { return this->length_; }
-
-    size_t newLinesCount() const { return this->newLineCount_; }
-
-    BufferNode *firstLeaf();
-    BufferNode *next();
-
-    bool findOffset(size_t offset, BufferCursor &result);
-    bool findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end);
-
+    void _log(ostream &os, int indent);
     bool _findLineStart(size_t &lineIndex, BufferCursor &result);
     void _findLineEnd(BufferNode *node, size_t nodeStartOffset, size_t innerLineIndex, BufferCursor &result);
-    void extractString(BufferCursor start, size_t len, uint16_t *dest);
 };
 }
 

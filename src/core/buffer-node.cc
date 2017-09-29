@@ -15,17 +15,6 @@ namespace edcore
 
 void printIndent(ostream &os, int indent);
 
-void BufferNode::_init(shared_ptr<BufferNodeString> str, BufferNode *leftChild, BufferNode *rightChild, size_t len, size_t newLineCount)
-{
-    this->str_ = str;
-    this->leftChild_ = leftChild;
-    this->rightChild_ = rightChild;
-    this->parent_ = NULL;
-    this->length_ = len;
-    this->newLineCount_ = newLineCount;
-    MM_REGISTER(this);
-}
-
 BufferNode::BufferNode(shared_ptr<BufferNodeString> str)
 {
     assert(str != NULL);
@@ -40,6 +29,17 @@ BufferNode::BufferNode(BufferNode *leftChild, BufferNode *rightChild)
     const size_t newLineCount = (leftChild != NULL ? leftChild->newLineCount_ : 0) + (rightChild != NULL ? rightChild->newLineCount_ : 0);
 
     this->_init(NULL, leftChild, rightChild, len, newLineCount);
+}
+
+void BufferNode::_init(shared_ptr<BufferNodeString> str, BufferNode *leftChild, BufferNode *rightChild, size_t len, size_t newLineCount)
+{
+    this->str_ = str;
+    this->leftChild_ = leftChild;
+    this->rightChild_ = rightChild;
+    this->parent_ = NULL;
+    this->length_ = len;
+    this->newLineCount_ = newLineCount;
+    MM_REGISTER(this);
 }
 
 BufferNode::~BufferNode()
@@ -65,10 +65,10 @@ BufferNode::~BufferNode()
 
 void BufferNode::print(ostream &os)
 {
-    this->log(os, 0);
+    this->_log(os, 0);
 }
 
-void BufferNode::log(ostream &os, int indent)
+void BufferNode::_log(ostream &os, int indent)
 {
     if (this->isLeaf())
     {
@@ -83,11 +83,11 @@ void BufferNode::log(ostream &os, int indent)
     indent += 4;
     if (this->leftChild_)
     {
-        this->leftChild_->log(os, indent);
+        this->leftChild_->_log(os, indent);
     }
     if (this->rightChild_)
     {
-        this->rightChild_->log(os, indent);
+        this->rightChild_->_log(os, indent);
     }
 }
 
