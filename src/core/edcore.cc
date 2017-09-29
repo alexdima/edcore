@@ -138,47 +138,6 @@ size_t BufferNode::newLinesCount() const
     return this->_newLineCount;
 }
 
-BufferNode *BufferNode::findPieceAtOffset(size_t &offset)
-{
-    if (offset >= this->_len)
-    {
-        return NULL;
-    }
-
-    BufferNode *it = this;
-    while (!it->isLeaf())
-    {
-        BufferNode *left = it->_leftChild;
-        BufferNode *right = it->_rightChild;
-
-        if (left == NULL)
-        {
-            it = right;
-            continue;
-        }
-
-        if (right == NULL)
-        {
-            it = left;
-            continue;
-        }
-
-        const size_t leftLen = left->_len;
-        if (offset < leftLen)
-        {
-            // go left
-            it = left;
-            continue;
-        }
-
-        // go right
-        offset -= leftLen;
-        it = right;
-    }
-
-    return it;
-}
-
 BufferNode *BufferNode::firstLeaf()
 {
     // TODO: this will not work for an unbalanced tree

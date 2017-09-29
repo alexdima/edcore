@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "buffer-node-string.h"
+#include "buffer-cursor.h"
 
 using namespace std;
 
@@ -18,33 +19,6 @@ namespace edcore
 
 
 
-class BufferNode;
-
-class BufferCursor
-{
-  public:
-    size_t offset;
-
-    BufferNode *node;
-    size_t nodeStartOffset;
-
-    BufferCursor()
-        : BufferCursor(0, NULL, 0)
-    {
-    }
-
-    BufferCursor(BufferCursor &src)
-        : BufferCursor(src.offset, src.node, src.nodeStartOffset)
-    {
-    }
-
-    BufferCursor(size_t offset, BufferNode *node, size_t nodeStartOffset)
-    {
-        this->offset = offset;
-        this->node = node;
-        this->nodeStartOffset = nodeStartOffset;
-    }
-};
 
 class BufferNode
 {
@@ -58,12 +32,7 @@ class BufferNode
     size_t _len;
     size_t _newLineCount;
 
-    void _init(
-        shared_ptr<BufferNodeString> str,
-        BufferNode *leftChild,
-        BufferNode *rightChild,
-        size_t len,
-        size_t newLineCount);
+    void _init(shared_ptr<BufferNodeString> str, BufferNode *leftChild, BufferNode *rightChild, size_t len, size_t newLineCount);
 
   public:
     BufferNode(shared_ptr<BufferNodeString> str);
@@ -84,14 +53,11 @@ class BufferNode
 
     size_t newLinesCount() const;
 
-    BufferNode *findPieceAtOffset(size_t &offset);
-
     BufferNode *firstLeaf();
     BufferNode *next();
 
     bool findOffset(size_t offset, BufferCursor &result);
     bool findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end);
-
 
     bool _findLineStart(size_t &lineIndex, BufferCursor &result);
     void _findLineEnd(BufferNode *node, size_t nodeStartOffset, size_t innerLineIndex, BufferCursor &result);

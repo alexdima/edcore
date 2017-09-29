@@ -5,6 +5,8 @@
       "sources": [
         "src/core/mem-manager.cc",
         "src/core/mem-manager.h",
+        "src/core/buffer-cursor.cc",
+        "src/core/buffer-cursor.h",
         "src/core/buffer-node-string.cc",
         "src/core/buffer-node-string.h",
         "src/core/edcore.cc",
