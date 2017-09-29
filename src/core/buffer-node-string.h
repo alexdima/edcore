@@ -28,11 +28,11 @@ class BufferNodeString
     void print(ostream &os) const;
 
   private:
-    uint16_t *_data;
-    size_t _len;
+    uint16_t *data_;
+    size_t length_;
 
-    size_t *_lineStarts;
-    size_t _lineStartsCount;
+    size_t *lineStarts_;
+    size_t lineStartsCount_;
 
     void _init(uint16_t *data, size_t len, size_t *lineStarts, size_t lineStartsCount);
 };

@@ -12,15 +12,6 @@
 namespace edcore
 {
 
-void BufferNodeString::_init(uint16_t *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
-{
-    this->_data = data;
-    this->_len = len;
-    this->_lineStarts = lineStarts;
-    this->_lineStartsCount = lineStartsCount;
-    MM_REGISTER(this);
-}
-
 BufferNodeString::BufferNodeString(uint16_t *data, size_t len)
 {
     assert(data != NULL && len != 0);
@@ -80,37 +71,46 @@ BufferNodeString::BufferNodeString(uint16_t *data, size_t len)
     this->_init(data, len, lineStarts, lineStartsCount);
 }
 
+void BufferNodeString::_init(uint16_t *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
+{
+    this->data_ = data;
+    this->length_ = len;
+    this->lineStarts_ = lineStarts;
+    this->lineStartsCount_ = lineStartsCount;
+    MM_REGISTER(this);
+}
+
 BufferNodeString::~BufferNodeString()
 {
     MM_UNREGISTER(this);
-    delete[] this->_data;
-    delete[] this->_lineStarts;
+    delete[] this->data_;
+    delete[] this->lineStarts_;
 }
 
 size_t BufferNodeString::getLen() const
 {
-    return this->_len;
+    return this->length_;
 }
 
 size_t BufferNodeString::getNewLineCount() const
 {
-    return this->_lineStartsCount;
+    return this->lineStartsCount_;
 }
 
 const uint16_t *BufferNodeString::getData() const // TODO
 {
-    return this->_data;
+    return this->data_;
 }
 
 const size_t *BufferNodeString::getLineStarts() const
 {
-    return this->_lineStarts;
+    return this->lineStarts_;
 }
 
 void BufferNodeString::print(std::ostream &os) const
 {
-    const uint16_t *data = this->_data;
-    const size_t len = this->_len;
+    const uint16_t *data = this->data_;
+    const size_t len = this->length_;
     for (size_t i = 0; i < len; i++)
     {
         os << data[i];
