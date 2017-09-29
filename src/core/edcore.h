@@ -139,7 +139,6 @@ class BufferNode
     BufferNode *findPieceAtLineIndex(size_t &lineIndex);
     size_t getLineLength(size_t lineNumber);
     size_t _getLineIndexLength(const size_t lineIndex, BufferNode *node, const size_t lineStartOffset);
-    shared_ptr<String> getLineContent(size_t lineNumber);
 
     bool findOffset(size_t offset, BufferCursor &result);
     bool findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end);
@@ -165,7 +164,6 @@ class Buffer
     size_t getLineCount() const;
     shared_ptr<String> getStrAt(size_t offset, size_t len);
     size_t getLineLength(size_t lineNumber);
-    shared_ptr<String> getLineContent(size_t lineNumber);
     void print(ostream &os);
 
     // BufferCursor& findOffset(size_t offset);

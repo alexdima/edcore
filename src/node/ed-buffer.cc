@@ -8,24 +8,6 @@
 
 using namespace std;
 
-EdBuffer::EdBuffer(EdBufferBuilder *builder)
-{
-    this->_actual = builder->BuildBuffer();
-}
-
-EdBuffer::~EdBuffer()
-{
-    delete this->_actual;
-}
-
-void EdBuffer::GetLineCount(const v8::FunctionCallbackInfo<v8::Value> &args)
-{
-    v8::Isolate *isolate = args.GetIsolate();
-    EdBuffer *obj = ObjectWrap::Unwrap<EdBuffer>(args.Holder());
-
-    args.GetReturnValue().Set(v8::Number::New(isolate, obj->_actual->getLineCount()));
-}
-
 class MyString : public v8::String::ExternalStringResource
 {
   public:
@@ -38,6 +20,24 @@ class MyString : public v8::String::ExternalStringResource
     const uint16_t *data_;
     size_t length_;
 };
+
+EdBuffer::EdBuffer(EdBufferBuilder *builder)
+{
+    this->actual_ = builder->BuildBuffer();
+}
+
+EdBuffer::~EdBuffer()
+{
+    delete this->actual_;
+}
+
+void EdBuffer::GetLineCount(const v8::FunctionCallbackInfo<v8::Value> &args)
+{
+    v8::Isolate *isolate = args.GetIsolate();
+    EdBuffer *obj = ObjectWrap::Unwrap<EdBuffer>(args.Holder());
+
+    args.GetReturnValue().Set(v8::Number::New(isolate, obj->actual_->getLineCount()));
+}
 
 void EdBuffer::GetLineContent(const v8::FunctionCallbackInfo<v8::Value> &args)
 {
@@ -54,7 +54,7 @@ void EdBuffer::GetLineContent(const v8::FunctionCallbackInfo<v8::Value> &args)
     size_t lineNumber = args[0]->NumberValue();
 
     edcore::BufferCursor start, end;
-    if (!obj->_actual->findLine(lineNumber, start, end))
+    if (!obj->actual_->findLine(lineNumber, start, end))
     {
         isolate->ThrowException(v8::Exception::Error(
             v8::String::NewFromUtf8(isolate, "Line not found")));
@@ -63,7 +63,7 @@ void EdBuffer::GetLineContent(const v8::FunctionCallbackInfo<v8::Value> &args)
 
     size_t len = end.offset - start.offset;
     uint16_t *data = new uint16_t[len];
-    obj->_actual->extractString(start, len, data);
+    obj->actual_->extractString(start, len, data);
     v8::MaybeLocal<v8::String> res = v8::String::NewExternalTwoByte(isolate, new MyString(data, len));
     args.GetReturnValue().Set(res.ToLocalChecked() /*TODO*/);
 }

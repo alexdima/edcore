@@ -18,11 +18,7 @@ edcore::Buffer *EdBufferBuilder::BuildBuffer()
 
 EdBufferBuilder::~EdBufferBuilder()
 {
-    if (this->actual_ != NULL)
-    {
-        delete this->actual_;
-        this->actual_ = NULL;
-    }
+    delete this->actual_;
 }
 
 void EdBufferBuilder::AcceptChunk(const v8::FunctionCallbackInfo<v8::Value> &args)

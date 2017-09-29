@@ -996,26 +996,6 @@ size_t BufferNode::_getLineIndexLength(const size_t lineIndex, BufferNode *node,
     return result;
 }
 
-shared_ptr<String> BufferNode::getLineContent(size_t lineNumber)
-{
-    if (lineNumber < 1 || lineNumber > this->_newLineCount + 1)
-    {
-        return NULL;
-    }
-
-    size_t lineIndex = lineNumber - 1;
-    BufferNode *node = findPieceAtLineIndex(lineIndex);
-    if (node == NULL)
-    {
-        return NULL;
-    }
-
-    const size_t *lineStarts = node->_str->getLineStarts();
-    const size_t lineStartOffset = (lineIndex == 0 ? 0 : lineStarts[lineIndex - 1]);
-    size_t len = this->_getLineIndexLength(lineIndex, node, lineStartOffset);
-    return this->_getStrAt(node, lineStartOffset, len);
-}
-
 Buffer::Buffer(BufferNode *root)
 {
     assert(root != NULL);
@@ -1074,11 +1054,6 @@ bool Buffer::findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end)
 size_t Buffer::getLineLength(size_t lineNumber)
 {
     return this->root->getLineLength(lineNumber);
-}
-
-shared_ptr<String> Buffer::getLineContent(size_t lineNumber)
-{
-    return this->root->getLineContent(lineNumber);
 }
 
 void Buffer::print(ostream &os)
