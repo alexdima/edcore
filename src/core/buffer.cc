@@ -69,10 +69,10 @@ void printIndent2(ostream &os, int indent)
     }
 }
 
-Buffer::Buffer(vector<BufferNodeString *> &pieces)
+Buffer::Buffer(vector<BufferPiece *> &pieces)
 {
     leafsCount_ = pieces.size();
-    leafs_ = new BufferNodeString *[leafsCount_];
+    leafs_ = new BufferPiece *[leafsCount_];
     for (size_t i = 0; i < leafsCount_; i++)
     {
         leafs_[i] = pieces[i];
@@ -331,7 +331,7 @@ void Buffer::print(ostream &os, size_t index, size_t indent)
     if (IS_LEAF(index))
     {
         printIndent2(os, indent);
-        BufferNodeString *v = leafs_[LEAF_INDEX(index)];
+        BufferPiece *v = leafs_[LEAF_INDEX(index)];
         os << "[LEAF] (len:" << v->length() << ", newLineCount:" << v->newLineCount() << ")" << endl;
         return;
     }

@@ -31,7 +31,7 @@ typedef struct BufferCursor2 BufferCursor2;
 class Buffer
 {
 public:
-    Buffer(vector<BufferNodeString*> &pieces);
+    Buffer(vector<BufferPiece*> &pieces);
     ~Buffer();
     size_t length() const { return nodes_[1].length; }
     size_t lineCount() const { return nodes_[1].newLineCount + 1; }
@@ -48,7 +48,7 @@ public:
     BufferNode2 *nodes_;
     size_t nodesCount_;
     
-    BufferNodeString **leafs_;
+    BufferPiece **leafs_;
     size_t leafsCount_;
     size_t leafsStart_;
     size_t leafsEnd_;

@@ -26,7 +26,7 @@ class BufferBuilder
     Buffer *Build();
 
   private:
-    vector<BufferNodeString*> _rawPieces;
+    vector<BufferPiece*> _rawPieces;
     bool _hasPreviousChar;
     uint16_t _previousChar;
 };

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-#ifndef EDCORE_BUFFER_NODE_STRING_H_
-#define EDCORE_BUFFER_NODE_STRING_H_
+#ifndef EDCORE_BUFFER_PIECE_H_
+#define EDCORE_BUFFER_PIECE_H_
 
 #include <memory>
 
@@ -13,11 +13,11 @@ using namespace std;
 namespace edcore
 {
 
-class BufferNodeString
+class BufferPiece
 {
   public:
-    BufferNodeString(uint16_t *data, size_t len);
-    ~BufferNodeString();
+    BufferPiece(uint16_t *data, size_t len);
+    ~BufferPiece();
 
     const uint16_t *data() const { return this->data_; }
     size_t length() const { return this->length_; }

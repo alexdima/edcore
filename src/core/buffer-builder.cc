@@ -38,7 +38,7 @@ void BufferBuilder::AcceptChunk(uint16_t *chunk, size_t chunkLen)
     }
     memcpy(data + (_hasPreviousChar ? 1 : 0), chunk, sizeof(uint16_t) * (chunkLen - (holdBackLastChar ? 1 : 0)));
 
-    _rawPieces.push_back(new BufferNodeString(data, dataLen));
+    _rawPieces.push_back(new BufferPiece(data, dataLen));
     _hasPreviousChar = holdBackLastChar;
     _previousChar = lastChar;
 }
@@ -65,7 +65,7 @@ void BufferBuilder::Finish()
             data = new uint16_t[0];
         }
 
-        _rawPieces.push_back(new BufferNodeString(data, dataLen));
+        _rawPieces.push_back(new BufferPiece(data, dataLen));
 
         return;
     }
@@ -75,7 +75,7 @@ void BufferBuilder::Finish()
         _hasPreviousChar = false;
         // recreate last chunk
 
-        BufferNodeString* lastPiece = _rawPieces[_rawPieces.size() - 1];
+        BufferPiece* lastPiece = _rawPieces[_rawPieces.size() - 1];
         size_t prevDataLen = lastPiece->length();
         const uint16_t *prevData = lastPiece->data();
 
@@ -86,7 +86,7 @@ void BufferBuilder::Finish()
 
         delete lastPiece;
 
-        _rawPieces[_rawPieces.size() - 1] = new BufferNodeString(data, dataLen);
+        _rawPieces[_rawPieces.size() - 1] = new BufferPiece(data, dataLen);
     }
 }
 

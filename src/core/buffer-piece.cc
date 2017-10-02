@@ -11,7 +11,7 @@
 namespace edcore
 {
 
-BufferNodeString::BufferNodeString(uint16_t *data, size_t len)
+BufferPiece::BufferPiece(uint16_t *data, size_t len)
 {
     assert(data != NULL && len != 0);
 
@@ -70,7 +70,7 @@ BufferNodeString::BufferNodeString(uint16_t *data, size_t len)
     this->_init(data, len, lineStarts, lineStartsCount);
 }
 
-void BufferNodeString::_init(uint16_t *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
+void BufferPiece::_init(uint16_t *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
 {
     this->data_ = data;
     this->length_ = len;
@@ -78,13 +78,13 @@ void BufferNodeString::_init(uint16_t *data, size_t len, size_t *lineStarts, siz
     this->lineStartsCount_ = lineStartsCount;
 }
 
-BufferNodeString::~BufferNodeString()
+BufferPiece::~BufferPiece()
 {
     delete[] this->data_;
     delete[] this->lineStarts_;
 }
 
-void BufferNodeString::print(std::ostream &os) const
+void BufferPiece::print(std::ostream &os) const
 {
     const uint16_t *data = this->data_;
     const size_t len = this->length_;
@@ -94,7 +94,7 @@ void BufferNodeString::print(std::ostream &os) const
     }
 }
 
-std::ostream &operator<<(std::ostream &os, BufferNodeString *const &m)
+std::ostream &operator<<(std::ostream &os, BufferPiece *const &m)
 {
     if (m == NULL)
     {
@@ -104,7 +104,7 @@ std::ostream &operator<<(std::ostream &os, BufferNodeString *const &m)
     m->print(os);
     return os;
 }
-std::ostream &operator<<(std::ostream &os, shared_ptr<BufferNodeString> const &m)
+std::ostream &operator<<(std::ostream &os, shared_ptr<BufferPiece> const &m)
 {
     if (m == NULL)
     {
