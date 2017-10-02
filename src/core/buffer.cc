@@ -83,10 +83,6 @@ Buffer::Buffer(vector<BufferPiece *> &pieces)
     leafsStart_ = nodesCount_;
     leafsEnd_ = leafsStart_ + leafsCount_;
 
-    cout << "leafsCount: " << leafsCount_ << endl;
-    cout << "nodesCount: " << nodesCount_ << endl;
-    cout << "leafsStart_: " << leafsStart_ << endl;
-
     nodes_ = new BufferNode[nodesCount_];
     memset(nodes_, 0, nodesCount_ * sizeof(nodes_[0]));
 
@@ -127,12 +123,12 @@ Buffer::Buffer(vector<BufferPiece *> &pieces)
 
 Buffer::~Buffer()
 {
-    delete []nodes_;
+    delete[] nodes_;
     for (size_t i = 0; i < leafsCount_; i++)
     {
         delete leafs_[i];
     }
-    delete []leafs_;
+    delete[] leafs_;
 }
 
 void Buffer::extractString(BufferCursor start, size_t len, uint16_t *dest)
@@ -288,7 +284,6 @@ void Buffer::_findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t inner
 
         leafStartOffset += leaf->length();
         innerLineIndex = 0;
-
     }
 }
 
