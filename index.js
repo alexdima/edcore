@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-var binding = require('./build/Debug/edcore');
+const native = require('./build/Debug/edcore');
 
-exports.EdBuffer = binding.EdBuffer;
-exports.EdBufferBuilder = binding.EdBufferBuilder;
+exports.EdBuffer = native.EdBuffer;
+exports.EdBufferBuilder = native.EdBufferBuilder;

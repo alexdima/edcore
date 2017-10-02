@@ -3,10 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-var index = require('./index');
+export declare class EdBuffer {
+    _nativeEdBufferBrand: void;
+    constructor();
 
-var EdBuffer = index.EdBuffer;
+    GetLineCount(): number;
+    GetLineContent(lineNumber: number): string;
+}
 
-var buff = new EdBuffer();
+export declare class EdBufferBuilder {
+    _nativeEdBufferBuilderBrand: void;
 
-console.log(`line count: ${buff.GetLineCount()}`);
+    constructor();
+
+    AcceptChunk(chunk: string): void;
+    Finish(): string;
+    Build(): EdBuffer;
+}

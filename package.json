@@ -2,7 +2,7 @@
   "name": "edcore",
   "version": "0.0.0",
   "description": "Ed Core",
-  "main": "index.js",
+  "main": "./out/index.js",
   "scripts": {
     "test": "node test.js"
   },
@@ -15,5 +15,11 @@
   "bugs": {
     "url": "https://github.com/Microsoft/node-native-keymap/issues"
   },
-  "homepage": "https://github.com/Microsoft/node-native-keymap#readme"
+  "homepage": "https://github.com/Microsoft/node-native-keymap#readme",
+  "devDependencies": {
+    "@types/mocha": "^2.2.43",
+    "@types/node": "^8.0.31",
+    "mocha": "^3.5.3",
+    "typescript": "^2.5.3"
+  }
 }
