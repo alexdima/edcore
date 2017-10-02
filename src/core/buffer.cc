@@ -137,35 +137,28 @@ Buffer::~Buffer()
 
 void Buffer::extractString(BufferCursor start, size_t len, uint16_t *dest)
 {
-    size_t innerNodeOffset = start.offset - start.leafStartOffset;
-    size_t node = start.leafIndex;
+    assert(start.offset + len <= nodes_[1].length);
 
-    if (innerNodeOffset + len <= leafs_[node]->length())
+    size_t innerLeafOffset = start.offset - start.leafStartOffset;
+    size_t leafIndex = start.leafIndex;
+    size_t destOffset = 0;
+    while (len > 0)
     {
-         // This is a simple substring
-        const uint16_t *data = leafs_[node]->data();
-        memcpy(dest, data + innerNodeOffset, sizeof(uint16_t) * len);
-        return;
-    }
+        BufferPiece *leaf = leafs_[leafIndex];
+        const uint16_t *src = leaf->data();
+        const size_t cnt = min(len, leaf->length() - innerLeafOffset);
+        memcpy(dest + destOffset, src + innerLeafOffset, sizeof(uint16_t) * cnt);
+        len -= cnt;
+        destOffset += cnt;
+        innerLeafOffset = 0;
 
-    size_t resultOffset = 0;
-    size_t remainingLen = len;
-    do
-    {
-        const uint16_t *src = leafs_[node]->data();
-        const size_t cnt = min(remainingLen, leafs_[node]->length() - innerNodeOffset);
-        memcpy(dest + resultOffset, src + innerNodeOffset, sizeof(uint16_t) * cnt);
-        remainingLen -= cnt;
-        resultOffset += cnt;
-        innerNodeOffset = 0;
-
-        if (remainingLen == 0)
+        if (len == 0)
         {
             break;
         }
 
-        node++;
-    } while (true);
+        leafIndex++;
+    }
 }
 
 bool Buffer::findOffset(size_t offset, BufferCursor &result)
