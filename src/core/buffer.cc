@@ -268,50 +268,35 @@ bool Buffer::_findLineStart(size_t &lineIndex, BufferCursor2 &result)
 
 void Buffer::_findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t innerLineIndex, BufferCursor2 &result)
 {
-    const size_t leafLineCount = leafs_[leafIndex]->newLineCount();
-
-    if (innerLineIndex < leafLineCount)
+    while (true)
     {
-        // lucky, the line ends in the same leaf
-        const size_t *lineStarts = leafs_[leafIndex]->lineStarts();
-        size_t lineEndOffset = lineStarts[innerLineIndex];
+        BufferPiece *leaf = leafs_[leafIndex];
 
-        result.offset = leafStartOffset + lineEndOffset;
-        result.leafIndex = leafIndex;
-        result.leafStartOffset = leafStartOffset;
-        return;
-    }
-
-    // find the first newline or EOF
-    size_t offset = leafStartOffset + leafs_[leafIndex]->length();
-    do
-    {
-        size_t next = leafIndex+1;
-
-        if (next >= leafsCount_)
-        {
-            // EOF
-            break;
-        }
-
-        leafStartOffset += leafs_[leafIndex]->length();
-        leafIndex = next;
-
-        if (leafs_[leafIndex]->newLineCount() > 0)
+        if (innerLineIndex < leaf->newLineCount())
         {
             const size_t *lineStarts = leafs_[leafIndex]->lineStarts();
-            offset = leafStartOffset + lineStarts[0];
-            break;
-        }
-        else
-        {
-            offset = leafStartOffset + leafs_[leafIndex]->length();
-        }
-    } while (true);
+            size_t lineEndOffset = lineStarts[innerLineIndex];
 
-    result.offset = offset;
-    result.leafIndex = leafIndex;
-    result.leafStartOffset = leafStartOffset;
+            result.offset = leafStartOffset + lineEndOffset;
+            result.leafIndex = leafIndex;
+            result.leafStartOffset = leafStartOffset;
+            return;
+        }
+
+        leafIndex++;
+
+        if (leafIndex >= leafsCount_)
+        {
+            result.offset = leafStartOffset + leaf->length();
+            result.leafIndex = leafIndex - 1;
+            result.leafStartOffset = leafStartOffset;
+            return;
+        }
+
+        leafStartOffset += leaf->length();
+        innerLineIndex = 0;
+
+    }
 }
 
 bool Buffer::findLine2(size_t lineNumber, BufferCursor2 &start, BufferCursor2 &end)
