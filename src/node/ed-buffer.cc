@@ -36,7 +36,7 @@ void EdBuffer::GetLineCount(const v8::FunctionCallbackInfo<v8::Value> &args)
     v8::Isolate *isolate = args.GetIsolate();
     EdBuffer *obj = ObjectWrap::Unwrap<EdBuffer>(args.Holder());
 
-    args.GetReturnValue().Set(v8::Number::New(isolate, obj->actual_->getLineCount()));
+    args.GetReturnValue().Set(v8::Number::New(isolate, obj->actual_->lineCount()));
 }
 
 void EdBuffer::GetLineContent(const v8::FunctionCallbackInfo<v8::Value> &args)

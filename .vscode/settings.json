@@ -2,5 +2,11 @@
     "files.insertFinalNewline": true,
     "editor.detectIndentation": false,
     "editor.tabSize": 4,
-    "editor.insertSpaces": true
+    "editor.insertSpaces": true,
+    "files.associations": {
+        "__locale": "cpp",
+        "__string": "cpp",
+        "string": "cpp",
+        "string_view": "cpp"
+    }
 }

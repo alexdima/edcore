@@ -24,16 +24,6 @@ Buffer::~Buffer()
     delete this->root;
 }
 
-size_t Buffer::length() const
-{
-    return this->root->length();
-}
-
-size_t Buffer::getLineCount() const
-{
-    return this->root->newLinesCount() + 1;
-}
-
 void Buffer::extractString(BufferCursor start, size_t len, uint16_t *dest)
 {
     this->root->extractString(start, len, dest);
