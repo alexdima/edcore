@@ -24,7 +24,7 @@ function assertBuffer(fileName: string): void {
     for (let i = 0; i < lines.length; i++) {
         let actual = buff.GetLineContent(i + 1);
         let expected = lines[i];
-        assert.equal(actual, expected);
+        assert.equal(actual, expected, '@ line number ' + (i + 1));
     }
 }
 

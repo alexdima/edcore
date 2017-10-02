@@ -18,7 +18,8 @@ namespace edcore
 
 class BufferNode
 {
-  public:
+public:
+    BufferNode();
     BufferNode(BufferNodeString *str);
     BufferNode(BufferNode *leftChild, BufferNode *rightChild);
     ~BufferNode();

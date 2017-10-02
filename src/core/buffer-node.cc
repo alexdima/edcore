@@ -140,7 +140,6 @@ void BufferNode::extractString(BufferCursor start, size_t len, uint16_t *dest)
         return;
     }
 
-    // uint16_t *result = new uint16_t[len];
     size_t resultOffset = 0;
     size_t remainingLen = len;
     do

@@ -7,27 +7,60 @@
 #define EDCORE_BUFFER_H_
 
 #include "buffer-node.h"
+#include "buffer-node-string.h"
 
 #include <memory>
+#include <vector>
 
 namespace edcore
 {
 
+struct BufferNode2 {
+    size_t length;
+    size_t newLineCount;
+};
+typedef struct BufferNode2 BufferNode2;
+
+struct BufferCursor2
+{
+    size_t offset;
+    size_t leafIndex;
+    size_t leafStartOffset;
+};
+typedef struct BufferCursor2 BufferCursor2;
+
 class Buffer
 {
-  public:
-    Buffer(BufferNode *root);
+public:
+    Buffer(vector<BufferNodeString*> &pieces);
     ~Buffer();
-    size_t length() const { return this->root->length(); }
-    size_t lineCount() const { return this->root->newLinesCount() + 1; }
-    void print(ostream &os);
+    size_t length() const { return nodes_[1].length; }
+    size_t lineCount() const { return nodes_[1].newLineCount + 1; }
+    void print(ostream &os, size_t index, size_t indent);
 
     bool findOffset(size_t offset, BufferCursor &result);
+    bool findOffset2(size_t offset, BufferCursor2 &result);
+
     bool findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end);
+    bool findLine2(size_t lineNumber, BufferCursor2 &start, BufferCursor2 &end);
+
     void extractString(BufferCursor start, size_t len, uint16_t *dest);
+    void extractString2(BufferCursor2 start, size_t len, uint16_t *dest);
 
   private:
     BufferNode *root;
+    
+    BufferNode2 *nodes_;
+    size_t nodesCount_;
+    
+    BufferNodeString **leafs_;
+    size_t leafsCount_;
+    size_t leafsStart_;
+    size_t leafsEnd_;
+
+    bool _findLineStart(size_t &lineIndex, BufferCursor2 &result);
+    void _findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t innerLineIndex, BufferCursor2 &result);
+
 };
 }
 

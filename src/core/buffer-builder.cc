@@ -118,8 +118,6 @@ void BufferBuilder::Finish()
 
 Buffer *BufferBuilder::Build()
 {
-    size_t pieceCount = _rawPieces.size();
-    BufferNode *root = buildBufferFromPieces(_rawPieces, 0, pieceCount);
-    return new Buffer(root);
+    return new Buffer(_rawPieces);
 }
 }

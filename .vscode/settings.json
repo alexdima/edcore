@@ -7,7 +7,14 @@
         "__locale": "cpp",
         "__string": "cpp",
         "string": "cpp",
-        "string_view": "cpp"
+        "string_view": "cpp",
+        "__split_buffer": "cpp",
+        "bitset": "cpp",
+        "initializer_list": "cpp",
+        "iterator": "cpp",
+        "utility": "cpp",
+        "vector": "cpp",
+        "memory": "cpp"
     },
     "search.exclude": {
         "**/node_modules": true,
