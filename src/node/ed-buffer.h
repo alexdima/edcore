@@ -9,7 +9,7 @@
 #include <node.h>
 #include <node_object_wrap.h>
 
-#include "../core/edcore.h"
+#include "../core/buffer.h"
 #include "ed-buffer-builder.h"
 
 class EdBuffer : public node::ObjectWrap

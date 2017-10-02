@@ -8,5 +8,10 @@
         "__string": "cpp",
         "string": "cpp",
         "string_view": "cpp"
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "build/": true
     }
 }
