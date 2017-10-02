@@ -87,7 +87,7 @@ Buffer::Buffer(vector<BufferPiece *> &pieces)
     cout << "nodesCount: " << nodesCount_ << endl;
     cout << "leafsStart_: " << leafsStart_ << endl;
 
-    nodes_ = new BufferNode2[nodesCount_];
+    nodes_ = new BufferNode[nodesCount_];
     memset(nodes_, 0, nodesCount_ * sizeof(nodes_[0]));
 
     for (size_t i = nodesCount_ - 1; i >= 1; i--)
@@ -135,7 +135,7 @@ Buffer::~Buffer()
     delete []leafs_;
 }
 
-void Buffer::extractString2(BufferCursor2 start, size_t len, uint16_t *dest)
+void Buffer::extractString(BufferCursor start, size_t len, uint16_t *dest)
 {
     size_t innerNodeOffset = start.offset - start.leafStartOffset;
     size_t node = start.leafIndex;
@@ -168,7 +168,7 @@ void Buffer::extractString2(BufferCursor2 start, size_t len, uint16_t *dest)
     } while (true);
 }
 
-bool Buffer::findOffset2(size_t offset, BufferCursor2 &result)
+bool Buffer::findOffset(size_t offset, BufferCursor &result)
 {
     if (offset > nodes_[1].length)
     {
@@ -215,7 +215,7 @@ bool Buffer::findOffset2(size_t offset, BufferCursor2 &result)
     return true;
 }
 
-bool Buffer::_findLineStart(size_t &lineIndex, BufferCursor2 &result)
+bool Buffer::_findLineStart(size_t &lineIndex, BufferCursor &result)
 {
     if (lineIndex > nodes_[1].newLineCount)
     {
@@ -266,7 +266,7 @@ bool Buffer::_findLineStart(size_t &lineIndex, BufferCursor2 &result)
     return true;
 }
 
-void Buffer::_findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t innerLineIndex, BufferCursor2 &result)
+void Buffer::_findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t innerLineIndex, BufferCursor &result)
 {
     while (true)
     {
@@ -299,7 +299,7 @@ void Buffer::_findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t inner
     }
 }
 
-bool Buffer::findLine2(size_t lineNumber, BufferCursor2 &start, BufferCursor2 &end)
+bool Buffer::findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end)
 {
     size_t innerLineIndex = lineNumber - 1;
     if (!_findLineStart(innerLineIndex, start))

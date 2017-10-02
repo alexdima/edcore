@@ -14,19 +14,19 @@
 namespace edcore
 {
 
-struct BufferNode2 {
+struct BufferNode {
     size_t length;
     size_t newLineCount;
 };
-typedef struct BufferNode2 BufferNode2;
+typedef struct BufferNode BufferNode;
 
-struct BufferCursor2
+struct BufferCursor
 {
     size_t offset;
     size_t leafIndex;
     size_t leafStartOffset;
 };
-typedef struct BufferCursor2 BufferCursor2;
+typedef struct BufferCursor BufferCursor;
 
 class Buffer
 {
@@ -37,15 +37,15 @@ public:
     size_t lineCount() const { return nodes_[1].newLineCount + 1; }
     void print(ostream &os, size_t index, size_t indent);
 
-    bool findOffset2(size_t offset, BufferCursor2 &result);
+    bool findOffset(size_t offset, BufferCursor &result);
 
-    bool findLine2(size_t lineNumber, BufferCursor2 &start, BufferCursor2 &end);
+    bool findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end);
 
-    void extractString2(BufferCursor2 start, size_t len, uint16_t *dest);
+    void extractString(BufferCursor start, size_t len, uint16_t *dest);
 
   private:
     
-    BufferNode2 *nodes_;
+    BufferNode *nodes_;
     size_t nodesCount_;
     
     BufferPiece **leafs_;
@@ -53,8 +53,8 @@ public:
     size_t leafsStart_;
     size_t leafsEnd_;
 
-    bool _findLineStart(size_t &lineIndex, BufferCursor2 &result);
-    void _findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t innerLineIndex, BufferCursor2 &result);
+    bool _findLineStart(size_t &lineIndex, BufferCursor &result);
+    void _findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t innerLineIndex, BufferCursor &result);
 
 };
 }

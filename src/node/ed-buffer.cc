@@ -53,8 +53,8 @@ void EdBuffer::GetLineContent(const v8::FunctionCallbackInfo<v8::Value> &args)
 
     size_t lineNumber = args[0]->NumberValue();
 
-    edcore::BufferCursor2 start, end;
-    if (!obj->actual_->findLine2(lineNumber, start, end))
+    edcore::BufferCursor start, end;
+    if (!obj->actual_->findLine(lineNumber, start, end))
     {
         isolate->ThrowException(v8::Exception::Error(
             v8::String::NewFromUtf8(isolate, "Line not found")));
@@ -63,7 +63,7 @@ void EdBuffer::GetLineContent(const v8::FunctionCallbackInfo<v8::Value> &args)
 
     size_t len = end.offset - start.offset;
     uint16_t *data = new uint16_t[len];
-    obj->actual_->extractString2(start, len, data);
+    obj->actual_->extractString(start, len, data);
     v8::MaybeLocal<v8::String> res = v8::String::NewExternalTwoByte(isolate, new MyString(data, len));
     args.GetReturnValue().Set(res.ToLocalChecked() /*TODO*/);
 }
