@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-#ifndef SRC_BUFFER_NODE_STRING_H_
-#define SRC_BUFFER_NODE_STRING_H_
+#ifndef EDCORE_BUFFER_NODE_STRING_H_
+#define EDCORE_BUFFER_NODE_STRING_H_
 
 #include <memory>
 

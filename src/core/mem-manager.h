@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-#ifndef SRC_MEM_MANAGER_H_
-#define SRC_MEM_MANAGER_H_
+#ifndef EDCORE_MEM_MANAGER_H_
+#define EDCORE_MEM_MANAGER_H_
 
 #include <memory>
 #include <iostream>

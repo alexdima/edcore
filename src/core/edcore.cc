@@ -33,59 +33,7 @@ class Buffer;
 
 
 
-Buffer::Buffer(BufferNode *root)
-{
-    assert(root != NULL);
-    this->root = root;
-    MM_REGISTER(this);
-}
 
-Buffer::~Buffer()
-{
-    MM_UNREGISTER(this);
-    delete this->root;
-}
-
-size_t Buffer::length() const
-{
-    return this->root->length();
-}
-
-size_t Buffer::getLineCount() const
-{
-    return this->root->newLinesCount() + 1;
-}
-
-void Buffer::extractString(BufferCursor start, size_t len, uint16_t *dest)
-{
-    this->root->extractString(start, len, dest);
-}
-
-bool Buffer::findOffset(size_t offset, BufferCursor &result)
-{
-    return this->root->findOffset(offset, result);
-}
-
-bool Buffer::findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end)
-{
-    return this->root->findLine(lineNumber, start, end);
-}
-
-void Buffer::print(ostream &os)
-{
-    this->root->print(os);
-}
-
-std::ostream &operator<<(std::ostream &os, Buffer *const &m)
-{
-    if (m == NULL)
-    {
-        return os << "[NULL]";
-    }
-
-    m->print(os);
-    return os;
-}
 
 BufferNode *buildBufferFromPieces(vector<shared_ptr<BufferNodeString>> &pieces, size_t start, size_t end)
 {

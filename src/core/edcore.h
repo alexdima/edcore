@@ -12,28 +12,12 @@
 #include "buffer-node-string.h"
 #include "buffer-cursor.h"
 #include "buffer-node.h"
+#include "buffer.h"
 
 using namespace std;
 
 namespace edcore
 {
-
-class Buffer
-{
-  private:
-    BufferNode *root;
-
-  public:
-    Buffer(BufferNode *root);
-    ~Buffer();
-    size_t length() const;
-    size_t getLineCount() const;
-    void print(ostream &os);
-
-    bool findOffset(size_t offset, BufferCursor &result);
-    bool findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end);
-    void extractString(BufferCursor start, size_t len, uint16_t *dest);
-};
 
 class BufferBuilder
 {

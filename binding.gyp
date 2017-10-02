@@ -11,6 +11,8 @@
         "src/core/buffer-node-string.h",
         "src/core/buffer-node.cc",
         "src/core/buffer-node.h",
+        "src/core/buffer.cc",
+        "src/core/buffer.h",
         "src/core/edcore.cc",
         "src/core/edcore.h",
         "src/node/ed-buffer-builder.cc",
