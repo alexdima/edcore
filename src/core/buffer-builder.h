@@ -9,7 +9,7 @@
 #include <memory>
 #include <vector>
 
-#include "buffer-node-string.h"
+#include "buffer-piece.h"
 #include "buffer.h"
 
 using namespace std;

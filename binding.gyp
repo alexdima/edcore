@@ -3,8 +3,8 @@
     {
       "target_name": "edcore",
       "sources": [
-        "src/core/buffer-node-string.cc",
-        "src/core/buffer-node-string.h",
+        "src/core/buffer-piece.cc",
+        "src/core/buffer-piece.h",
         "src/core/buffer.cc",
         "src/core/buffer.h",
         "src/core/buffer-builder.cc",

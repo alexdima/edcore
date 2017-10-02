@@ -6,7 +6,7 @@
 #include <iostream>
 #include <assert.h>
 
-#include "buffer-node-string.h"
+#include "buffer-piece.h"
 
 namespace edcore
 {

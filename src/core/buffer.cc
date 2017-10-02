@@ -106,7 +106,7 @@ Buffer::Buffer(vector<BufferNodeString *> &pieces)
         else if (IS_LEAF(left))
         {
             length += leafs_[LEAF_INDEX(left)]->length();
-            newLineCount += leafs_[LEAF_INDEX(left)]->newLinesCount();
+            newLineCount += leafs_[LEAF_INDEX(left)]->newLineCount();
         }
 
         if (IS_NODE(right))
@@ -117,7 +117,7 @@ Buffer::Buffer(vector<BufferNodeString *> &pieces)
         else if (IS_LEAF(right))
         {
             length += leafs_[LEAF_INDEX(right)]->length();
-            newLineCount += leafs_[LEAF_INDEX(right)]->newLinesCount();
+            newLineCount += leafs_[LEAF_INDEX(right)]->newLineCount();
         }
 
         nodes_[i].length = length;
@@ -238,7 +238,7 @@ bool Buffer::_findLineStart(size_t &lineIndex, BufferCursor2 &result)
         }
         else if (IS_LEAF(left))
         {
-            leftNewLineCount = leafs_[LEAF_INDEX(left)]->newLinesCount();
+            leftNewLineCount = leafs_[LEAF_INDEX(left)]->newLineCount();
             leftLength = leafs_[LEAF_INDEX(left)]->length();
         }
 
@@ -268,7 +268,7 @@ bool Buffer::_findLineStart(size_t &lineIndex, BufferCursor2 &result)
 
 void Buffer::_findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t innerLineIndex, BufferCursor2 &result)
 {
-    const size_t leafLineCount = leafs_[leafIndex]->newLinesCount();
+    const size_t leafLineCount = leafs_[leafIndex]->newLineCount();
 
     if (innerLineIndex < leafLineCount)
     {
@@ -297,7 +297,7 @@ void Buffer::_findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t inner
         leafStartOffset += leafs_[leafIndex]->length();
         leafIndex = next;
 
-        if (leafs_[leafIndex]->newLinesCount() > 0)
+        if (leafs_[leafIndex]->newLineCount() > 0)
         {
             const size_t *lineStarts = leafs_[leafIndex]->lineStarts();
             offset = leafStartOffset + lineStarts[0];
@@ -332,7 +332,7 @@ void Buffer::print(ostream &os, size_t index, size_t indent)
     {
         printIndent2(os, indent);
         BufferNodeString *v = leafs_[LEAF_INDEX(index)];
-        os << "[LEAF] (len:" << v->length() << ", newLineCount:" << v->newLinesCount() << ")" << endl;
+        os << "[LEAF] (len:" << v->length() << ", newLineCount:" << v->newLineCount() << ")" << endl;
         return;
     }
 

@@ -6,7 +6,7 @@
 #ifndef EDCORE_BUFFER_H_
 #define EDCORE_BUFFER_H_
 
-#include "buffer-node-string.h"
+#include "buffer-piece.h"
 
 #include <memory>
 #include <vector>
