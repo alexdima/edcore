@@ -7,7 +7,6 @@
 #include <assert.h>
 
 #include "buffer-node-string.h"
-#include "mem-manager.h"
 
 namespace edcore
 {
@@ -77,12 +76,10 @@ void BufferNodeString::_init(uint16_t *data, size_t len, size_t *lineStarts, siz
     this->length_ = len;
     this->lineStarts_ = lineStarts;
     this->lineStartsCount_ = lineStartsCount;
-    MM_REGISTER(this);
 }
 
 BufferNodeString::~BufferNodeString()
 {
-    MM_UNREGISTER(this);
     delete[] this->data_;
     delete[] this->lineStarts_;
 }

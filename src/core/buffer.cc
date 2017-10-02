@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 #include "buffer.h"
-#include "mem-manager.h"
 
 #include <iostream>
 #include <assert.h>
@@ -124,15 +123,16 @@ Buffer::Buffer(vector<BufferNodeString *> &pieces)
         nodes_[i].length = length;
         nodes_[i].newLineCount = newLineCount;
     }
-
-    // print(cout, 1, 0);
-    MM_REGISTER(this);
 }
 
 Buffer::~Buffer()
 {
-    MM_UNREGISTER(this);
-    delete this->root;
+    delete []nodes_;
+    for (size_t i = 0; i < leafsCount_; i++)
+    {
+        delete leafs_[i];
+    }
+    delete []leafs_;
 }
 
 void Buffer::extractString2(BufferCursor2 start, size_t len, uint16_t *dest)
@@ -166,16 +166,6 @@ void Buffer::extractString2(BufferCursor2 start, size_t len, uint16_t *dest)
 
         node++;
     } while (true);
-}
-
-void Buffer::extractString(BufferCursor start, size_t len, uint16_t *dest)
-{
-    this->root->extractString(start, len, dest);
-}
-
-bool Buffer::findOffset(size_t offset, BufferCursor &result)
-{
-    return this->root->findOffset(offset, result);
 }
 
 bool Buffer::findOffset2(size_t offset, BufferCursor2 &result)
@@ -334,11 +324,6 @@ bool Buffer::findLine2(size_t lineNumber, BufferCursor2 &start, BufferCursor2 &e
 
     _findLineEnd(start.leafIndex, start.leafStartOffset, innerLineIndex, end);
     return true;
-}
-
-bool Buffer::findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end)
-{
-    return this->root->findLine(lineNumber, start, end);
 }
 
 void Buffer::print(ostream &os, size_t index, size_t indent)

@@ -6,7 +6,6 @@
 #ifndef EDCORE_BUFFER_H_
 #define EDCORE_BUFFER_H_
 
-#include "buffer-node.h"
 #include "buffer-node-string.h"
 
 #include <memory>
@@ -38,17 +37,13 @@ public:
     size_t lineCount() const { return nodes_[1].newLineCount + 1; }
     void print(ostream &os, size_t index, size_t indent);
 
-    bool findOffset(size_t offset, BufferCursor &result);
     bool findOffset2(size_t offset, BufferCursor2 &result);
 
-    bool findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end);
     bool findLine2(size_t lineNumber, BufferCursor2 &start, BufferCursor2 &end);
 
-    void extractString(BufferCursor start, size_t len, uint16_t *dest);
     void extractString2(BufferCursor2 start, size_t len, uint16_t *dest);
 
   private:
-    BufferNode *root;
     
     BufferNode2 *nodes_;
     size_t nodesCount_;

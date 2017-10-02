@@ -8,32 +8,6 @@
 namespace edcore
 {
 
-BufferNode *buildBufferFromPieces(vector<BufferNodeString*> &pieces, size_t start, size_t end)
-{
-    size_t cnt = end - start;
-
-    if (cnt == 0)
-    {
-        return NULL;
-    }
-
-    if (cnt == 1)
-    {
-        return new BufferNode(pieces[start]);
-    }
-
-    size_t mid = (start + cnt / 2);
-
-    BufferNode *left = buildBufferFromPieces(pieces, start, mid);
-    BufferNode *right = buildBufferFromPieces(pieces, mid, end);
-
-    BufferNode *result = new BufferNode(left, right);
-    left->setParent(result);
-    right->setParent(result);
-
-    return result;
-}
-
 BufferBuilder::BufferBuilder()
 {
     _hasPreviousChar = false;
