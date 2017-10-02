@@ -19,7 +19,7 @@ namespace edcore
 class BufferNode
 {
   public:
-    BufferNode(shared_ptr<BufferNodeString> str);
+    BufferNode(BufferNodeString *str);
     BufferNode(BufferNode *leftChild, BufferNode *rightChild);
     ~BufferNode();
 
@@ -38,7 +38,7 @@ class BufferNode
     void extractString(BufferCursor start, size_t len, uint16_t *dest);
 
   private:
-    shared_ptr<BufferNodeString> str_;
+    BufferNodeString *str_;
 
     BufferNode *leftChild_;
     BufferNode *rightChild_;
@@ -47,7 +47,7 @@ class BufferNode
     size_t length_;
     size_t newLineCount_;
 
-    void _init(shared_ptr<BufferNodeString> str, BufferNode *leftChild, BufferNode *rightChild, size_t len, size_t newLineCount);
+    void _init(BufferNodeString* str, BufferNode *leftChild, BufferNode *rightChild, size_t len, size_t newLineCount);
     void _log(ostream &os, int indent);
     bool _findLineStart(size_t &lineIndex, BufferCursor &result);
     void _findLineEnd(BufferNode *node, size_t nodeStartOffset, size_t innerLineIndex, BufferCursor &result);

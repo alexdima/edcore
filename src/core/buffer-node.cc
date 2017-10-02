@@ -15,7 +15,7 @@ namespace edcore
 
 void printIndent(ostream &os, int indent);
 
-BufferNode::BufferNode(shared_ptr<BufferNodeString> str)
+BufferNode::BufferNode(BufferNodeString* str)
 {
     assert(str != NULL);
     this->_init(str, NULL, NULL, str->length(), str->newLinesCount());
@@ -31,7 +31,7 @@ BufferNode::BufferNode(BufferNode *leftChild, BufferNode *rightChild)
     this->_init(NULL, leftChild, rightChild, len, newLineCount);
 }
 
-void BufferNode::_init(shared_ptr<BufferNodeString> str, BufferNode *leftChild, BufferNode *rightChild, size_t len, size_t newLineCount)
+void BufferNode::_init(BufferNodeString* str, BufferNode *leftChild, BufferNode *rightChild, size_t len, size_t newLineCount)
 {
     this->str_ = str;
     this->leftChild_ = leftChild;
@@ -45,11 +45,11 @@ void BufferNode::_init(shared_ptr<BufferNodeString> str, BufferNode *leftChild, 
 BufferNode::~BufferNode()
 {
     MM_UNREGISTER(this);
-    // if (this->str_ != NULL)
-    // {
-    //     delete this->str_;
-    //     this->str_ = NULL;
-    // }
+    if (this->str_ != NULL)
+    {
+        delete this->str_;
+        this->str_ = NULL;
+    }
     if (this->leftChild_ != NULL)
     {
         delete this->leftChild_;
@@ -105,6 +105,9 @@ BufferNode *BufferNode::firstLeaf()
 BufferNode *BufferNode::next()
 {
     assert(this->isLeaf());
+    if (this->parent_ == NULL) {
+        return NULL;
+    }
     if (this->parent_->leftChild_ == this)
     {
         BufferNode *sibling = this->parent_->rightChild_;
