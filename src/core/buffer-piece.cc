@@ -198,10 +198,10 @@ void BufferPiece::deleteOneOffsetLen(size_t offset, size_t len)
             continue;
         }
 
-        // Boundary: Cover the case of deleting: \r[...\r]\n
+        // Boundary: Cover the case of deleting: \r[...]\n
         if (offset + len == lineStart - 1)
         {
-            if (deletingCase1 != NULL && lineStart > 1 && data_[lineStart - 2] == '\r' && data_[lineStart - 1] == '\n')
+            if (deletingCase1 != NULL && data_[lineStart - 1] == '\n')
             {
                 (*deletingCase1) = (*deletingCase1) + 1;
             }

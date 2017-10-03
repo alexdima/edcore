@@ -47,10 +47,10 @@ suite('DeleteOneOffsetLen', () => {
         let expected = initialContent;
         for (let i = 0; i < edits.length; i++) {
             expected = applyOffsetLengthEdits(expected, [{ offset: edits[i].offset, length: edits[i].length, text: '' }]);
-            const time = process.hrtime();
+            // const time = process.hrtime();
             buff.DeleteOneOffsetLen(edits[i].offset, edits[i].length);
-            const diff = process.hrtime(time);
-            console.log(`DeleteOneOffsetLen took ${diff[0] * 1e9 + diff[1]} nanoseconds, i.e. ${(diff[0] * 1e9 + diff[1]) / 1e6} ms.`);
+            // const diff = process.hrtime(time);
+            // console.log(`DeleteOneOffsetLen took ${diff[0] * 1e9 + diff[1]} nanoseconds, i.e. ${(diff[0] * 1e9 + diff[1]) / 1e6} ms.`);
             assertAllMethods(buff, expected);
         }
     }
@@ -155,12 +155,35 @@ suite('DeleteOneOffsetLen', () => {
                 { "offset": 282, "length": 6 }
             ]);
         });
+
+        test('gen8', () => {
+            runTest(19671, [
+                { "offset": 3478, "length": 12195 },
+                { "offset": 645, "length": 830 },
+                { "offset": 1346, "length": 7120 },
+                { "offset": 1572, "length": 419 },
+                { "offset": 1449, "length": 918 },
+                { "offset": 391, "length": 161 },
+                { "offset": 28, "length": 516 },
+                { "offset": 805, "length": 0 },
+                { "offset": 1005, "length": 19 },
+                { "offset": 969, "length": 23 },
+                { "offset": 718, "length": 72 },
+                { "offset": 811, "length": 29 },
+                { "offset": 6, "length": 318 },
+                { "offset": 303, "length": 44 },
+                { "offset": 126, "length": 155 },
+                { "offset": 68, "length": 107 },
+                { "offset": 198, "length": 46 }
+            ]);
+        });
+
     });
 });
 
 (function () {
     const CONSECUTIVE_EDITS_CNT = 10;
-    const MIN_CHUNK_SIZE = 100;
+    const MIN_CHUNK_SIZE = 10;
     const MAX_CHUNK_SIZE = 1 << 16;
 
     class AutoTest {
@@ -179,7 +202,7 @@ suite('DeleteOneOffsetLen', () => {
         }
 
         run(): void {
-            console.log(this._chunkSize);
+            // console.log(this._chunkSize);
             for (let i = 0; i < this._editsCnt; i++) {
                 let _edits = generateEdits(this._content, 1, 1);
                 if (_edits.length === 0) {
@@ -190,7 +213,7 @@ suite('DeleteOneOffsetLen', () => {
                     offset: _edit.offset,
                     length: _edit.length
                 };
-                console.log(edit);
+                // console.log(edit);
                 this._edits[i] = edit;
 
                 this._content = applyOffsetLengthEdits(this._content, [{ offset: edit.offset, length: edit.length, text: '' }]);
