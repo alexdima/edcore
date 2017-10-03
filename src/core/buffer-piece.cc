@@ -90,20 +90,60 @@ BufferPiece::~BufferPiece()
 void BufferPiece::deleteOneOffsetLen(size_t offset, size_t len)
 {
     cout << "Line starts: ";
+    size_t deleteFrom = lineStartsCount_;
+    size_t deleteTo = 0;
     for (size_t i = 0; i < lineStartsCount_; i++)
     {
         size_t lineStart = lineStarts_[i];
-        if (lineStart > offset)
+        if (lineStart <= offset)
+        {
+            continue;
+        }
+        if (lineStart > offset + len)
         {
             lineStarts_[i] -= len;
+            continue;
         }
-        else
+
+        // Cover the case of deleting only the \n in a \r\n pair
+        if (offset == lineStart - 1 && lineStart > 1 && data_[lineStart - 2] == '\r' && data_[lineStart - 1] == '\n')
         {
-            // TODO
-            assert(false);
+            // The line start remains
+            lineStarts_[i] -= 1;
+            continue;
         }
-        // cout << " - lineStart["<<i<<"]: " << lineStarts_[i] << endl;
-        // break;
+
+        // This line start must be deleted
+        deleteFrom = min(deleteFrom, i);
+        deleteTo = max(deleteTo, i + 1);
+        // bool deleteLineStart = true;
+
+        // // if ()
+        // assert(false);
+
+        // uint16_t char1 = data_[lineStart - 1];
+        // uint16_t char0 = lineStart > 1 ? data_[lineStart - 2] : 0;
+
+        // // if (lineStart)
+        // if (lineStart > offset)
+        // {
+        //     lineStarts_[i] -= len;
+        // }
+        // else
+        // {
+        //     // TODO
+        //     assert(false);
+        // }
+        // // cout << " - lineStart["<<i<<"]: " << lineStarts_[i] << endl;
+        // // break;
+    }
+
+
+    if (deleteFrom < deleteTo)
+    {
+        memcpy(lineStarts_ + deleteFrom, lineStarts_ + deleteTo, sizeof(size_t) * (lineStartsCount_ - deleteTo));
+        lineStartsCount_ -= (deleteTo - deleteFrom);
+        // printf("\nTODO!!!!!\n");
     }
 
     uint16_t length = length_ - len;

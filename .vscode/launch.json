@@ -6,7 +6,11 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "/usr/local/bin/node",
-            "args": ["./node_modules/.bin/_mocha"],
+            "args": [
+                "./node_modules/.bin/_mocha",
+                "--grep",
+                "first line with EOL"
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
             "environment": [],

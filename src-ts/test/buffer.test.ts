@@ -35,17 +35,46 @@ function applyOffsetLengthEdits(initialContent: string, edits: IOffsetLengthEdit
 
 suite('Editing: DeleteOneOffsetLen', () => {
 
+    interface IOffsetLengthDelete {
+        offset: number;
+        length: number;
+    }
+
     function assertDeleteOneOffsetLen(fileName: string, offset: number, length: number): void {
         const buff = buildBufferFromFixture(fileName);
         const initialContent = readFixture(fileName);
         const expected = applyOffsetLengthEdits(initialContent, [{ offset: offset, length: length, text: '' }]);
-        
+
         buff.DeleteOneOffsetLen(offset, length);
         assertAllMethods(buff, expected);
     }
 
-    test('simple delete', () => {
+    function assertConsecutiveDeleteOneOffsetLen(fileName: string, edits: IOffsetLengthDelete[]): void {
+        const buff = buildBufferFromFixture(fileName);
+        const initialContent = readFixture(fileName);
+
+        let expected = initialContent;
+        for (let i = 0; i < edits.length; i++) {
+            expected = applyOffsetLengthEdits(expected, [{ offset: edits[i].offset, length: edits[i].length, text: '' }]);
+            buff.DeleteOneOffsetLen(edits[i].offset, edits[i].length);
+            assertAllMethods(buff, expected);
+        }
+    }
+
+    test('simple delete: first char', () => {
         assertDeleteOneOffsetLen('checker.txt', 0, 1);
+    });
+
+    test('simple delete: first line without EOL', () => {
+        assertConsecutiveDeleteOneOffsetLen('checker.txt', [
+            { offset: 0, length: 45 }
+        ]);
+    });
+
+    test('simple delete: first line with EOL', () => {
+        assertConsecutiveDeleteOneOffsetLen('checker.txt', [
+            { offset: 0, length: 46 }
+        ]);
     });
 });
 
@@ -57,10 +86,10 @@ function assertBuffer(fileName: string): void {
 }
 
 function assertAllMethods(buff: EdBuffer, text: string): void {
-    assert.equal(buff.GetLength(), text.length);
-    
+    assert.equal(buff.GetLength(), text.length, 'length');
+
     const lines = constructLines(text);
-    assert.equal(buff.GetLineCount(), lines.length);
+    assert.equal(buff.GetLineCount(), lines.length, 'line count');
 
     for (let i = 0; i < lines.length; i++) {
         let actual = buff.GetLineContent(i + 1);
