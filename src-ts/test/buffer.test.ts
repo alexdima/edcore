@@ -6,6 +6,7 @@
 import * as assert from 'assert';
 import { buildBufferFromFixture, readFixture } from './utils/bufferBuilder';
 import { EdBuffer } from '../../index';
+import { IOffsetLengthEdit, getRandomInt, generateEdits } from './utils';
 
 suite('Loading', () => {
 
@@ -13,12 +14,6 @@ suite('Loading', () => {
         assertBuffer('checker.txt');
     });
 });
-
-interface IOffsetLengthEdit {
-    offset: number;
-    length: number;
-    text: string;
-}
 
 function applyOffsetLengthEdits(initialContent: string, edits: IOffsetLengthEdit[]): string {
     // TODO: ensure edits are sorted bottom up
@@ -33,12 +28,12 @@ function applyOffsetLengthEdits(initialContent: string, edits: IOffsetLengthEdit
     return result;
 }
 
-suite('DeleteOneOffsetLen', () => {
+interface IOffsetLengthDelete {
+    offset: number;
+    length: number;
+}
 
-    interface IOffsetLengthDelete {
-        offset: number;
-        length: number;
-    }
+suite('DeleteOneOffsetLen', () => {
 
     interface IFileInfo {
         fileName: string;
@@ -117,7 +112,76 @@ suite('DeleteOneOffsetLen', () => {
         tt('simple delete: last line with preceding EOL', [{ offset: 23150, length: 49 }]);
         tt('simple delete: entire file', [{ offset: 0, length: 23199 }]);
     });
+
+    suite('generated', () => {
+        function runTest(chunkSize: number, edits: IOffsetLengthDelete[]): void {
+            assertConsecutiveDeleteOneOffsetLen({
+                fileName: 'checker-400-CRLF.txt',
+                chunkSize: chunkSize
+            }, edits);
+        }
+
+        test('gen1', () => {
+            runTest(59302, [{ "offset": 13501, "length": 2134 }]);
+        });
+    });
 });
+
+(function () {
+    const CONSECUTIVE_EDITS_CNT = 1;
+    const MIN_CHUNK_SIZE = 100;
+    const MAX_CHUNK_SIZE = 1 << 16;
+
+    class AutoTest {
+        private _buff: EdBuffer;
+        private _content: string;
+        private _chunkSize: number;
+        private _editsCnt: number;
+        private _edits: IOffsetLengthDelete[];
+
+        constructor() {
+            this._chunkSize = getRandomInt(MIN_CHUNK_SIZE, MAX_CHUNK_SIZE);
+            this._buff = buildBufferFromFixture('checker-400-CRLF.txt', this._chunkSize);
+            this._content = readFixture('checker-400-CRLF.txt');
+            this._editsCnt = getRandomInt(1, CONSECUTIVE_EDITS_CNT);
+            this._edits = [];
+        }
+
+        run(): void {
+            console.log(this._chunkSize);
+            for (let i = 0; i < this._editsCnt; i++) {
+                let _edit = generateEdits(this._content, 1, 1)[0];
+                let edit: IOffsetLengthDelete = {
+                    offset: _edit.offset,
+                    length: _edit.length
+                };
+                console.log(edit);
+                this._edits[i] = edit;
+
+                this._content = applyOffsetLengthEdits(this._content, [{ offset: edit.offset, length: edit.length, text: '' }]);
+                this._buff.DeleteOneOffsetLen(edit.offset, edit.length);
+                assertAllMethods(this._buff, this._content);
+            }
+        }
+
+        toString(): void {
+            console.log(`runTest(${this._chunkSize}, ${JSON.stringify(this._edits)});`);
+        }
+    }
+
+    const GENERATE_CNT = -1;//1000;
+    for (let i = GENERATE_CNT; i >= 0; i--) {
+        console.log(`REMAINING... ${i}`);
+        let test = new AutoTest();
+        try {
+            test.run();
+        } catch (err) {
+            console.log(test.toString());
+            i = -1;
+            // process.exit(0);
+        }
+    }
+})();
 
 function assertBuffer(fileName: string): void {
     const buff = buildBufferFromFixture(fileName);

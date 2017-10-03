@@ -91,25 +91,44 @@ void BufferPiece::deleteOneOffsetLen(size_t offset, size_t len)
 {
     size_t deleteLineStartsFrom = lineStartsCount_;
     size_t deleteLineStartsTo = 0;
+    LINE_START_T *deletingCase1 = NULL; 
     for (size_t i = 0; i < lineStartsCount_; i++)
     {
         LINE_START_T lineStart = lineStarts_[i];
         if (lineStart <= offset)
         {
+            // Entirely before deletion
             continue;
         }
-        if (lineStart > offset + len)
+        if (lineStart > offset + len + 1)
         {
+            // Entirely after deletion
             lineStarts_[i] -= len;
             continue;
         }
 
-        // Cover the case of deleting only the \n in a \r\n pair
+        // Boundary: Cover the case of deleting: \r[\n...]
         if (offset == lineStart - 1 && lineStart > 1 && data_[lineStart - 2] == '\r' && data_[lineStart - 1] == '\n')
         {
             // The line start remains
             lineStarts_[i] -= 1;
+            deletingCase1 = &lineStarts_[i];
             continue;
+        }
+
+        // Boundary: Cover the case of deleting: \r[\n...\r]\n
+        if (offset + len == lineStart - 1)
+        {
+            if (deletingCase1 != NULL && lineStart > 1 && data_[lineStart - 2] == '\r' && data_[lineStart - 1] == '\n')
+            {
+                (*deletingCase1) = (*deletingCase1) + 1;
+            }
+            else
+            {
+                // The line start remains
+                lineStarts_[i] -= len;
+                continue;
+            }
         }
 
         // This line start must be deleted

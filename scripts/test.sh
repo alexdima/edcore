@@ -10,4 +10,4 @@ fi
 cd $ROOT
 
 make BUILDTYPE=Debug -C build
-./node_modules/.bin/mocha
+./node_modules/.bin/mocha "$@"
