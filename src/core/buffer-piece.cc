@@ -41,7 +41,7 @@ BufferPiece::BufferPiece(uint16_t *data, size_t len)
         }
     }
 
-    size_t *lineStarts = new size_t[lineStartsCount];
+    LINE_START_T *lineStarts = new LINE_START_T[lineStartsCount];
 
     size_t dest = 0;
     for (size_t i = 0; i < len; i++)
@@ -70,7 +70,7 @@ BufferPiece::BufferPiece(uint16_t *data, size_t len)
     _init(data, len, lineStarts, lineStartsCount);
 }
 
-void BufferPiece::_init(uint16_t *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
+void BufferPiece::_init(uint16_t *data, size_t len, LINE_START_T *lineStarts, size_t lineStartsCount)
 {
     data_ = data;
     length_ = len;
@@ -89,12 +89,11 @@ BufferPiece::~BufferPiece()
 
 void BufferPiece::deleteOneOffsetLen(size_t offset, size_t len)
 {
-    cout << "Line starts: ";
-    size_t deleteFrom = lineStartsCount_;
-    size_t deleteTo = 0;
+    size_t deleteLineStartsFrom = lineStartsCount_;
+    size_t deleteLineStartsTo = 0;
     for (size_t i = 0; i < lineStartsCount_; i++)
     {
-        size_t lineStart = lineStarts_[i];
+        LINE_START_T lineStart = lineStarts_[i];
         if (lineStart <= offset)
         {
             continue;
@@ -114,43 +113,20 @@ void BufferPiece::deleteOneOffsetLen(size_t offset, size_t len)
         }
 
         // This line start must be deleted
-        deleteFrom = min(deleteFrom, i);
-        deleteTo = max(deleteTo, i + 1);
-        // bool deleteLineStart = true;
-
-        // // if ()
-        // assert(false);
-
-        // uint16_t char1 = data_[lineStart - 1];
-        // uint16_t char0 = lineStart > 1 ? data_[lineStart - 2] : 0;
-
-        // // if (lineStart)
-        // if (lineStart > offset)
-        // {
-        //     lineStarts_[i] -= len;
-        // }
-        // else
-        // {
-        //     // TODO
-        //     assert(false);
-        // }
-        // // cout << " - lineStart["<<i<<"]: " << lineStarts_[i] << endl;
-        // // break;
+        deleteLineStartsFrom = min(deleteLineStartsFrom, i);
+        deleteLineStartsTo = max(deleteLineStartsTo, i + 1);
     }
 
 
-    if (deleteFrom < deleteTo)
+    if (deleteLineStartsFrom < deleteLineStartsTo)
     {
-        memcpy(lineStarts_ + deleteFrom, lineStarts_ + deleteTo, sizeof(size_t) * (lineStartsCount_ - deleteTo));
-        lineStartsCount_ -= (deleteTo - deleteFrom);
-        // printf("\nTODO!!!!!\n");
+        memcpy(lineStarts_ + deleteLineStartsFrom, lineStarts_ + deleteLineStartsTo, sizeof(LINE_START_T) * (lineStartsCount_ - deleteLineStartsTo));
+        lineStartsCount_ -= (deleteLineStartsTo - deleteLineStartsFrom);
     }
 
     uint16_t length = length_ - len;
     memcpy(data_ + offset, data_ + offset + len, sizeof(uint16_t) * (length - offset));
     length_ = length;
-
-    printf("INSIDE LEAF, deleteOneOffsetLen %lu %lu\n", offset, len);
 }
 
 void BufferPiece::print(std::ostream &os) const

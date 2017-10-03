@@ -10,6 +10,8 @@
 
 using namespace std;
 
+#define LINE_START_T uint32_t
+
 namespace edcore
 {
 
@@ -21,7 +23,7 @@ class BufferPiece
 
     const uint16_t *data() const { return this->data_; }
     size_t length() const { return this->length_; }
-    const size_t *lineStarts() const { return this->lineStarts_; }
+    const LINE_START_T *lineStarts() const { return this->lineStarts_; }
     size_t newLineCount() const { return this->lineStartsCount_; }
 
     void deleteOneOffsetLen(size_t offset, size_t len);
@@ -33,11 +35,11 @@ class BufferPiece
     size_t length_;
     size_t dataCapacity_;
 
-    size_t *lineStarts_;
+    LINE_START_T *lineStarts_;
     size_t lineStartsCount_;
     size_t lineStartsCapacity_;
 
-    void _init(uint16_t *data, size_t len, size_t *lineStarts, size_t lineStartsCount);
+    void _init(uint16_t *data, size_t len, LINE_START_T *lineStarts, size_t lineStartsCount);
 };
 }
 

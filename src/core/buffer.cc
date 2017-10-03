@@ -224,8 +224,8 @@ bool Buffer::_findLineStart(size_t &lineIndex, BufferCursor &result)
     }
     it = NODE_TO_LEAF_INDEX(it);
 
-    const size_t *lineStarts = leafs_[it]->lineStarts();
-    const size_t innerLineStartOffset = (lineIndex == 0 ? 0 : lineStarts[lineIndex - 1]);
+    const LINE_START_T *lineStarts = leafs_[it]->lineStarts();
+    const LINE_START_T innerLineStartOffset = (lineIndex == 0 ? 0 : lineStarts[lineIndex - 1]);
 
     result.offset = leafStartOffset + innerLineStartOffset;
     result.leafIndex = it;
@@ -242,8 +242,8 @@ void Buffer::_findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t inner
 
         if (innerLineIndex < leaf->newLineCount())
         {
-            const size_t *lineStarts = leafs_[leafIndex]->lineStarts();
-            size_t lineEndOffset = lineStarts[innerLineIndex];
+            const LINE_START_T *lineStarts = leafs_[leafIndex]->lineStarts();
+            LINE_START_T lineEndOffset = lineStarts[innerLineIndex];
 
             result.offset = leafStartOffset + lineEndOffset;
             result.leafIndex = leafIndex;
