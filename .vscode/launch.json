@@ -7,9 +7,7 @@
             "request": "launch",
             "program": "/usr/local/bin/node",
             "args": [
-                "./node_modules/.bin/_mocha",
-                "--grep",
-                "first line with EOL"
+                "./node_modules/.bin/_mocha"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",

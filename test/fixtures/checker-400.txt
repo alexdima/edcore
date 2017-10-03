@@ -1,0 +1,399 @@
+/// <reference path="moduleNameResolver.ts"/>
+/// <reference path="binder.ts"/>
+/// <reference path="symbolWalker.ts" />
+
+/* @internal */
+namespace ts {
+    const ambientModuleSymbolRegex = /^".+"$/;
+
+    let nextSymbolId = 1;
+    let nextNodeId = 1;
+    let nextMergeId = 1;
+    let nextFlowId = 1;
+
+    export function getNodeId(node: Node): number {
+        if (!node.id) {
+            node.id = nextNodeId;
+            nextNodeId++;
+        }
+        return node.id;
+    }
+
+    export function getSymbolId(symbol: Symbol): number {
+        if (!symbol.id) {
+            symbol.id = nextSymbolId;
+            nextSymbolId++;
+        }
+
+        return symbol.id;
+    }
+
+    export function isInstantiatedModule(node: ModuleDeclaration, preserveConstEnums: boolean) {
+        const moduleState = getModuleInstanceState(node);
+        return moduleState === ModuleInstanceState.Instantiated ||
+            (preserveConstEnums && moduleState === ModuleInstanceState.ConstEnumOnly);
+    }
+
+    export function createTypeChecker(host: TypeCheckerHost, produceDiagnostics: boolean): TypeChecker {
+        // Cancellation that controls whether or not we can cancel in the middle of type checking.
+        // In general cancelling is *not* safe for the type checker.  We might be in the middle of
+        // computing something, and we will leave our internals in an inconsistent state.  Callers
+        // who set the cancellation token should catch if a cancellation exception occurs, and
+        // should throw away and create a new TypeChecker.
+        //
+        // Currently we only support setting the cancellation token when getting diagnostics.  This
+        // is because diagnostics can be quite expensive, and we want to allow hosts to bail out if
+        // they no longer need the information (for example, if the user started editing again).
+        let cancellationToken: CancellationToken;
+        let requestedExternalEmitHelpers: ExternalEmitHelpers;
+        let externalHelpersModule: Symbol;
+
+        const Symbol = objectAllocator.getSymbolConstructor();
+        const Type = objectAllocator.getTypeConstructor();
+        const Signature = objectAllocator.getSignatureConstructor();
+
+        let typeCount = 0;
+        let symbolCount = 0;
+        let enumCount = 0;
+        let symbolInstantiationDepth = 0;
+
+        const emptySymbols = createSymbolTable();
+        const identityMapper: (type: Type) => Type = identity;
+
+        const compilerOptions = host.getCompilerOptions();
+        const languageVersion = getEmitScriptTarget(compilerOptions);
+        const modulekind = getEmitModuleKind(compilerOptions);
+        const noUnusedIdentifiers = !!compilerOptions.noUnusedLocals || !!compilerOptions.noUnusedParameters;
+        const allowSyntheticDefaultImports = typeof compilerOptions.allowSyntheticDefaultImports !== "undefined" ? compilerOptions.allowSyntheticDefaultImports : modulekind === ModuleKind.System;
+        const strictNullChecks = compilerOptions.strictNullChecks === undefined ? compilerOptions.strict : compilerOptions.strictNullChecks;
+        const noImplicitAny = compilerOptions.noImplicitAny === undefined ? compilerOptions.strict : compilerOptions.noImplicitAny;
+        const noImplicitThis = compilerOptions.noImplicitThis === undefined ? compilerOptions.strict : compilerOptions.noImplicitThis;
+
+        const emitResolver = createResolver();
+        const nodeBuilder = createNodeBuilder();
+
+        const undefinedSymbol = createSymbol(SymbolFlags.Property, "undefined" as __String);
+        undefinedSymbol.declarations = [];
+        const argumentsSymbol = createSymbol(SymbolFlags.Property, "arguments" as __String);
+
+        /** This will be set during calls to `getResolvedSignature` where services determines an apparent number of arguments greater than what is actually provided. */
+        let apparentArgumentCount: number | undefined;
+
+        // for public members that accept a Node or one of its subtypes, we must guard against
+        // synthetic nodes created during transformations by calling `getParseTreeNode`.
+        // for most of these, we perform the guard only on `checker` to avoid any possible
+        // extra cost of calling `getParseTreeNode` when calling these functions from inside the
+        // checker.
+        const checker: TypeChecker = {
+            getNodeCount: () => sum(host.getSourceFiles(), "nodeCount"),
+            getIdentifierCount: () => sum(host.getSourceFiles(), "identifierCount"),
+            getSymbolCount: () => sum(host.getSourceFiles(), "symbolCount") + symbolCount,
+            getTypeCount: () => typeCount,
+            isUndefinedSymbol: symbol => symbol === undefinedSymbol,
+            isArgumentsSymbol: symbol => symbol === argumentsSymbol,
+            isUnknownSymbol: symbol => symbol === unknownSymbol,
+            getMergedSymbol,
+            getDiagnostics,
+            getGlobalDiagnostics,
+            getTypeOfSymbolAtLocation: (symbol, location) => {
+                location = getParseTreeNode(location);
+                return location ? getTypeOfSymbolAtLocation(symbol, location) : unknownType;
+            },
+            getSymbolsOfParameterPropertyDeclaration: (parameter, parameterName) => {
+                parameter = getParseTreeNode(parameter, isParameter);
+                Debug.assert(parameter !== undefined, "Cannot get symbols of a synthetic parameter that cannot be resolved to a parse-tree node.");
+                return getSymbolsOfParameterPropertyDeclaration(parameter, escapeLeadingUnderscores(parameterName));
+            },
+            getDeclaredTypeOfSymbol,
+            getPropertiesOfType,
+            getPropertyOfType: (type, name) => getPropertyOfType(type, escapeLeadingUnderscores(name)),
+            getIndexInfoOfType,
+            getSignaturesOfType,
+            getIndexTypeOfType,
+            getBaseTypes,
+            getBaseTypeOfLiteralType,
+            getWidenedType,
+            getTypeFromTypeNode: node => {
+                node = getParseTreeNode(node, isTypeNode);
+                return node ? getTypeFromTypeNode(node) : unknownType;
+            },
+            getParameterType: getTypeAtPosition,
+            getReturnTypeOfSignature,
+            getNullableType,
+            getNonNullableType,
+            typeToTypeNode: nodeBuilder.typeToTypeNode,
+            indexInfoToIndexSignatureDeclaration: nodeBuilder.indexInfoToIndexSignatureDeclaration,
+            signatureToSignatureDeclaration: nodeBuilder.signatureToSignatureDeclaration,
+            getSymbolsInScope: (location, meaning) => {
+                location = getParseTreeNode(location);
+                return location ? getSymbolsInScope(location, meaning) : [];
+            },
+            getSymbolAtLocation: node => {
+                node = getParseTreeNode(node);
+                return node ? getSymbolAtLocation(node) : undefined;
+            },
+            getShorthandAssignmentValueSymbol: node => {
+                node = getParseTreeNode(node);
+                return node ? getShorthandAssignmentValueSymbol(node) : undefined;
+            },
+            getExportSpecifierLocalTargetSymbol: node => {
+                node = getParseTreeNode(node, isExportSpecifier);
+                return node ? getExportSpecifierLocalTargetSymbol(node) : undefined;
+            },
+            getExportSymbolOfSymbol(symbol) {
+                return getMergedSymbol(symbol.exportSymbol || symbol);
+            },
+            getTypeAtLocation: node => {
+                node = getParseTreeNode(node);
+                return node ? getTypeOfNode(node) : unknownType;
+            },
+            getPropertySymbolOfDestructuringAssignment: location => {
+                location = getParseTreeNode(location, isIdentifier);
+                return location ? getPropertySymbolOfDestructuringAssignment(location) : undefined;
+            },
+            signatureToString: (signature, enclosingDeclaration?, flags?, kind?) => {
+                return signatureToString(signature, getParseTreeNode(enclosingDeclaration), flags, kind);
+            },
+            typeToString: (type, enclosingDeclaration?, flags?) => {
+                return typeToString(type, getParseTreeNode(enclosingDeclaration), flags);
+            },
+            getSymbolDisplayBuilder,
+            symbolToString: (symbol, enclosingDeclaration?, meaning?) => {
+                return symbolToString(symbol, getParseTreeNode(enclosingDeclaration), meaning);
+            },
+            getAugmentedPropertiesOfType,
+            getRootSymbols,
+            getContextualType: node => {
+                node = getParseTreeNode(node, isExpression);
+                return node ? getContextualType(node) : undefined;
+            },
+            getFullyQualifiedName,
+            getResolvedSignature: (node, candidatesOutArray, theArgumentCount) => {
+                node = getParseTreeNode(node, isCallLikeExpression);
+                apparentArgumentCount = theArgumentCount;
+                const res = node ? getResolvedSignature(node, candidatesOutArray) : undefined;
+                apparentArgumentCount = undefined;
+                return res;
+            },
+            getConstantValue: node => {
+                node = getParseTreeNode(node, canHaveConstantValue);
+                return node ? getConstantValue(node) : undefined;
+            },
+            isValidPropertyAccess: (node, propertyName) => {
+                node = getParseTreeNode(node, isPropertyAccessOrQualifiedName);
+                return node ? isValidPropertyAccess(node, escapeLeadingUnderscores(propertyName)) : false;
+            },
+            getSignatureFromDeclaration: declaration => {
+                declaration = getParseTreeNode(declaration, isFunctionLike);
+                return declaration ? getSignatureFromDeclaration(declaration) : undefined;
+            },
+            isImplementationOfOverload: node => {
+                const parsed = getParseTreeNode(node, isFunctionLike);
+                return parsed ? isImplementationOfOverload(parsed) : undefined;
+            },
+            getImmediateAliasedSymbol: symbol => {
+                Debug.assert((symbol.flags & SymbolFlags.Alias) !== 0, "Should only get Alias here.");
+                const links = getSymbolLinks(symbol);
+                if (!links.immediateTarget) {
+                    const node = getDeclarationOfAliasSymbol(symbol);
+                    Debug.assert(!!node);
+                    links.immediateTarget = getTargetOfAliasDeclaration(node, /*dontRecursivelyResolve*/ true);
+                }
+
+                return links.immediateTarget;
+            },
+            getAliasedSymbol: resolveAlias,
+            getEmitResolver,
+            getExportsOfModule: getExportsOfModuleAsArray,
+            getExportsAndPropertiesOfModule,
+            getSymbolWalker: createGetSymbolWalker(getRestTypeOfSignature, getReturnTypeOfSignature, getBaseTypes, resolveStructuredTypeMembers, getTypeOfSymbol, getResolvedSymbol, getIndexTypeOfStructuredType, getConstraintFromTypeParameter, getFirstIdentifier),
+            getAmbientModules,
+            getAllAttributesTypeFromJsxOpeningLikeElement: node => {
+                node = getParseTreeNode(node, isJsxOpeningLikeElement);
+                return node ? getAllAttributesTypeFromJsxOpeningLikeElement(node) : undefined;
+            },
+            getJsxIntrinsicTagNames,
+            isOptionalParameter: node => {
+                node = getParseTreeNode(node, isParameter);
+                return node ? isOptionalParameter(node) : false;
+            },
+            tryGetMemberInModuleExports: (name, symbol) => tryGetMemberInModuleExports(escapeLeadingUnderscores(name), symbol),
+            tryGetMemberInModuleExportsAndProperties: (name, symbol) => tryGetMemberInModuleExportsAndProperties(escapeLeadingUnderscores(name), symbol),
+            tryFindAmbientModuleWithoutAugmentations: moduleName => {
+                // we deliberately exclude augmentations
+                // since we are only interested in declarations of the module itself
+                return tryFindAmbientModule(moduleName, /*withAugmentations*/ false);
+            },
+            getApparentType,
+            isArrayLikeType,
+            getAllPossiblePropertiesOfTypes,
+            getSuggestionForNonexistentProperty: (node, type) => unescapeLeadingUnderscores(getSuggestionForNonexistentProperty(node, type)),
+            getSuggestionForNonexistentSymbol: (location, name, meaning) => unescapeLeadingUnderscores(getSuggestionForNonexistentSymbol(location, escapeLeadingUnderscores(name), meaning)),
+            getBaseConstraintOfType,
+            resolveName(name, location, meaning) {
+                return resolveName(location, escapeLeadingUnderscores(name), meaning, /*nameNotFoundMessage*/ undefined, /*nameArg*/ undefined, /*isUse*/ false);
+            },
+            getJsxNamespace: () => unescapeLeadingUnderscores(getJsxNamespace()),
+        };
+
+        const tupleTypes: GenericType[] = [];
+        const unionTypes = createMap<UnionType>();
+        const intersectionTypes = createMap<IntersectionType>();
+        const literalTypes = createMap<LiteralType>();
+        const indexedAccessTypes = createMap<IndexedAccessType>();
+        const evolvingArrayTypes: EvolvingArrayType[] = [];
+
+        const unknownSymbol = createSymbol(SymbolFlags.Property, "unknown" as __String);
+        const resolvingSymbol = createSymbol(0, InternalSymbolName.Resolving);
+
+        const anyType = createIntrinsicType(TypeFlags.Any, "any");
+        const autoType = createIntrinsicType(TypeFlags.Any, "any");
+        const unknownType = createIntrinsicType(TypeFlags.Any, "unknown");
+        const undefinedType = createIntrinsicType(TypeFlags.Undefined, "undefined");
+        const undefinedWideningType = strictNullChecks ? undefinedType : createIntrinsicType(TypeFlags.Undefined | TypeFlags.ContainsWideningType, "undefined");
+        const nullType = createIntrinsicType(TypeFlags.Null, "null");
+        const nullWideningType = strictNullChecks ? nullType : createIntrinsicType(TypeFlags.Null | TypeFlags.ContainsWideningType, "null");
+        const stringType = createIntrinsicType(TypeFlags.String, "string");
+        const numberType = createIntrinsicType(TypeFlags.Number, "number");
+        const trueType = createIntrinsicType(TypeFlags.BooleanLiteral, "true");
+        const falseType = createIntrinsicType(TypeFlags.BooleanLiteral, "false");
+        const booleanType = createBooleanType([trueType, falseType]);
+        const esSymbolType = createIntrinsicType(TypeFlags.ESSymbol, "symbol");
+        const voidType = createIntrinsicType(TypeFlags.Void, "void");
+        const neverType = createIntrinsicType(TypeFlags.Never, "never");
+        const silentNeverType = createIntrinsicType(TypeFlags.Never, "never");
+        const nonPrimitiveType = createIntrinsicType(TypeFlags.NonPrimitive, "object");
+
+        const emptyObjectType = createAnonymousType(undefined, emptySymbols, emptyArray, emptyArray, undefined, undefined);
+
+        const emptyTypeLiteralSymbol = createSymbol(SymbolFlags.TypeLiteral, InternalSymbolName.Type);
+        emptyTypeLiteralSymbol.members = createSymbolTable();
+        const emptyTypeLiteralType = createAnonymousType(emptyTypeLiteralSymbol, emptySymbols, emptyArray, emptyArray, undefined, undefined);
+
+        const emptyGenericType = <GenericType><ObjectType>createAnonymousType(undefined, emptySymbols, emptyArray, emptyArray, undefined, undefined);
+        emptyGenericType.instantiations = createMap<TypeReference>();
+
+        const anyFunctionType = createAnonymousType(undefined, emptySymbols, emptyArray, emptyArray, undefined, undefined);
+        // The anyFunctionType contains the anyFunctionType by definition. The flag is further propagated
+        // in getPropagatingFlagsOfTypes, and it is checked in inferFromTypes.
+        anyFunctionType.flags |= TypeFlags.ContainsAnyFunctionType;
+
+        const noConstraintType = createAnonymousType(undefined, emptySymbols, emptyArray, emptyArray, undefined, undefined);
+        const circularConstraintType = createAnonymousType(undefined, emptySymbols, emptyArray, emptyArray, undefined, undefined);
+
+        const anySignature = createSignature(undefined, undefined, undefined, emptyArray, anyType, /*typePredicate*/ undefined, 0, /*hasRestParameter*/ false, /*hasLiteralTypes*/ false);
+        const unknownSignature = createSignature(undefined, undefined, undefined, emptyArray, unknownType, /*typePredicate*/ undefined, 0, /*hasRestParameter*/ false, /*hasLiteralTypes*/ false);
+        const resolvingSignature = createSignature(undefined, undefined, undefined, emptyArray, anyType, /*typePredicate*/ undefined, 0, /*hasRestParameter*/ false, /*hasLiteralTypes*/ false);
+        const silentNeverSignature = createSignature(undefined, undefined, undefined, emptyArray, silentNeverType, /*typePredicate*/ undefined, 0, /*hasRestParameter*/ false, /*hasLiteralTypes*/ false);
+
+        const enumNumberIndexInfo = createIndexInfo(stringType, /*isReadonly*/ true);
+        const jsObjectLiteralIndexInfo = createIndexInfo(anyType, /*isReadonly*/ false);
+
+        const globals = createSymbolTable();
+        /**
+         * List of every ambient module with a "*" wildcard.
+         * Unlike other ambient modules, these can't be stored in `globals` because symbol tables only deal with exact matches.
+         * This is only used if there is no exact match.
+         */
+        let patternAmbientModules: PatternAmbientModule[];
+
+        let globalObjectType: ObjectType;
+        let globalFunctionType: ObjectType;
+        let globalArrayType: GenericType;
+        let globalReadonlyArrayType: GenericType;
+        let globalStringType: ObjectType;
+        let globalNumberType: ObjectType;
+        let globalBooleanType: ObjectType;
+        let globalRegExpType: ObjectType;
+        let globalThisType: GenericType;
+        let anyArrayType: Type;
+        let autoArrayType: Type;
+        let anyReadonlyArrayType: Type;
+
+        // The library files are only loaded when the feature is used.
+        // This allows users to just specify library files they want to used through --lib
+        // and they will not get an error from not having unrelated library files
+        let deferredGlobalESSymbolConstructorSymbol: Symbol;
+        let deferredGlobalESSymbolType: ObjectType;
+        let deferredGlobalTypedPropertyDescriptorType: GenericType;
+        let deferredGlobalPromiseType: GenericType;
+        let deferredGlobalPromiseConstructorSymbol: Symbol;
+        let deferredGlobalPromiseConstructorLikeType: ObjectType;
+        let deferredGlobalIterableType: GenericType;
+        let deferredGlobalIteratorType: GenericType;
+        let deferredGlobalIterableIteratorType: GenericType;
+        let deferredGlobalAsyncIterableType: GenericType;
+        let deferredGlobalAsyncIteratorType: GenericType;
+        let deferredGlobalAsyncIterableIteratorType: GenericType;
+        let deferredGlobalTemplateStringsArrayType: ObjectType;
+        let deferredJsxElementClassType: Type;
+        let deferredJsxElementType: Type;
+        let deferredJsxStatelessElementType: Type;
+
+        let deferredNodes: Node[];
+        let deferredUnusedIdentifierNodes: Node[];
+
+        let flowLoopStart = 0;
+        let flowLoopCount = 0;
+        let sharedFlowCount = 0;
+        let flowAnalysisDisabled = false;
+
+        const emptyStringType = getLiteralType("");
+        const zeroType = getLiteralType(0);
+
+        const resolutionTargets: TypeSystemEntity[] = [];
+        const resolutionResults: boolean[] = [];
+        const resolutionPropertyNames: TypeSystemPropertyName[] = [];
+
+        let suggestionCount = 0;
+        const maximumSuggestionCount = 10;
+        const mergedSymbols: Symbol[] = [];
+        const symbolLinks: SymbolLinks[] = [];
+        const nodeLinks: NodeLinks[] = [];
+        const flowLoopCaches: Map<Type>[] = [];
+        const flowLoopNodes: FlowNode[] = [];
+        const flowLoopKeys: string[] = [];
+        const flowLoopTypes: Type[][] = [];
+        const sharedFlowNodes: FlowNode[] = [];
+        const sharedFlowTypes: FlowType[] = [];
+        const potentialThisCollisions: Node[] = [];
+        const potentialNewTargetCollisions: Node[] = [];
+        const awaitedTypeStack: number[] = [];
+
+        const diagnostics = createDiagnosticCollection();
+
+        const enum TypeFacts {
+            None = 0,
+            TypeofEQString = 1 << 0,      // typeof x === "string"
+            TypeofEQNumber = 1 << 1,      // typeof x === "number"
+            TypeofEQBoolean = 1 << 2,     // typeof x === "boolean"
+            TypeofEQSymbol = 1 << 3,      // typeof x === "symbol"
+            TypeofEQObject = 1 << 4,      // typeof x === "object"
+            TypeofEQFunction = 1 << 5,    // typeof x === "function"
+            TypeofEQHostObject = 1 << 6,  // typeof x === "xxx"
+            TypeofNEString = 1 << 7,      // typeof x !== "string"
+            TypeofNENumber = 1 << 8,      // typeof x !== "number"
+            TypeofNEBoolean = 1 << 9,     // typeof x !== "boolean"
+            TypeofNESymbol = 1 << 10,     // typeof x !== "symbol"
+            TypeofNEObject = 1 << 11,     // typeof x !== "object"
+            TypeofNEFunction = 1 << 12,   // typeof x !== "function"
+            TypeofNEHostObject = 1 << 13, // typeof x !== "xxx"
+            EQUndefined = 1 << 14,        // x === undefined
+            EQNull = 1 << 15,             // x === null
+            EQUndefinedOrNull = 1 << 16,  // x === undefined / x === null
+            NEUndefined = 1 << 17,        // x !== undefined
+            NENull = 1 << 18,             // x !== null
+            NEUndefinedOrNull = 1 << 19,  // x != undefined / x != null
+            Truthy = 1 << 20,             // x
+            Falsy = 1 << 21,              // !x
+            Discriminatable = 1 << 22,    // May have discriminant property
+            All = (1 << 23) - 1,
+            // The following members encode facts about particular kinds of types for use in the getTypeFacts function.
+            // The presence of a particular fact means that the given test is true for some (and possibly all) values
+            // of that kind of type.
+            BaseStringStrictFacts = TypeofEQString | TypeofNENumber | TypeofNEBoolean | TypeofNESymbol | TypeofNEObject | TypeofNEFunction | TypeofNEHostObject | NEUndefined | NENull | NEUndefinedOrNull,
+            BaseStringFacts = BaseStringStrictFacts | EQUndefined | EQNull | EQUndefinedOrNull | Falsy,
+            StringStrictFacts = BaseStringStrictFacts | Truthy | Falsy,
+            StringFacts = BaseStringFacts | Truthy,
+            EmptyStringStrictFacts = BaseStringStrictFacts | Falsy,
+            EmptyStringFacts = BaseStringFacts,
