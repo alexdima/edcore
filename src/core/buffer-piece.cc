@@ -11,6 +11,14 @@
 namespace edcore
 {
 
+size_t BufferPiece::memUsage() const
+{
+    return (
+        sizeof(BufferPiece) +
+        dataCapacity_ * sizeof(uint16_t) +
+        lineStartsCapacity_ * sizeof(LINE_START_T));
+}
+
 BufferPiece::BufferPiece(uint16_t *data, size_t len)
 {
     assert(data != NULL && len != 0);

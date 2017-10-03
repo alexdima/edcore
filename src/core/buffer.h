@@ -36,6 +36,8 @@ class Buffer
     ~Buffer();
     size_t length() const { return nodes_[1].length; }
     size_t lineCount() const { return nodes_[1].newLineCount + 1; }
+    size_t memUsage() const;
+
     void print(ostream &os, size_t index, size_t indent);
 
     bool findOffset(size_t offset, BufferCursor &result);

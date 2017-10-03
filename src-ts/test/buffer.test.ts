@@ -182,7 +182,7 @@ suite('DeleteOneOffsetLen', () => {
 });
 
 (function () {
-    const CONSECUTIVE_EDITS_CNT = 10;
+    const CONSECUTIVE_EDITS_CNT = 100;
     const MIN_CHUNK_SIZE = 10;
     const MAX_CHUNK_SIZE = 1 << 16;
 

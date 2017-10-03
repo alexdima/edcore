@@ -43,6 +43,20 @@ void printIndent(ostream &os, int indent)
     }
 }
 
+size_t Buffer::memUsage() const
+{
+    size_t leafs = 0;
+    for (size_t i = 0; i < leafsCount_; i++)
+    {
+        leafs += leafs_[i]->memUsage();
+    }
+    return (
+        sizeof(Buffer) +
+        leafsCount_ * sizeof(BufferPiece *) +
+        nodesCount_ * sizeof(BufferNode) +
+        leafs);
+}
+
 Buffer::Buffer(vector<BufferPiece *> &pieces)
 {
     leafsCount_ = pieces.size();
@@ -64,6 +78,8 @@ Buffer::Buffer(vector<BufferPiece *> &pieces)
     {
         _updateSingleNode(i);
     }
+
+    // printf("mem usage: %lu B = %lf MB\n", memUsage(), ((double)memUsage()) / 1024 / 1024);
 }
 
 void Buffer::_updateSingleNode(size_t nodeIndex)
