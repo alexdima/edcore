@@ -140,11 +140,15 @@ suite('DeleteOneOffsetLen', () => {
         test('gen5 - \\r\\n boundary case outisde chunk 3', () => {
             runTest(201, [{ "offset": 19720, "length": 2203 }]);
         });
+
+        test('gen6', () => {
+            runTest(192, [{ "offset": 8062, "length": 13646 }, { "offset": 7469, "length": 1925 }]);
+        })
     });
 });
 
 (function () {
-    const CONSECUTIVE_EDITS_CNT = 1;
+    const CONSECUTIVE_EDITS_CNT = 2;
     const MIN_CHUNK_SIZE = 100;
     const MAX_CHUNK_SIZE = 1 << 16;
 

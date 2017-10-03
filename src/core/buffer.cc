@@ -310,6 +310,8 @@ void Buffer::deleteOneOffsetLen(size_t offset, size_t len)
     // size_t nextLeafIndex =
 
     // Maintain invariant that a leaf does not end in \r or a high surrogate pair
+    size_t firstDirtyIndex = start.leafIndex;
+    size_t lastDirtyIndex = leafIndex;
     {
         BufferPiece *startLeaf = leafs_[start.leafIndex];
         size_t startLeafLength = startLeaf->length();
@@ -334,6 +336,7 @@ void Buffer::deleteOneOffsetLen(size_t offset, size_t len)
                 {
                     startLeaf->deleteLastChar();
                     nextLeaf->insertFirstChar(lastChar);
+                    lastDirtyIndex = nextLeafIndex;
                     // printf("TODO: I need to insert the last character!\n");
                 }
             }
@@ -353,8 +356,8 @@ void Buffer::deleteOneOffsetLen(size_t offset, size_t len)
     // size_t startLeafLength = leafs_[start.leafIndex]->length();
     // if (leafs_[start.leafIndex]->length() > 0)
 
-    size_t fromNodeIndex = LEAF_TO_NODE_INDEX(start.leafIndex) / 2;
-    size_t toNodeIndex = LEAF_TO_NODE_INDEX(leafIndex) / 2;
+    size_t fromNodeIndex = LEAF_TO_NODE_INDEX(firstDirtyIndex) / 2;
+    size_t toNodeIndex = LEAF_TO_NODE_INDEX(lastDirtyIndex) / 2;
     _updateNodes(fromNodeIndex, toNodeIndex);
 }
 
