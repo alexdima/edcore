@@ -7,8 +7,10 @@ export declare class EdBuffer {
     _nativeEdBufferBrand: void;
     constructor();
 
+    GetLength(): number;
     GetLineCount(): number;
     GetLineContent(lineNumber: number): string;
+    DeleteOneOffsetLen(offset: number, length: number): void;
 }
 
 export declare class EdBufferBuilder {

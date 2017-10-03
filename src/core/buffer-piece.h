@@ -24,14 +24,18 @@ class BufferPiece
     const size_t *lineStarts() const { return this->lineStarts_; }
     size_t newLineCount() const { return this->lineStartsCount_; }
 
+    void deleteOneOffsetLen(size_t offset, size_t len);
+
     void print(ostream &os) const;
 
   private:
     uint16_t *data_;
     size_t length_;
+    size_t dataCapacity_;
 
     size_t *lineStarts_;
     size_t lineStartsCount_;
+    size_t lineStartsCapacity_;
 
     void _init(uint16_t *data, size_t len, size_t *lineStarts, size_t lineStartsCount);
 };

@@ -26,8 +26,10 @@ class EdBuffer : public node::ObjectWrap
 
     static v8::Persistent<v8::Function> constructor;
     static void New(const v8::FunctionCallbackInfo<v8::Value> &args);
+    static void GetLength(const v8::FunctionCallbackInfo<v8::Value> &args);
     static void GetLineCount(const v8::FunctionCallbackInfo<v8::Value> &args);
     static void GetLineContent(const v8::FunctionCallbackInfo<v8::Value> &args);
+    static void DeleteOneOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args);
 };
 
 #endif

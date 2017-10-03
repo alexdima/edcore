@@ -23,8 +23,13 @@ export function buildBufferFromFixture(fileName: string, chunkSize: number = 1 <
     return builder.Build();
 }
 
+const FIXTURE_CACHE: { [fileName:string]: string; } = {};
+
 export function readFixture(fileName: string): string {
-    const filePath = path.join(FIXTURES_FOLDER, fileName);
-    const fileContents = fs.readFileSync(filePath);
-    return fileContents.toString();
+    if (!FIXTURE_CACHE.hasOwnProperty(fileName)) {
+        const filePath = path.join(FIXTURES_FOLDER, fileName);
+        const fileContents = fs.readFileSync(filePath);
+        FIXTURE_CACHE[fileName] = fileContents.toString();
+    }
+    return FIXTURE_CACHE[fileName];
 }

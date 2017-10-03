@@ -5,19 +5,60 @@
 
 import * as assert from 'assert';
 import { buildBufferFromFixture, readFixture } from './utils/bufferBuilder';
+import { EdBuffer } from '../../index';
 
-suite('Simple', () => {
+suite('Loading', () => {
 
     test('checker.txt', () => {
         assertBuffer('checker.txt');
     });
+});
 
+interface IOffsetLengthEdit {
+    offset: number;
+    length: number;
+    text: string;
+}
+
+function applyOffsetLengthEdits(initialContent: string, edits: IOffsetLengthEdit[]): string {
+    // TODO: ensure edits are sorted bottom up
+    let result = initialContent;
+    for (let i = edits.length - 1; i >= 0; i--) {
+        result = (
+            result.substring(0, edits[i].offset) +
+            edits[i].text +
+            result.substring(edits[i].offset + edits[i].length)
+        );
+    }
+    return result;
+}
+
+suite('Editing: DeleteOneOffsetLen', () => {
+
+    function assertDeleteOneOffsetLen(fileName: string, offset: number, length: number): void {
+        const buff = buildBufferFromFixture(fileName);
+        const initialContent = readFixture(fileName);
+        const expected = applyOffsetLengthEdits(initialContent, [{ offset: offset, length: length, text: '' }]);
+        
+        buff.DeleteOneOffsetLen(offset, length);
+        assertAllMethods(buff, expected);
+    }
+
+    test('simple delete', () => {
+        assertDeleteOneOffsetLen('checker.txt', 0, 1);
+    });
 });
 
 function assertBuffer(fileName: string): void {
     const buff = buildBufferFromFixture(fileName);
     const text = readFixture(fileName);
 
+    assertAllMethods(buff, text);
+}
+
+function assertAllMethods(buff: EdBuffer, text: string): void {
+    assert.equal(buff.GetLength(), text.length);
+    
     const lines = constructLines(text);
     assert.equal(buff.GetLineCount(), lines.length);
 

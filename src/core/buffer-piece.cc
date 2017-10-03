@@ -67,27 +67,56 @@ BufferPiece::BufferPiece(uint16_t *data, size_t len)
             lineStarts[dest++] = i + 1;
         }
     }
-    this->_init(data, len, lineStarts, lineStartsCount);
+    _init(data, len, lineStarts, lineStartsCount);
 }
 
 void BufferPiece::_init(uint16_t *data, size_t len, size_t *lineStarts, size_t lineStartsCount)
 {
-    this->data_ = data;
-    this->length_ = len;
-    this->lineStarts_ = lineStarts;
-    this->lineStartsCount_ = lineStartsCount;
+    data_ = data;
+    length_ = len;
+    dataCapacity_ = len;
+
+    lineStarts_ = lineStarts;
+    lineStartsCount_ = lineStartsCount;
+    lineStartsCapacity_ = lineStartsCount;
 }
 
 BufferPiece::~BufferPiece()
 {
-    delete[] this->data_;
-    delete[] this->lineStarts_;
+    delete[] data_;
+    delete[] lineStarts_;
+}
+
+void BufferPiece::deleteOneOffsetLen(size_t offset, size_t len)
+{
+    cout << "Line starts: ";
+    for (size_t i = 0; i < lineStartsCount_; i++)
+    {
+        size_t lineStart = lineStarts_[i];
+        if (lineStart > offset)
+        {
+            lineStarts_[i] -= len;
+        }
+        else
+        {
+            // TODO
+            assert(false);
+        }
+        // cout << " - lineStart["<<i<<"]: " << lineStarts_[i] << endl;
+        // break;
+    }
+
+    uint16_t length = length_ - len;
+    memcpy(data_ + offset, data_ + offset + len, sizeof(uint16_t) * (length - offset));
+    length_ = length;
+
+    printf("INSIDE LEAF, deleteOneOffsetLen %lu %lu\n", offset, len);
 }
 
 void BufferPiece::print(std::ostream &os) const
 {
-    const uint16_t *data = this->data_;
-    const size_t len = this->length_;
+    const uint16_t *data = data_;
+    const size_t len = length_;
     for (size_t i = 0; i < len; i++)
     {
         os << data[i];

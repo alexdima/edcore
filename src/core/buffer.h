@@ -42,6 +42,8 @@ class Buffer
     bool findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end);
     void extractString(BufferCursor start, size_t len, uint16_t *dest);
 
+    void deleteOneOffsetLen(size_t offset, size_t len);
+
   private:
     BufferNode *nodes_;
     size_t nodesCount_;
@@ -53,6 +55,8 @@ class Buffer
 
     bool _findLineStart(size_t &lineIndex, BufferCursor &result);
     void _findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t innerLineIndex, BufferCursor &result);
+    void _updateNodes(size_t fromNodeIndex, size_t toNodeIndex);
+    void _updateSingleNode(size_t nodeIndex);
 };
 }
 

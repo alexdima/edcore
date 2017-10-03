@@ -31,6 +31,14 @@ EdBuffer::~EdBuffer()
     delete this->actual_;
 }
 
+void EdBuffer::GetLength(const v8::FunctionCallbackInfo<v8::Value> &args)
+{
+    v8::Isolate *isolate = args.GetIsolate();
+    EdBuffer *obj = ObjectWrap::Unwrap<EdBuffer>(args.Holder());
+
+    args.GetReturnValue().Set(v8::Number::New(isolate, obj->actual_->length()));
+}
+
 void EdBuffer::GetLineCount(const v8::FunctionCallbackInfo<v8::Value> &args)
 {
     v8::Isolate *isolate = args.GetIsolate();
@@ -66,6 +74,32 @@ void EdBuffer::GetLineContent(const v8::FunctionCallbackInfo<v8::Value> &args)
     obj->actual_->extractString(start, len, data);
     v8::MaybeLocal<v8::String> res = v8::String::NewExternalTwoByte(isolate, new MyString(data, len));
     args.GetReturnValue().Set(res.ToLocalChecked() /*TODO*/);
+}
+
+void EdBuffer::DeleteOneOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
+{
+    v8::Isolate *isolate = args.GetIsolate();
+    EdBuffer *obj = ObjectWrap::Unwrap<EdBuffer>(args.Holder());
+
+    if (args.Length() != 2 || !args[0]->IsNumber() || !args[1]->IsNumber())
+    {
+        isolate->ThrowException(v8::Exception::Error(
+            v8::String::NewFromUtf8(isolate, "Expected two number arguments")));
+        return;
+    }
+
+    size_t offset = args[0]->NumberValue();
+    size_t len = args[1]->NumberValue();
+    const size_t bufferLength = obj->actual_->length();
+
+    if (offset > bufferLength || offset + len > bufferLength)
+    {
+        isolate->ThrowException(v8::Exception::Error(
+            v8::String::NewFromUtf8(isolate, "Invalid range")));
+        return;
+    }
+
+    obj->actual_->deleteOneOffsetLen(offset, len);
 }
 
 v8::Local<v8::Object> EdBuffer::Create(v8::Isolate *isolate, const v8::Local<v8::Object> builder)
@@ -115,8 +149,10 @@ void EdBuffer::Init(v8::Local<v8::Object> exports)
     tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
     // Prototype
+    NODE_SET_PROTOTYPE_METHOD(tpl, "GetLength", GetLength);
     NODE_SET_PROTOTYPE_METHOD(tpl, "GetLineCount", GetLineCount);
     NODE_SET_PROTOTYPE_METHOD(tpl, "GetLineContent", GetLineContent);
+    NODE_SET_PROTOTYPE_METHOD(tpl, "DeleteOneOffsetLen", DeleteOneOffsetLen);
 
     constructor.Reset(isolate, tpl->GetFunction());
     exports->Set(v8::String::NewFromUtf8(isolate, "EdBuffer"),

@@ -13,7 +13,8 @@
 #define RIGHT_CHILD(i) ((i << 1) + 1)
 #define IS_NODE(i) (i < nodesCount_)
 #define IS_LEAF(i) (i >= leafsStart_ && i < leafsEnd_)
-#define LEAF_INDEX(i) (i - leafsStart_)
+#define NODE_TO_LEAF_INDEX(i) (i - leafsStart_)
+#define LEAF_TO_NODE_INDEX(i) (i + leafsStart_)
 
 using namespace std;
 
@@ -61,37 +62,42 @@ Buffer::Buffer(vector<BufferPiece *> &pieces)
 
     for (size_t i = nodesCount_ - 1; i >= 1; i--)
     {
-        size_t left = LEFT_CHILD(i);
-        size_t right = RIGHT_CHILD(i);
-
-        size_t length = 0;
-        size_t newLineCount = 0;
-
-        if (IS_NODE(left))
-        {
-            length += nodes_[left].length;
-            newLineCount += nodes_[left].newLineCount;
-        }
-        else if (IS_LEAF(left))
-        {
-            length += leafs_[LEAF_INDEX(left)]->length();
-            newLineCount += leafs_[LEAF_INDEX(left)]->newLineCount();
-        }
-
-        if (IS_NODE(right))
-        {
-            length += nodes_[right].length;
-            newLineCount += nodes_[right].newLineCount;
-        }
-        else if (IS_LEAF(right))
-        {
-            length += leafs_[LEAF_INDEX(right)]->length();
-            newLineCount += leafs_[LEAF_INDEX(right)]->newLineCount();
-        }
-
-        nodes_[i].length = length;
-        nodes_[i].newLineCount = newLineCount;
+        _updateSingleNode(i);
     }
+}
+
+void Buffer::_updateSingleNode(size_t nodeIndex)
+{
+    size_t left = LEFT_CHILD(nodeIndex);
+    size_t right = RIGHT_CHILD(nodeIndex);
+
+    size_t length = 0;
+    size_t newLineCount = 0;
+
+    if (IS_NODE(left))
+    {
+        length += nodes_[left].length;
+        newLineCount += nodes_[left].newLineCount;
+    }
+    else if (IS_LEAF(left))
+    {
+        length += leafs_[NODE_TO_LEAF_INDEX(left)]->length();
+        newLineCount += leafs_[NODE_TO_LEAF_INDEX(left)]->newLineCount();
+    }
+
+    if (IS_NODE(right))
+    {
+        length += nodes_[right].length;
+        newLineCount += nodes_[right].newLineCount;
+    }
+    else if (IS_LEAF(right))
+    {
+        length += leafs_[NODE_TO_LEAF_INDEX(right)]->length();
+        newLineCount += leafs_[NODE_TO_LEAF_INDEX(right)]->newLineCount();
+    }
+
+    nodes_[nodeIndex].length = length;
+    nodes_[nodeIndex].newLineCount = newLineCount;
 }
 
 Buffer::~Buffer()
@@ -152,7 +158,7 @@ bool Buffer::findOffset(size_t offset, BufferCursor &result)
         }
         else if (IS_LEAF(left))
         {
-            leftLength = leafs_[LEAF_INDEX(left)]->length();
+            leftLength = leafs_[NODE_TO_LEAF_INDEX(left)]->length();
         }
 
         if (searchOffset < leftLength)
@@ -168,7 +174,7 @@ bool Buffer::findOffset(size_t offset, BufferCursor &result)
             it = right;
         }
     }
-    it = LEAF_INDEX(it);
+    it = NODE_TO_LEAF_INDEX(it);
 
     result.offset = offset;
     result.leafIndex = it;
@@ -200,8 +206,8 @@ bool Buffer::_findLineStart(size_t &lineIndex, BufferCursor &result)
         }
         else if (IS_LEAF(left))
         {
-            leftNewLineCount = leafs_[LEAF_INDEX(left)]->newLineCount();
-            leftLength = leafs_[LEAF_INDEX(left)]->length();
+            leftNewLineCount = leafs_[NODE_TO_LEAF_INDEX(left)]->newLineCount();
+            leftLength = leafs_[NODE_TO_LEAF_INDEX(left)]->length();
         }
 
         if (lineIndex <= leftNewLineCount)
@@ -216,7 +222,7 @@ bool Buffer::_findLineStart(size_t &lineIndex, BufferCursor &result)
         leafStartOffset += leftLength;
         it = right;
     }
-    it = LEAF_INDEX(it);
+    it = NODE_TO_LEAF_INDEX(it);
 
     const size_t *lineStarts = leafs_[it]->lineStarts();
     const size_t innerLineStartOffset = (lineIndex == 0 ? 0 : lineStarts[lineIndex - 1]);
@@ -272,12 +278,67 @@ bool Buffer::findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end)
     return true;
 }
 
+void Buffer::deleteOneOffsetLen(size_t offset, size_t len)
+{
+    assert(offset + len <= nodes_[1].length);
+
+    BufferCursor start;
+    if (!findOffset(offset, start))
+    {
+        assert(false);
+        return;
+    }
+
+    size_t innerLeafOffset = start.offset - start.leafStartOffset;
+    size_t leafIndex = start.leafIndex;
+    while (len > 0)
+    {
+        BufferPiece *leaf = leafs_[leafIndex];
+        const size_t cnt = min(len, leaf->length() - innerLeafOffset);
+        leaf->deleteOneOffsetLen(innerLeafOffset, cnt);
+        len -= cnt;
+        innerLeafOffset = 0;
+
+        if (len == 0)
+        {
+            break;
+        }
+
+        leafIndex++;
+    }
+
+    size_t fromNodeIndex = LEAF_TO_NODE_INDEX(start.leafIndex) / 2;
+    size_t toNodeIndex = LEAF_TO_NODE_INDEX(leafIndex) / 2;
+    _updateNodes(fromNodeIndex, toNodeIndex);
+
+    printf("fromNodeIndex: %lu, toNodeIndex: %lu\n", fromNodeIndex, toNodeIndex);
+
+    // TODO: update nodes_ as needed
+    printf("TODO: update nodes_ as needed");
+
+    printf("TODO: deleteOneOffsetLen %lu %lu\n", offset, len);
+    printf("TODO: offset: %lu, leafIndex: %lu, leafStartOffset: %lu\n", start.offset, start.leafIndex, start.leafStartOffset);
+}
+
+void Buffer::_updateNodes(size_t fromNodeIndex, size_t toNodeIndex)
+{
+    while (fromNodeIndex != 0)
+    {
+        for (size_t nodeIndex = fromNodeIndex; nodeIndex <= toNodeIndex; nodeIndex++)
+        {
+            _updateSingleNode(nodeIndex);
+        }
+        fromNodeIndex /= 2;
+        toNodeIndex /= 2;
+    }
+}
+
 void Buffer::print(ostream &os, size_t index, size_t indent)
 {
     if (IS_LEAF(index))
     {
         printIndent(os, indent);
-        BufferPiece *v = leafs_[LEAF_INDEX(index)];
+        BufferPiece *v = leafs_[NODE_TO_LEAF_INDEX(index)];
         os << "[LEAF] (len:" << v->length() << ", newLineCount:" << v->newLineCount() << ")" << endl;
         return;
     }
