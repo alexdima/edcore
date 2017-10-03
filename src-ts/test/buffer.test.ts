@@ -141,14 +141,25 @@ suite('DeleteOneOffsetLen', () => {
             runTest(201, [{ "offset": 19720, "length": 2203 }]);
         });
 
-        test('gen6', () => {
+        test('gen6 - invalidate nodes', () => {
             runTest(192, [{ "offset": 8062, "length": 13646 }, { "offset": 7469, "length": 1925 }]);
-        })
+        });
+
+        test('gen7', () => {
+            runTest(53340, [
+                { "offset": 807, "length": 22287 },
+                { "offset": 278, "length": 109 },
+                { "offset": 628, "length": 152 },
+                { "offset": 348, "length": 271 },
+                { "offset": 282, "length": 29 },
+                { "offset": 282, "length": 6 }
+            ]);
+        });
     });
 });
 
 (function () {
-    const CONSECUTIVE_EDITS_CNT = 2;
+    const CONSECUTIVE_EDITS_CNT = 10;
     const MIN_CHUNK_SIZE = 100;
     const MAX_CHUNK_SIZE = 1 << 16;
 
@@ -163,14 +174,18 @@ suite('DeleteOneOffsetLen', () => {
             this._chunkSize = getRandomInt(MIN_CHUNK_SIZE, MAX_CHUNK_SIZE);
             this._buff = buildBufferFromFixture('checker-400-CRLF.txt', this._chunkSize);
             this._content = readFixture('checker-400-CRLF.txt');
-            this._editsCnt = getRandomInt(1, CONSECUTIVE_EDITS_CNT);
+            this._editsCnt = getRandomInt(CONSECUTIVE_EDITS_CNT, CONSECUTIVE_EDITS_CNT);
             this._edits = [];
         }
 
         run(): void {
             console.log(this._chunkSize);
             for (let i = 0; i < this._editsCnt; i++) {
-                let _edit = generateEdits(this._content, 1, 1)[0];
+                let _edits = generateEdits(this._content, 1, 1);
+                if (_edits.length === 0) {
+                    continue;
+                }
+                let _edit = _edits[0];
                 let edit: IOffsetLengthDelete = {
                     offset: _edit.offset,
                     length: _edit.length
@@ -196,6 +211,7 @@ suite('DeleteOneOffsetLen', () => {
         try {
             test.run();
         } catch (err) {
+            console.log(err);
             console.log(test.toString());
             i = -1;
         }
