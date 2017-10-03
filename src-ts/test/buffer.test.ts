@@ -121,9 +121,13 @@ suite('DeleteOneOffsetLen', () => {
             }, edits);
         }
 
-        test('gen1', () => {
+        test('gen1 - \r\n boundary case', () => {
             runTest(59302, [{ "offset": 13501, "length": 2134 }]);
         });
+
+        test.only('gen2 - endless loop', () => {
+            runTest(36561, [{ "offset": 23199, "length": 0 }]);
+        })
     });
 });
 
@@ -169,7 +173,7 @@ suite('DeleteOneOffsetLen', () => {
         }
     }
 
-    const GENERATE_CNT = -1;//1000;
+    const GENERATE_CNT = -1;//100000;
     for (let i = GENERATE_CNT; i >= 0; i--) {
         console.log(`REMAINING... ${i}`);
         let test = new AutoTest();
@@ -178,7 +182,6 @@ suite('DeleteOneOffsetLen', () => {
         } catch (err) {
             console.log(test.toString());
             i = -1;
-            // process.exit(0);
         }
     }
 })();

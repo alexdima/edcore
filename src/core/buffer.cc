@@ -161,7 +161,7 @@ bool Buffer::findOffset(size_t offset, BufferCursor &result)
             leftLength = leafs_[NODE_TO_LEAF_INDEX(left)]->length();
         }
 
-        if (searchOffset < leftLength)
+        if (searchOffset < leftLength || !(IS_NODE(right) || IS_LEAF(right)))
         {
             // go left
             it = left;
