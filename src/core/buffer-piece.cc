@@ -104,14 +104,4 @@ std::ostream &operator<<(std::ostream &os, BufferPiece *const &m)
     m->print(os);
     return os;
 }
-std::ostream &operator<<(std::ostream &os, shared_ptr<BufferPiece> const &m)
-{
-    if (m == NULL)
-    {
-        return os << "[NULL]";
-    }
-
-    m->print(os);
-    return os;
-}
 }

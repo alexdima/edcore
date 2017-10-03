@@ -20,33 +20,6 @@ using namespace std;
 namespace edcore
 {
 
-size_t computeNodeCount(size_t leafsCount)
-{
-    size_t totalNodes = 0;
-    while (leafsCount > 0)
-    {
-        if (leafsCount == 1 || leafsCount == 2)
-        {
-            totalNodes += 1;
-            break;
-        }
-
-        size_t stepNodes;
-        if (leafsCount % 2 == 0)
-        {
-            stepNodes = leafsCount / 2;
-        }
-        else
-        {
-            stepNodes = leafsCount / 2 + 1;
-        }
-
-        totalNodes += stepNodes;
-        leafsCount = stepNodes;
-    }
-    return totalNodes;
-}
-
 size_t log2(size_t n)
 {
     size_t v = 1;
@@ -61,7 +34,7 @@ size_t log2(size_t n)
     return -1;
 }
 
-void printIndent2(ostream &os, int indent)
+void printIndent(ostream &os, int indent)
 {
     for (int i = 0; i < indent; i++)
     {
@@ -303,13 +276,13 @@ void Buffer::print(ostream &os, size_t index, size_t indent)
 {
     if (IS_LEAF(index))
     {
-        printIndent2(os, indent);
+        printIndent(os, indent);
         BufferPiece *v = leafs_[LEAF_INDEX(index)];
         os << "[LEAF] (len:" << v->length() << ", newLineCount:" << v->newLineCount() << ")" << endl;
         return;
     }
 
-    printIndent2(os, indent);
+    printIndent(os, indent);
     os << "[NODE] (len:" << nodes_[index].length << ", newLineCount:" << nodes_[index].newLineCount << ")" << endl;
 
     indent += 4;
