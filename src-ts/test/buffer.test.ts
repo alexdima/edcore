@@ -56,7 +56,10 @@ suite('Editing: DeleteOneOffsetLen', () => {
         let expected = initialContent;
         for (let i = 0; i < edits.length; i++) {
             expected = applyOffsetLengthEdits(expected, [{ offset: edits[i].offset, length: edits[i].length, text: '' }]);
+            const time = process.hrtime();
             buff.DeleteOneOffsetLen(edits[i].offset, edits[i].length);
+            const diff = process.hrtime(time);
+            console.log(`DeleteOneOffsetLen took ${diff[0] * 1e9 + diff[1]} nanoseconds, i.e. ${(diff[0] * 1e9 + diff[1])/1e6} ms.`);
             assertAllMethods(buff, expected);
         }
     }
@@ -74,6 +77,30 @@ suite('Editing: DeleteOneOffsetLen', () => {
     test('simple delete: first line with EOL', () => {
         assertConsecutiveDeleteOneOffsetLen('checker.txt', [
             { offset: 0, length: 46 }
+        ]);
+    });
+
+    test('simple delete: second line without EOL', () => {
+        assertConsecutiveDeleteOneOffsetLen('checker.txt', [
+            { offset: 46, length: 33 }
+        ]);
+    });
+
+    test('simple delete: second line with EOL', () => {
+        assertConsecutiveDeleteOneOffsetLen('checker.txt', [
+            { offset: 46, length: 34 }
+        ]);
+    });
+
+    test('simple delete: first two lines without EOL', () => {
+        assertConsecutiveDeleteOneOffsetLen('checker.txt', [
+            { offset: 0, length: 79 }
+        ]);
+    });
+
+    test('simple delete: first two lines with EOL', () => {
+        assertConsecutiveDeleteOneOffsetLen('checker.txt', [
+            { offset: 0, length: 80 }
         ]);
     });
 });

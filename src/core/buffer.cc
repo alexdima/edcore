@@ -310,14 +310,6 @@ void Buffer::deleteOneOffsetLen(size_t offset, size_t len)
     size_t fromNodeIndex = LEAF_TO_NODE_INDEX(start.leafIndex) / 2;
     size_t toNodeIndex = LEAF_TO_NODE_INDEX(leafIndex) / 2;
     _updateNodes(fromNodeIndex, toNodeIndex);
-
-    printf("fromNodeIndex: %lu, toNodeIndex: %lu\n", fromNodeIndex, toNodeIndex);
-
-    // TODO: update nodes_ as needed
-    printf("TODO: update nodes_ as needed");
-
-    printf("TODO: deleteOneOffsetLen %lu %lu\n", offset, len);
-    printf("TODO: offset: %lu, leafIndex: %lu, leafStartOffset: %lu\n", start.offset, start.leafIndex, start.leafStartOffset);
 }
 
 void Buffer::_updateNodes(size_t fromNodeIndex, size_t toNodeIndex)
