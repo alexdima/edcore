@@ -87,11 +87,74 @@ BufferPiece::~BufferPiece()
     delete[] lineStarts_;
 }
 
+uint16_t BufferPiece::deleteLastChar()
+{
+    assert(length_ > 0);
+
+    uint16_t ret = data_[length_ - 1];
+
+    if (lineStartsCount_ > 0 && lineStarts_[lineStartsCount_ - 1] == length_)
+    {
+        lineStartsCount_--;
+    }
+    length_--;
+
+    return ret;
+}
+
+void BufferPiece::insertFirstChar(uint16_t character)
+{
+    bool insertLineStart = false;
+    if (character == '\r' && (lineStartsCount_ == 0 || lineStarts_[0] != 1 || data_[0] != '\n'))
+    {
+        insertLineStart = true;
+    }
+
+    for (size_t i = 0; i < lineStartsCount_; i++)
+    {
+        lineStarts_[i] += 1;
+    }
+
+    if (insertLineStart)
+    {
+        if (lineStartsCapacity_ > lineStartsCount_)
+        {
+            memmove(lineStarts_ + 1, lineStarts_, sizeof(LINE_START_T) * lineStartsCount_);
+            lineStarts_[0] = 1;
+            lineStartsCount_ = lineStartsCount_ + 1;
+        } else {
+            // TODO
+            assert(false);
+        }
+    }
+
+    if (dataCapacity_ > length_)
+    {
+        memmove(data_ + 1, data_, sizeof(uint16_t) * length_);
+        data_[0] = character;
+        length_ = length_ + 1;
+    }
+    else
+    {
+        uint16_t length = length_ + 1;
+        uint16_t *newData = new uint16_t[length];
+        memcpy(newData + 1, data_, sizeof(uint16_t) * length_);
+        newData[0] = character;
+        delete []data_;
+        
+        data_ = newData;
+        dataCapacity_ = length;
+        length_ = length;
+    }
+}
+
 void BufferPiece::deleteOneOffsetLen(size_t offset, size_t len)
 {
+    assert(offset + len <= length_);
+
     size_t deleteLineStartsFrom = lineStartsCount_;
     size_t deleteLineStartsTo = 0;
-    LINE_START_T *deletingCase1 = NULL; 
+    LINE_START_T *deletingCase1 = NULL;
     for (size_t i = 0; i < lineStartsCount_; i++)
     {
         LINE_START_T lineStart = lineStarts_[i];
@@ -136,16 +199,20 @@ void BufferPiece::deleteOneOffsetLen(size_t offset, size_t len)
         deleteLineStartsTo = max(deleteLineStartsTo, i + 1);
     }
 
-
     if (deleteLineStartsFrom < deleteLineStartsTo)
     {
-        memcpy(lineStarts_ + deleteLineStartsFrom, lineStarts_ + deleteLineStartsTo, sizeof(LINE_START_T) * (lineStartsCount_ - deleteLineStartsTo));
+        memmove(lineStarts_ + deleteLineStartsFrom, lineStarts_ + deleteLineStartsTo, sizeof(LINE_START_T) * (lineStartsCount_ - deleteLineStartsTo));
         lineStartsCount_ -= (deleteLineStartsTo - deleteLineStartsFrom);
     }
 
     uint16_t length = length_ - len;
-    memcpy(data_ + offset, data_ + offset + len, sizeof(uint16_t) * (length - offset));
+    memmove(data_ + offset, data_ + offset + len, sizeof(uint16_t) * (length - offset));
     length_ = length;
+}
+
+void BufferPiece::insertOneOffsetLen(size_t offset, const uint16_t *data, size_t len)
+{
+    printf("TODO: insertOneOffsetLen %lu (data of %lu)\n", offset, len);
 }
 
 void BufferPiece::print(std::ostream &os) const

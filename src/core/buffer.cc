@@ -307,6 +307,52 @@ void Buffer::deleteOneOffsetLen(size_t offset, size_t len)
         leafIndex++;
     }
 
+    // size_t nextLeafIndex =
+
+    // Maintain invariant that a leaf does not end in \r or a high surrogate pair
+    {
+        BufferPiece *startLeaf = leafs_[start.leafIndex];
+        size_t startLeafLength = startLeaf->length();
+        if (startLeafLength > 0)
+        {
+            uint16_t lastChar = startLeaf->data()[startLeafLength - 1];
+            if (lastChar == 13 || (lastChar >= 0xd800 && lastChar <= 0xdbff))
+            {
+                size_t nextLeafIndex = leafIndex > start.leafIndex ? leafIndex : start.leafIndex + 1;
+                BufferPiece *nextLeaf = NULL;
+                while (nextLeafIndex < leafsCount_)
+                {
+                    nextLeaf = leafs_[nextLeafIndex];
+                    if (nextLeaf->length() > 0)
+                    {
+                        break;
+                    }
+                    nextLeafIndex++;
+                }
+
+                if (nextLeaf != NULL && nextLeaf->length() > 0)
+                {
+                    startLeaf->deleteLastChar();
+                    nextLeaf->insertFirstChar(lastChar);
+                    // printf("TODO: I need to insert the last character!\n");
+                }
+            }
+        }
+    }
+    // if (lastChar == 13 || (lastChar >= 0xd800 && lastChar <= 0xdbff))
+    //         if (start.leafIndex < leafIndex || start.leafIndex + 1 < leafsCount_)
+    //         {
+    //             startLeaf->deleteLastChar();
+    //             size_t nextLeafIndex = (start.leafIndex)
+    //                 printf("TODO: I need to move the last character!\n");
+    //         }
+    //     }
+    //     // uint16_t lastChar = startLeaf->data()
+    //     // size_t nextLeaf = (start.leafIndex)
+    // }
+    // size_t startLeafLength = leafs_[start.leafIndex]->length();
+    // if (leafs_[start.leafIndex]->length() > 0)
+
     size_t fromNodeIndex = LEAF_TO_NODE_INDEX(start.leafIndex) / 2;
     size_t toNodeIndex = LEAF_TO_NODE_INDEX(leafIndex) / 2;
     _updateNodes(fromNodeIndex, toNodeIndex);

@@ -27,6 +27,9 @@ class BufferPiece
     size_t newLineCount() const { return this->lineStartsCount_; }
 
     void deleteOneOffsetLen(size_t offset, size_t len);
+    void insertOneOffsetLen(size_t offset, const uint16_t *data, size_t len);
+    uint16_t deleteLastChar();
+    void insertFirstChar(uint16_t character);
 
     void print(ostream &os) const;
 

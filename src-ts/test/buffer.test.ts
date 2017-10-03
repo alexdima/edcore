@@ -121,13 +121,21 @@ suite('DeleteOneOffsetLen', () => {
             }, edits);
         }
 
-        test('gen1 - \r\n boundary case', () => {
+        test('gen1 - \\r\\n boundary case within chunk', () => {
             runTest(59302, [{ "offset": 13501, "length": 2134 }]);
         });
 
-        test.only('gen2 - endless loop', () => {
+        test('gen2 - endless loop', () => {
             runTest(36561, [{ "offset": 23199, "length": 0 }]);
-        })
+        });
+
+        test('gen3 - \\r\\n boundary case outisde chunk 1', () => {
+            runTest(20646, [{ "offset": 19478, "length": 1287 }]);
+        });
+
+        test('gen4 - \\r\\n boundary case outisde chunk 2', () => {
+            runTest(2195, [{ "offset": 12512, "length": 2249 }]);
+        });
     });
 });
 
