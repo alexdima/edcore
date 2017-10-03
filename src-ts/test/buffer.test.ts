@@ -136,6 +136,10 @@ suite('DeleteOneOffsetLen', () => {
         test('gen4 - \\r\\n boundary case outisde chunk 2', () => {
             runTest(2195, [{ "offset": 12512, "length": 2249 }]);
         });
+
+        test('gen5 - \\r\\n boundary case outisde chunk 3', () => {
+            runTest(201, [{ "offset": 19720, "length": 2203 }]);
+        });
     });
 });
 

@@ -122,9 +122,18 @@ void BufferPiece::insertFirstChar(uint16_t character)
             memmove(lineStarts_ + 1, lineStarts_, sizeof(LINE_START_T) * lineStartsCount_);
             lineStarts_[0] = 1;
             lineStartsCount_ = lineStartsCount_ + 1;
-        } else {
-            // TODO
-            assert(false);
+        }
+        else
+        {
+            uint16_t lineStartsCount = lineStartsCount_ + 1;
+            LINE_START_T *newLineStarts = new LINE_START_T[lineStartsCount];
+            memcpy(newLineStarts + 1, lineStarts_, sizeof(LINE_START_T) * lineStartsCount_);
+            newLineStarts[0] = 1;
+            delete[] lineStarts_;
+
+            lineStarts_ = newLineStarts;
+            lineStartsCapacity_ = lineStartsCount;
+            lineStartsCount_ = lineStartsCount;
         }
     }
 
@@ -140,8 +149,8 @@ void BufferPiece::insertFirstChar(uint16_t character)
         uint16_t *newData = new uint16_t[length];
         memcpy(newData + 1, data_, sizeof(uint16_t) * length_);
         newData[0] = character;
-        delete []data_;
-        
+        delete[] data_;
+
         data_ = newData;
         dataCapacity_ = length;
         length_ = length;
