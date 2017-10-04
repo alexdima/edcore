@@ -14,6 +14,8 @@
 namespace edcore
 {
 
+size_t log2(size_t n);
+
 struct BufferNode
 {
     size_t length;
@@ -32,7 +34,7 @@ typedef struct BufferCursor BufferCursor;
 class Buffer
 {
   public:
-    Buffer(vector<BufferPiece *> &pieces);
+    Buffer(vector<BufferPiece *> &pieces, size_t minLeafLength, size_t maxLeafLength);
     ~Buffer();
     size_t length() const { return nodes_[1].length; }
     size_t lineCount() const { return nodes_[1].newLineCount + 1; }
@@ -54,6 +56,9 @@ class Buffer
     size_t leafsCount_;
     size_t leafsStart_;
     size_t leafsEnd_;
+
+    size_t minLeafLength_;
+    size_t maxLeafLength_;
 
     bool _findLineStart(size_t &lineIndex, BufferCursor &result);
     void _findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t innerLineIndex, BufferCursor &result);

@@ -57,8 +57,10 @@ size_t Buffer::memUsage() const
         leafs);
 }
 
-Buffer::Buffer(vector<BufferPiece *> &pieces)
+Buffer::Buffer(vector<BufferPiece *> &pieces, size_t minLeafLength, size_t maxLeafLength)
 {
+    assert(2 * minLeafLength >= maxLeafLength);
+
     leafsCount_ = pieces.size();
     leafs_ = new BufferPiece *[leafsCount_];
     for (size_t i = 0; i < leafsCount_; i++)
@@ -78,6 +80,9 @@ Buffer::Buffer(vector<BufferPiece *> &pieces)
     {
         _updateSingleNode(i);
     }
+
+    minLeafLength_ = minLeafLength;
+    maxLeafLength_ = maxLeafLength;
 
     // printf("mem usage: %lu B = %lf MB\n", memUsage(), ((double)memUsage()) / 1024 / 1024);
 }
@@ -323,8 +328,6 @@ void Buffer::deleteOneOffsetLen(size_t offset, size_t len)
         leafIndex++;
     }
 
-    // size_t nextLeafIndex =
-
     // Maintain invariant that a leaf does not end in \r or a high surrogate pair
     size_t firstDirtyIndex = start.leafIndex;
     size_t lastDirtyIndex = leafIndex;
@@ -353,27 +356,16 @@ void Buffer::deleteOneOffsetLen(size_t offset, size_t len)
                     startLeaf->deleteLastChar();
                     nextLeaf->insertFirstChar(lastChar);
                     lastDirtyIndex = nextLeafIndex;
-                    // printf("TODO: I need to insert the last character!\n");
                 }
             }
         }
     }
-    // if (lastChar == 13 || (lastChar >= 0xd800 && lastChar <= 0xdbff))
-    //         if (start.leafIndex < leafIndex || start.leafIndex + 1 < leafsCount_)
-    //         {
-    //             startLeaf->deleteLastChar();
-    //             size_t nextLeafIndex = (start.leafIndex)
-    //                 printf("TODO: I need to move the last character!\n");
-    //         }
-    //     }
-    //     // uint16_t lastChar = startLeaf->data()
-    //     // size_t nextLeaf = (start.leafIndex)
-    // }
-    // size_t startLeafLength = leafs_[start.leafIndex]->length();
-    // if (leafs_[start.leafIndex]->length() > 0)
 
     size_t fromNodeIndex = LEAF_TO_NODE_INDEX(firstDirtyIndex) / 2;
     size_t toNodeIndex = LEAF_TO_NODE_INDEX(lastDirtyIndex) / 2;
+
+    // TODO: Let's see if we should merge some leafs
+
     _updateNodes(fromNodeIndex, toNodeIndex);
 }
 

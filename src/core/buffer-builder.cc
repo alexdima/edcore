@@ -11,6 +11,7 @@ namespace edcore
 BufferBuilder::BufferBuilder()
 {
     _hasPreviousChar = false;
+    _averageChunkSize = 0;
     _previousChar = 0;
 }
 
@@ -20,6 +21,19 @@ void BufferBuilder::AcceptChunk(uint16_t *chunk, size_t chunkLen)
     {
         // Nothing to do
         return;
+    }
+
+    {
+        // Current pieces
+        const size_t rawPiecesCount = _rawPieces.size();
+        if (rawPiecesCount == 0)
+        {
+            _averageChunkSize = chunkLen;
+        }
+        else
+        {
+            _averageChunkSize = (_averageChunkSize * rawPiecesCount + chunkLen) / (rawPiecesCount + 1);
+        }
     }
 
     bool holdBackLastChar = false;
@@ -75,7 +89,7 @@ void BufferBuilder::Finish()
         _hasPreviousChar = false;
         // recreate last chunk
 
-        BufferPiece* lastPiece = _rawPieces[_rawPieces.size() - 1];
+        BufferPiece *lastPiece = _rawPieces[_rawPieces.size() - 1];
         size_t prevDataLen = lastPiece->length();
         const uint16_t *prevData = lastPiece->data();
 
@@ -92,6 +106,13 @@ void BufferBuilder::Finish()
 
 Buffer *BufferBuilder::Build()
 {
-    return new Buffer(_rawPieces);
+    size_t averageChunkSize = (size_t)min(65536.0, max(128.0, _averageChunkSize));
+    size_t delta = averageChunkSize / 3;
+    size_t min_ = averageChunkSize - delta;
+    size_t max_ = 2 * min_;
+
+    // printf("%lf ==> %lu, %lu\n", _averageChunkSize, min_, max_);
+
+    return new Buffer(_rawPieces, min_, max_);
 }
 }
