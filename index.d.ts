@@ -7,6 +7,8 @@ export declare class EdBuffer {
     _nativeEdBufferBrand: void;
     constructor();
 
+    AssertInvariants(): void;
+
     GetLength(): number;
     GetLineCount(): number;
     GetLineContent(lineNumber: number): string;

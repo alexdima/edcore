@@ -135,8 +135,6 @@ class BufferPiece
 
     void assertInvariants();
 
-    void print(ostream &os) const;
-
   private:
 
     MyArray<uint16_t> chars_;

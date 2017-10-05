@@ -8,7 +8,21 @@ import { buildBufferFromFixture, readFixture } from './utils/bufferBuilder';
 import { EdBuffer } from '../../index';
 import { IOffsetLengthEdit, getRandomInt, generateEdits } from './utils';
 
+const GENERATE_DELETE_TESTS = false;
+const PRINT_TIMES = false;
+const ASSERT_INVARIANTS = true;
+
 suite('Loading', () => {
+
+    function assertBuffer(fileName: string): void {
+        const buff = buildBufferFromFixture(fileName);
+        const text = readFixture(fileName);
+
+        assertAllMethods(buff, text);
+        if (ASSERT_INVARIANTS) {
+            buff.AssertInvariants();
+        }
+    }
 
     test('checker.txt', () => {
         assertBuffer('checker.txt');
@@ -55,11 +69,16 @@ suite('DeleteOneOffsetLen', () => {
         let expected = initialContent;
         for (let i = 0; i < edits.length; i++) {
             expected = applyOffsetLengthEdits(expected, [{ offset: edits[i].offset, length: edits[i].length, text: '' }]);
-            // const time = process.hrtime();
+            const time = PRINT_TIMES ? process.hrtime() : null;
             buff.DeleteOneOffsetLen(edits[i].offset, edits[i].length);
-            // const diff = process.hrtime(time);
-            // console.log(`DeleteOneOffsetLen took ${diff[0] * 1e9 + diff[1]} nanoseconds, i.e. ${(diff[0] * 1e9 + diff[1]) / 1e6} ms.`);
+            const diff = PRINT_TIMES ? process.hrtime(time) : null;
+            if (PRINT_TIMES) {
+                console.log(`DeleteOneOffsetLen took ${diff[0] * 1e9 + diff[1]} nanoseconds, i.e. ${(diff[0] * 1e9 + diff[1]) / 1e6} ms.`);
+            }
             assertAllMethods(buff, expected);
+            if (ASSERT_INVARIANTS) {
+                buff.AssertInvariants();
+            }
         }
     }
 
@@ -246,6 +265,9 @@ suite('DeleteOneOffsetLen', () => {
                 this._content = applyOffsetLengthEdits(this._content, [{ offset: edit.offset, length: edit.length, text: '' }]);
                 this._buff.DeleteOneOffsetLen(edit.offset, edit.length);
                 assertAllMethods(this._buff, this._content);
+                if (ASSERT_INVARIANTS) {
+                    this._buff.AssertInvariants();
+                }
             }
         }
 
@@ -254,7 +276,7 @@ suite('DeleteOneOffsetLen', () => {
         }
     }
 
-    const GENERATE_CNT = -1;//100000;
+    const GENERATE_CNT = GENERATE_DELETE_TESTS ? 100000 : -1;
     for (let i = GENERATE_CNT; i >= 0; i--) {
         console.log(`REMAINING... ${i}`);
         let test = new AutoTest();
@@ -267,13 +289,6 @@ suite('DeleteOneOffsetLen', () => {
         }
     }
 })();
-
-function assertBuffer(fileName: string): void {
-    const buff = buildBufferFromFixture(fileName);
-    const text = readFixture(fileName);
-
-    assertAllMethods(buff, text);
-}
 
 function assertAllMethods(buff: EdBuffer, text: string): void {
     assert.equal(buff.GetLength(), text.length, 'length');

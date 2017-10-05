@@ -36,14 +36,6 @@ size_t log2(size_t n)
     return -1;
 }
 
-void printIndent(ostream &os, int indent)
-{
-    for (int i = 0; i < indent; i++)
-    {
-        os << " ";
-    }
-}
-
 size_t Buffer::memUsage() const
 {
     const size_t leafsCount = leafs_.length();
@@ -72,23 +64,35 @@ Buffer::Buffer(vector<BufferPiece *> &pieces, size_t minLeafLength, size_t maxLe
     }
     leafs_.init(tmp, leafsCount);
 
-    nodesCount_ = 1 << log2(leafsCount);
+    nodes_ = NULL;
+    _rebuildNodes();
 
-    leafsStart_ = nodesCount_;
-    leafsEnd_ = leafsStart_ + leafsCount;
-
-    nodes_ = new BufferNode[nodesCount_];
-    memset(nodes_, 0, nodesCount_ * sizeof(nodes_[0]));
-
-    for (size_t i = nodesCount_ - 1; i >= 1; i--)
-    {
-        _updateSingleNode(i);
-    }
 
     minLeafLength_ = minLeafLength;
     maxLeafLength_ = maxLeafLength;
 
     // printf("mem usage: %lu B = %lf MB\n", memUsage(), ((double)memUsage()) / 1024 / 1024);
+}
+
+void Buffer::_rebuildNodes()
+{
+    if (nodes_ != NULL)
+    {
+        delete []nodes_;
+    }
+
+    const size_t leafsCount = leafs_.length();
+
+    nodesCount_ = 1 << log2(leafsCount);
+    leafsStart_ = nodesCount_;
+    leafsEnd_ = leafsStart_ + leafsCount;
+
+    nodes_ = new BufferNode[nodesCount_];
+    memset(nodes_, 0, nodesCount_ * sizeof(nodes_[0]));
+    for (size_t i = nodesCount_ - 1; i >= 1; i--)
+    {
+        _updateSingleNode(i);
+    }
 }
 
 void Buffer::_updateSingleNode(size_t nodeIndex)
@@ -417,13 +421,22 @@ void Buffer::deleteOneOffsetLen(size_t offset, size_t len)
         leafsEnd_ -= (deleteLeafTo - deleteLeafFrom);
     }
 
+    // Check if we should resize our leafs and nodes
+    if (deleteLeafFrom < deleteLeafTo)
+    {
+        size_t newNodesCount = 1 << log2(leafs_.length());
+        if (newNodesCount != nodesCount_)
+        {
+            _rebuildNodes();
+            return;
+        }
+    }
+
     size_t fromNodeIndex = LEAF_TO_NODE_INDEX(firstDirtyIndex) / 2;
     size_t toNodeIndex = LEAF_TO_NODE_INDEX(lastDirtyIndex) / 2;
 
     assert(toNodeIndex < nodesCount_);
     _updateNodes(fromNodeIndex, toNodeIndex);
-
-    assertInvariants();
 }
 
 void Buffer::_updateNodes(size_t fromNodeIndex, size_t toNodeIndex)
@@ -489,31 +502,5 @@ void Buffer::assertNodeInvariants(size_t nodeIndex)
 
     assert(nodes_[nodeIndex].length == length);
     assert(nodes_[nodeIndex].newLineCount == newLineCount);
-}
-
-void Buffer::print(ostream &os, size_t index, size_t indent)
-{
-    if (IS_LEAF(index))
-    {
-        printIndent(os, indent);
-        BufferPiece *v = leafs_[NODE_TO_LEAF_INDEX(index)];
-        os << "[LEAF] (len:" << v->length() << ", newLineCount:" << v->newLineCount() << ")" << endl;
-        return;
-    }
-
-    printIndent(os, indent);
-    os << "[NODE] (len:" << nodes_[index].length << ", newLineCount:" << nodes_[index].newLineCount << ")" << endl;
-
-    indent += 4;
-    size_t left = LEFT_CHILD(index);
-    if (IS_NODE(left) || IS_LEAF(left))
-    {
-        print(os, left, indent);
-    }
-    size_t right = RIGHT_CHILD(index);
-    if (IS_NODE(right) || IS_LEAF(right))
-    {
-        print(os, right, indent);
-    }
 }
 }

@@ -40,8 +40,6 @@ class Buffer
     size_t lineCount() const { return nodes_[1].newLineCount + 1; }
     size_t memUsage() const;
 
-    void print(ostream &os, size_t index, size_t indent);
-
     bool findOffset(size_t offset, BufferCursor &result);
     bool findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end);
     void extractString(BufferCursor start, size_t len, uint16_t *dest);
@@ -66,6 +64,7 @@ class Buffer
     void _findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t innerLineIndex, BufferCursor &result);
     void _updateNodes(size_t fromNodeIndex, size_t toNodeIndex);
     void _updateSingleNode(size_t nodeIndex);
+    void _rebuildNodes();
 };
 }
 

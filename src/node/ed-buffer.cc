@@ -108,6 +108,12 @@ void EdBuffer::DeleteOneOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &arg
 
 }
 
+void EdBuffer::AssertInvariants(const v8::FunctionCallbackInfo<v8::Value> &args)
+{
+    EdBuffer *obj = ObjectWrap::Unwrap<EdBuffer>(args.Holder());
+    obj->actual_->assertInvariants();
+}
+
 v8::Local<v8::Object> EdBuffer::Create(v8::Isolate *isolate, const v8::Local<v8::Object> builder)
 {
     const int argc = 1;
@@ -159,6 +165,7 @@ void EdBuffer::Init(v8::Local<v8::Object> exports)
     NODE_SET_PROTOTYPE_METHOD(tpl, "GetLineCount", GetLineCount);
     NODE_SET_PROTOTYPE_METHOD(tpl, "GetLineContent", GetLineContent);
     NODE_SET_PROTOTYPE_METHOD(tpl, "DeleteOneOffsetLen", DeleteOneOffsetLen);
+    NODE_SET_PROTOTYPE_METHOD(tpl, "AssertInvariants", AssertInvariants);
 
     constructor.Reset(isolate, tpl->GetFunction());
     exports->Set(v8::String::NewFromUtf8(isolate, "EdBuffer"),

@@ -198,7 +198,6 @@ void BufferPiece::deleteOneOffsetLen(size_t offset, size_t len)
 void BufferPiece::join(const BufferPiece *other)
 {
     const size_t charsLength = chars_.length();
-    const size_t lineStartsLength = lineStarts_.length();
     const size_t otherCharsLength = other->chars_.length();
     const size_t otherLineStartsLength = other->lineStarts_.length();
 
@@ -256,24 +255,4 @@ void BufferPiece::assertInvariants()
     }
 }
 
-void BufferPiece::print(std::ostream &os) const
-{
-    const uint16_t *data = chars_.data();
-    const size_t len = chars_.length();
-    for (size_t i = 0; i < len; i++)
-    {
-        os << data[i];
-    }
-}
-
-std::ostream &operator<<(std::ostream &os, BufferPiece *const &m)
-{
-    if (m == NULL)
-    {
-        return os << "[NULL]";
-    }
-
-    m->print(os);
-    return os;
-}
 }
