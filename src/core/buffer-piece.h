@@ -71,15 +71,17 @@ class MyArray
 
     void insertFirstElement(T element)
     {
-        if (capacity_ > length_)
+        if (length_ + 1 <= capacity_)
         {
-            memmove(data_ + 1, data_, sizeof(T) * length_);
+            // fits in place
+            memmove(data_ + 0 + 1, data_ + 0, sizeof(T) * length_);
         }
         else
         {
             size_t newCapacity = length_ + 1;
             T *newData = new T[newCapacity];
-            memcpy(newData + 1, data_, sizeof(T) * length_);
+            memcpy(newData, data_, sizeof(T) * 0);
+            memcpy(newData + 0 + 1, data_ + 0, sizeof(T) * length_);
 
             delete[] data_;
             data_ = newData;
@@ -88,6 +90,29 @@ class MyArray
 
         data_[0] = element;
         length_ = length_ + 1;
+    }
+
+    void insert(size_t offset, const T* data, size_t len)
+    {
+        if (length_ + len <= capacity_)
+        {
+            // fits in place
+            memmove(data_ + offset + len, data_ + offset, sizeof(T) * length_);
+        }
+        else
+        {
+            size_t newCapacity = length_ + len;
+            T *newData = new T[newCapacity];
+            memcpy(newData, data_, sizeof(T) * offset);
+            memcpy(newData + offset + len, data_ + offset, sizeof(T) * length_);
+
+            delete []data_;
+            data_ = newData;
+            capacity_ = newCapacity;
+        }
+
+        memcpy(data_ + offset, data, sizeof(T) * len);
+        length_ = length_ + len;
     }
 
     void deleteRange(size_t deleteFrom, size_t deleteCount)

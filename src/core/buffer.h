@@ -45,6 +45,7 @@ class Buffer
     void extractString(BufferCursor start, size_t len, uint16_t *dest);
 
     void deleteOneOffsetLen(size_t offset, size_t len);
+    void insertOneOffsetLen(size_t offset, const uint16_t *data, size_t len);
 
     void assertInvariants();
     void assertNodeInvariants(size_t nodeIndex);

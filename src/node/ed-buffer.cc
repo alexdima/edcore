@@ -108,6 +108,37 @@ void EdBuffer::DeleteOneOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &arg
 
 }
 
+void EdBuffer::InsertOneOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
+{
+    v8::Isolate *isolate = args.GetIsolate();
+    EdBuffer *obj = ObjectWrap::Unwrap<EdBuffer>(args.Holder());
+
+    if (args.Length() != 2 || !args[0]->IsNumber() || !args[1]->IsString())
+    {
+        isolate->ThrowException(v8::Exception::Error(
+            v8::String::NewFromUtf8(isolate, "Expected two arguments, first a number and second a string")));
+        return;
+    }
+
+    size_t offset = args[0]->NumberValue();
+
+    const size_t bufferLength = obj->actual_->length();
+    if (offset > bufferLength)
+    {
+        isolate->ThrowException(v8::Exception::Error(
+            v8::String::NewFromUtf8(isolate, "Invalid offset")));
+        return;
+    }
+
+    v8::Local<v8::String> text = v8::Local<v8::String>::Cast(args[1]);
+    v8::String::Value utf16Value(text);
+
+    // size_t memUsageBefore = obj->actual_->memUsage();
+    obj->actual_->insertOneOffsetLen(offset, *utf16Value, utf16Value.length());
+    // size_t memUsageAfter = obj->actual_->memUsage();
+    // printf("mem usage: %lf KB -> %lf KB\n", ((double)memUsageBefore) / 1024, ((double)memUsageAfter) / 1024);
+}
+
 void EdBuffer::AssertInvariants(const v8::FunctionCallbackInfo<v8::Value> &args)
 {
     EdBuffer *obj = ObjectWrap::Unwrap<EdBuffer>(args.Holder());
@@ -165,6 +196,7 @@ void EdBuffer::Init(v8::Local<v8::Object> exports)
     NODE_SET_PROTOTYPE_METHOD(tpl, "GetLineCount", GetLineCount);
     NODE_SET_PROTOTYPE_METHOD(tpl, "GetLineContent", GetLineContent);
     NODE_SET_PROTOTYPE_METHOD(tpl, "DeleteOneOffsetLen", DeleteOneOffsetLen);
+    NODE_SET_PROTOTYPE_METHOD(tpl, "InsertOneOffsetLen", InsertOneOffsetLen);
     NODE_SET_PROTOTYPE_METHOD(tpl, "AssertInvariants", AssertInvariants);
 
     constructor.Reset(isolate, tpl->GetFunction());

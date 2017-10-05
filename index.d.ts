@@ -13,6 +13,7 @@ export declare class EdBuffer {
     GetLineCount(): number;
     GetLineContent(lineNumber: number): string;
     DeleteOneOffsetLen(offset: number, length: number): void;
+    InsertOneOffsetLen(offset: number, text: string): void;
 }
 
 export declare class EdBufferBuilder {

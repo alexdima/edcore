@@ -226,7 +226,33 @@ void BufferPiece::join(const BufferPiece *other)
 
 void BufferPiece::insertOneOffsetLen(size_t offset, const uint16_t *data, size_t len)
 {
-    printf("TODO: insertOneOffsetLen %lu (data of %lu)\n", offset, len);
+    const size_t charsLength = chars_.length();
+    const size_t lineStartsLength = lineStarts_.length();
+
+    for (size_t i = 0; i < lineStartsLength; i++)
+    {
+        LINE_START_T lineStart = lineStarts_[i];
+        if (lineStart < offset)
+        {
+            // Entirely before insertion
+            continue;
+        }
+        if (lineStart > offset + 1)
+        {
+            // Entirely after insertion
+            lineStarts_[i] += len;
+            continue;
+        }
+
+        // TODO
+        assert(false);
+    }
+
+    chars_.insert(offset, data, len);
+
+    // printf("TODO: insertOneOffsetLen %lu (data of %lu)\n", offset, len);
+
+
 }
 
 void BufferPiece::assertInvariants()

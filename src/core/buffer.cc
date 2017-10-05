@@ -439,6 +439,39 @@ void Buffer::deleteOneOffsetLen(size_t offset, size_t len)
     _updateNodes(fromNodeIndex, toNodeIndex);
 }
 
+void Buffer::insertOneOffsetLen(size_t offset, const uint16_t *data, size_t len)
+{
+    const size_t leafsCount = leafs_.length();
+    assert(offset <= leafsCount);
+
+    BufferCursor start;
+    if (!findOffset(offset, start))
+    {
+        assert(false);
+        return;
+    }
+    
+    size_t innerLeafOffset = start.offset - start.leafStartOffset;
+    size_t leafIndex = start.leafIndex;
+    BufferPiece *leaf = leafs_[leafIndex];
+
+    leaf->insertOneOffsetLen(innerLeafOffset, data, len);
+
+    // TODO: maintain \r and high surrogate invariant
+
+    size_t firstDirtyIndex = leafIndex;
+    size_t lastDirtyIndex = leafIndex;
+
+    size_t fromNodeIndex = LEAF_TO_NODE_INDEX(firstDirtyIndex) / 2;
+    size_t toNodeIndex = LEAF_TO_NODE_INDEX(lastDirtyIndex) / 2;
+
+    _updateNodes(fromNodeIndex, toNodeIndex);
+
+
+    // printf("TODO: insertOneOffsetLen @ %lu of length %lu\n", offset, len);
+    // printf("cursor: %lu, --(%lu)\n", start.leafIndex, start.leafStartOffset);
+}
+
 void Buffer::_updateNodes(size_t fromNodeIndex, size_t toNodeIndex)
 {
     while (fromNodeIndex != 0)

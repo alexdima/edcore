@@ -50,12 +50,12 @@ function applyOffsetLengthEdits(initialContent: string, edits: IOffsetLengthEdit
     return result;
 }
 
-interface IOffsetLengthDelete {
-    offset: number;
-    length: number;
-}
-
 suite('DeleteOneOffsetLen', () => {
+
+    interface IOffsetLengthDelete {
+        offset: number;
+        length: number;
+    }
 
     interface IFileInfo {
         fileName: string;
@@ -225,70 +225,140 @@ suite('DeleteOneOffsetLen', () => {
             runTest(43728, [{ offset: 16159, length: 3017 }]);
         });
     });
-});
 
-(function () {
-    const CONSECUTIVE_EDITS_CNT = 100;
-    const MIN_CHUNK_SIZE = 10;
-    const MAX_CHUNK_SIZE = 1 << 16;
+    (function () {
+        const CONSECUTIVE_EDITS_CNT = 100;
+        const MIN_CHUNK_SIZE = 10;
+        const MAX_CHUNK_SIZE = 1 << 16;
 
-    class AutoTest {
-        private _buff: EdBuffer;
-        private _content: string;
-        private _chunkSize: number;
-        private _editsCnt: number;
-        private _edits: IOffsetLengthDelete[];
+        class AutoTest {
+            private _buff: EdBuffer;
+            private _content: string;
+            private _chunkSize: number;
+            private _editsCnt: number;
+            private _edits: IOffsetLengthDelete[];
 
-        constructor() {
-            this._chunkSize = getRandomInt(MIN_CHUNK_SIZE, MAX_CHUNK_SIZE);
-            this._buff = buildBufferFromFixture('checker-400-CRLF.txt', this._chunkSize);
-            this._content = readFixture('checker-400-CRLF.txt');
-            this._editsCnt = getRandomInt(CONSECUTIVE_EDITS_CNT, CONSECUTIVE_EDITS_CNT);
-            this._edits = [];
-        }
+            constructor() {
+                this._chunkSize = getRandomInt(MIN_CHUNK_SIZE, MAX_CHUNK_SIZE);
+                this._buff = buildBufferFromFixture('checker-400-CRLF.txt', this._chunkSize);
+                this._content = readFixture('checker-400-CRLF.txt');
+                this._editsCnt = getRandomInt(CONSECUTIVE_EDITS_CNT, CONSECUTIVE_EDITS_CNT);
+                this._edits = [];
+            }
 
-        run(): void {
-            // console.log(this._chunkSize);
-            for (let i = 0; i < this._editsCnt; i++) {
-                let _edits = generateEdits(this._content, 1, 1);
-                if (_edits.length === 0) {
-                    continue;
+            run(): void {
+                // console.log(this._chunkSize);
+                for (let i = 0; i < this._editsCnt; i++) {
+                    let _edits = generateEdits(this._content, 1, 1);
+                    if (_edits.length === 0) {
+                        continue;
+                    }
+                    let _edit = _edits[0];
+                    let edit: IOffsetLengthDelete = {
+                        offset: _edit.offset,
+                        length: _edit.length
+                    };
+                    // console.log(edit);
+                    this._edits[i] = edit;
+
+                    this._content = applyOffsetLengthEdits(this._content, [{ offset: edit.offset, length: edit.length, text: '' }]);
+                    this._buff.DeleteOneOffsetLen(edit.offset, edit.length);
+                    assertAllMethods(this._buff, this._content);
+                    if (ASSERT_INVARIANTS) {
+                        this._buff.AssertInvariants();
+                    }
                 }
-                let _edit = _edits[0];
-                let edit: IOffsetLengthDelete = {
-                    offset: _edit.offset,
-                    length: _edit.length
-                };
-                // console.log(edit);
-                this._edits[i] = edit;
+            }
 
-                this._content = applyOffsetLengthEdits(this._content, [{ offset: edit.offset, length: edit.length, text: '' }]);
-                this._buff.DeleteOneOffsetLen(edit.offset, edit.length);
-                assertAllMethods(this._buff, this._content);
-                if (ASSERT_INVARIANTS) {
-                    this._buff.AssertInvariants();
-                }
+            toString(): void {
+                console.log(`runTest(${this._chunkSize}, ${JSON.stringify(this._edits)});`);
             }
         }
 
-        toString(): void {
-            console.log(`runTest(${this._chunkSize}, ${JSON.stringify(this._edits)});`);
+        const GENERATE_CNT = GENERATE_DELETE_TESTS ? 100000 : -1;
+        for (let i = GENERATE_CNT; i >= 0; i--) {
+            console.log(`REMAINING... ${i}`);
+            let test = new AutoTest();
+            try {
+                test.run();
+            } catch (err) {
+                console.log(err);
+                console.log(test.toString());
+                i = -1;
+            }
+        }
+    })();
+});
+
+suite('InsertOneOffsetLen', () => {
+
+    interface IOffsetLengthInsert {
+        offset: number;
+        text: string;
+    }
+
+    interface IFileInfo {
+        fileName: string;
+        chunkSize: number;
+    }
+
+    function assertConsecutiveInsertOneOffsetLen(fileInfo: IFileInfo, edits: IOffsetLengthInsert[]): void {
+        const buff = buildBufferFromFixture(fileInfo.fileName, fileInfo.chunkSize);
+        const initialContent = readFixture(fileInfo.fileName);
+
+        let expected = initialContent;
+        for (let i = 0; i < edits.length; i++) {
+            expected = applyOffsetLengthEdits(expected, [{ offset: edits[i].offset, length: 0, text: edits[i].text }]);
+            const time = PRINT_TIMES ? process.hrtime() : null;
+            buff.InsertOneOffsetLen(edits[i].offset, edits[i].text);
+            const diff = PRINT_TIMES ? process.hrtime(time) : null;
+            if (PRINT_TIMES) {
+                console.log(`InsertOneOffsetLen took ${diff[0] * 1e9 + diff[1]} nanoseconds, i.e. ${(diff[0] * 1e9 + diff[1]) / 1e6} ms.`);
+            }
+            assertAllMethods(buff, expected);
+            if (ASSERT_INVARIANTS) {
+                buff.AssertInvariants();
+            }
         }
     }
 
-    const GENERATE_CNT = GENERATE_DELETE_TESTS ? 100000 : -1;
-    for (let i = GENERATE_CNT; i >= 0; i--) {
-        console.log(`REMAINING... ${i}`);
-        let test = new AutoTest();
-        try {
-            test.run();
-        } catch (err) {
-            console.log(err);
-            console.log(test.toString());
-            i = -1;
+    function _tt(name: string, fileInfo: IFileInfo, edits: IOffsetLengthInsert[]): void {
+        if (name.charAt(0) === '_') {
+            test.only(name, () => {
+                assertConsecutiveInsertOneOffsetLen(fileInfo, edits);
+            });
+        } else {
+            test(name, () => {
+                assertConsecutiveInsertOneOffsetLen(fileInfo, edits);
+            });
         }
     }
-})();
+
+    suite('checker-400.txt', () => {
+        const FILE_INFO: IFileInfo = {
+            fileName: 'checker-400.txt',
+            chunkSize: 1000
+        };
+
+        function tt(name: string, edits: IOffsetLengthInsert[]): void {
+            _tt(name, FILE_INFO, edits);
+        }
+
+        tt('simple insert: first char', [{ offset: 0, text: 'a' }]);
+        // tt('simple delete: first line without EOL', [{ offset: 0, length: 45 }]);
+        // tt('simple delete: first line with EOL', [{ offset: 0, length: 46 }]);
+        // tt('simple delete: second line without EOL', [{ offset: 46, length: 33 }]);
+        // tt('simple delete: second line with EOL', [{ offset: 46, length: 34 }]);
+        // tt('simple delete: first two lines without EOL', [{ offset: 0, length: 79 }]);
+        // tt('simple delete: first two lines with EOL', [{ offset: 0, length: 80 }]);
+        // tt('simple delete: first chunk - 1', [{ offset: 0, length: 999 }]);
+        // tt('simple delete: first chunk', [{ offset: 0, length: 1000 }]);
+        // tt('simple delete: first chunk + 1', [{ offset: 0, length: 1001 }]);
+        // tt('simple delete: last line', [{ offset: 22754, length: 47 }]);
+        // tt('simple delete: last line with preceding EOL', [{ offset: 22753, length: 48 }]);
+        // tt('simple delete: entire file', [{ offset: 0, length: 22801 }]);
+    });
+});
 
 function assertAllMethods(buff: EdBuffer, text: string): void {
     assert.equal(buff.GetLength(), text.length, 'length');
