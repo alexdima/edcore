@@ -93,7 +93,11 @@ class MyArray
     void deleteRange(size_t deleteFrom, size_t deleteCount)
     {
         size_t deleteTo = deleteFrom + deleteCount;
-        memmove(data_ + deleteFrom, data_ + deleteTo, sizeof(T) * (length_ - deleteTo));
+        if (deleteTo < length_)
+        {
+            // there are still elements after the delete
+            memmove(data_ + deleteFrom, data_ + deleteTo, sizeof(T) * (length_ - deleteTo));
+        }
         length_ -= (deleteTo - deleteFrom);
     }
 

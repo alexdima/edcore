@@ -128,8 +128,16 @@ void BufferPiece::deleteOneOffsetLen(size_t offset, size_t len)
 {
     const size_t charsLength = chars_.length();
     const size_t lineStartsLength = lineStarts_.length();
-
+    
     assert(offset + len <= charsLength);
+
+    if (offset == 0 && len == charsLength)
+    {
+        // fast path => everything is deleted
+        lineStarts_.deleteRange(0, lineStartsLength);
+        chars_.deleteRange(0, charsLength);
+        return;
+    }
 
     size_t deleteLineStartsFrom = lineStartsLength;
     size_t deleteLineStartsTo = 0;
