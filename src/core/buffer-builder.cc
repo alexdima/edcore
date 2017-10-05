@@ -5,6 +5,8 @@
 
 #include "buffer-builder.h"
 
+#include <cstring>
+
 namespace edcore
 {
 

@@ -14,6 +14,7 @@
             "environment": [],
             "externalConsole": false,
             "linux": {
+                "program": "/usr/bin/node",
                 "MIMode": "gdb",
                 "setupCommands": [
                     {

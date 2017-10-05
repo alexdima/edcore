@@ -48,12 +48,14 @@ class Buffer
 
     void deleteOneOffsetLen(size_t offset, size_t len);
 
+    void assertInvariants();
+    void assertNodeInvariants(size_t nodeIndex);
+
   private:
     BufferNode *nodes_;
     size_t nodesCount_;
 
-    BufferPiece **leafs_;
-    size_t leafsCount_;
+    MyArray<BufferPiece*> leafs_;
     size_t leafsStart_;
     size_t leafsEnd_;
 

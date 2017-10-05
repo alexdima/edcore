@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <assert.h>
+#include <cstring>
 
 #include "buffer-piece.h"
 
@@ -15,8 +16,8 @@ size_t BufferPiece::memUsage() const
 {
     return (
         sizeof(BufferPiece) +
-        dataCapacity_ * sizeof(uint16_t) +
-        lineStartsCapacity_ * sizeof(LINE_START_T));
+        chars_.memUsage() +
+        lineStarts_.memUsage());
 }
 
 BufferPiece::BufferPiece(uint16_t *data, size_t len)
@@ -80,99 +81,60 @@ BufferPiece::BufferPiece(uint16_t *data, size_t len)
 
 void BufferPiece::_init(uint16_t *data, size_t len, LINE_START_T *lineStarts, size_t lineStartsCount)
 {
-    data_ = data;
-    length_ = len;
-    dataCapacity_ = len;
-
-    lineStarts_ = lineStarts;
-    lineStartsCount_ = lineStartsCount;
-    lineStartsCapacity_ = lineStartsCount;
+    chars_.init(data, len);
+    lineStarts_.init(lineStarts, lineStartsCount);
 }
 
 BufferPiece::~BufferPiece()
 {
-    delete[] data_;
-    delete[] lineStarts_;
 }
 
 uint16_t BufferPiece::deleteLastChar()
 {
-    assert(length_ > 0);
+    const size_t charsLength = chars_.length();
+    const size_t lineStartsLength = lineStarts_.length();
 
-    uint16_t ret = data_[length_ - 1];
+    assert(charsLength > 0);
 
-    if (lineStartsCount_ > 0 && lineStarts_[lineStartsCount_ - 1] == length_)
+    const uint16_t ret = chars_[charsLength - 1];
+
+    if (lineStartsLength > 0 && lineStarts_[lineStartsLength - 1] == charsLength)
     {
-        lineStartsCount_--;
+        lineStarts_.deleteLast();
     }
-    length_--;
+    chars_.deleteLast();
 
     return ret;
 }
 
 void BufferPiece::insertFirstChar(uint16_t character)
 {
-    bool insertLineStart = false;
-    if (character == '\r' && (lineStartsCount_ == 0 || lineStarts_[0] != 1 || data_[0] != '\n'))
-    {
-        insertLineStart = true;
-    }
+    const size_t lineStartsLength = lineStarts_.length();
+    const bool insertLineStart = (character == '\r' && (lineStartsLength == 0 || lineStarts_[0] != 1 || chars_[0] != '\n'));
 
-    for (size_t i = 0; i < lineStartsCount_; i++)
+    for (size_t i = 0; i < lineStartsLength; i++)
     {
         lineStarts_[i] += 1;
     }
 
     if (insertLineStart)
     {
-        if (lineStartsCapacity_ > lineStartsCount_)
-        {
-            memmove(lineStarts_ + 1, lineStarts_, sizeof(LINE_START_T) * lineStartsCount_);
-            lineStarts_[0] = 1;
-            lineStartsCount_ = lineStartsCount_ + 1;
-        }
-        else
-        {
-            uint16_t lineStartsCount = lineStartsCount_ + 1;
-            LINE_START_T *newLineStarts = new LINE_START_T[lineStartsCount];
-            memcpy(newLineStarts + 1, lineStarts_, sizeof(LINE_START_T) * lineStartsCount_);
-            newLineStarts[0] = 1;
-            delete[] lineStarts_;
-
-            lineStarts_ = newLineStarts;
-            lineStartsCapacity_ = lineStartsCount;
-            lineStartsCount_ = lineStartsCount;
-        }
+        lineStarts_.insertFirstElement(1);
     }
-
-    if (dataCapacity_ > length_)
-    {
-        memmove(data_ + 1, data_, sizeof(uint16_t) * length_);
-        data_[0] = character;
-        length_ = length_ + 1;
-    }
-    else
-    {
-        uint16_t length = length_ + 1;
-        uint16_t *newData = new uint16_t[length];
-        memcpy(newData + 1, data_, sizeof(uint16_t) * length_);
-        newData[0] = character;
-        delete[] data_;
-
-        data_ = newData;
-        dataCapacity_ = length;
-        length_ = length;
-    }
+    chars_.insertFirstElement(character);
 }
 
 void BufferPiece::deleteOneOffsetLen(size_t offset, size_t len)
 {
-    assert(offset + len <= length_);
+    const size_t charsLength = chars_.length();
+    const size_t lineStartsLength = lineStarts_.length();
 
-    size_t deleteLineStartsFrom = lineStartsCount_;
+    assert(offset + len <= charsLength);
+
+    size_t deleteLineStartsFrom = lineStartsLength;
     size_t deleteLineStartsTo = 0;
     LINE_START_T *deletingCase1 = NULL;
-    for (size_t i = 0; i < lineStartsCount_; i++)
+    for (size_t i = 0; i < lineStartsLength; i++)
     {
         LINE_START_T lineStart = lineStarts_[i];
         if (lineStart < offset)
@@ -188,20 +150,20 @@ void BufferPiece::deleteOneOffsetLen(size_t offset, size_t len)
         }
 
         // Boundary: Cover the case of deleting: \r[\n...]
-        if (offset == lineStart - 1 && lineStart > 1 && data_[lineStart - 2] == '\r' && data_[lineStart - 1] == '\n')
+        if (offset == lineStart - 1 && lineStart > 1 && chars_[lineStart - 2] == '\r' && chars_[lineStart - 1] == '\n')
         {
             // The line start remains
             lineStarts_[i] -= 1;
-            deletingCase1 = &lineStarts_[i];
+            deletingCase1 = &(lineStarts_[i]);
             continue;
         }
 
         // Boundary: Cover the case of deleting: \r[...]
         if (offset == lineStart)
         {
-            if (data_[lineStart - 1] == '\r')
+            if (chars_[lineStart - 1] == '\r')
             {
-                deletingCase1 = &lineStarts_[i];
+                deletingCase1 = &(lineStarts_[i]);
             }
             continue;
         }
@@ -209,7 +171,7 @@ void BufferPiece::deleteOneOffsetLen(size_t offset, size_t len)
         // Boundary: Cover the case of deleting: \r[...]\n
         if (offset + len == lineStart - 1)
         {
-            if (deletingCase1 != NULL && data_[lineStart - 1] == '\n')
+            if (deletingCase1 != NULL && chars_[lineStart - 1] == '\n')
             {
                 (*deletingCase1) = (*deletingCase1) + 1;
             }
@@ -228,13 +190,31 @@ void BufferPiece::deleteOneOffsetLen(size_t offset, size_t len)
 
     if (deleteLineStartsFrom < deleteLineStartsTo)
     {
-        memmove(lineStarts_ + deleteLineStartsFrom, lineStarts_ + deleteLineStartsTo, sizeof(LINE_START_T) * (lineStartsCount_ - deleteLineStartsTo));
-        lineStartsCount_ -= (deleteLineStartsTo - deleteLineStartsFrom);
+        lineStarts_.deleteRange(deleteLineStartsFrom, deleteLineStartsTo - deleteLineStartsFrom);
+    }
+    chars_.deleteRange(offset, len);
+}
+
+void BufferPiece::join(const BufferPiece *other)
+{
+    const size_t charsLength = chars_.length();
+    const size_t lineStartsLength = lineStarts_.length();
+    const size_t otherCharsLength = other->chars_.length();
+    const size_t otherLineStartsLength = other->lineStarts_.length();
+
+    if (otherCharsLength == 0)
+    {
+        // nothing to append
+        return;
     }
 
-    uint16_t length = length_ - len;
-    memmove(data_ + offset, data_ + offset + len, sizeof(uint16_t) * (length - offset));
-    length_ = length;
+    for (size_t i = 0; i < otherLineStartsLength; i++)
+    {
+        other->lineStarts_[i] += charsLength;
+    }
+
+    lineStarts_.append(other->lineStarts_.data(), otherLineStartsLength);
+    chars_.append(other->chars_.data(), otherCharsLength);
 }
 
 void BufferPiece::insertOneOffsetLen(size_t offset, const uint16_t *data, size_t len)
@@ -242,10 +222,44 @@ void BufferPiece::insertOneOffsetLen(size_t offset, const uint16_t *data, size_t
     printf("TODO: insertOneOffsetLen %lu (data of %lu)\n", offset, len);
 }
 
+void BufferPiece::assertInvariants()
+{
+    const size_t charsLength = chars_.length();
+    const size_t lineStartsLength = lineStarts_.length();
+
+    assert(chars_.data() != NULL);
+    assert(charsLength <= chars_.capacity());
+
+    assert(lineStarts_.data() != NULL);
+    assert(lineStartsLength <= lineStarts_.capacity());
+
+    for (size_t i = 0; i < lineStartsLength; i++)
+    {
+        LINE_START_T lineStart = lineStarts_[i];
+
+        assert(lineStart > 0 && lineStart <= charsLength);
+
+        if (i > 0)
+        {
+            LINE_START_T prevLineStart = lineStarts_[i - 1];
+            assert(lineStart > prevLineStart);
+        }
+
+        uint16_t charBefore = chars_[lineStart - 1];
+        assert(charBefore == '\n' || charBefore == '\r');
+
+        if (charBefore == '\r' && lineStart < charsLength)
+        {
+            uint16_t charAfter = chars_[lineStart];
+            assert(charAfter != '\n');
+        }
+    }
+}
+
 void BufferPiece::print(std::ostream &os) const
 {
-    const uint16_t *data = data_;
-    const size_t len = length_;
+    const uint16_t *data = chars_.data();
+    const size_t len = chars_.length();
     for (size_t i = 0; i < len; i++)
     {
         os << data[i];

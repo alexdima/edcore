@@ -99,7 +99,13 @@ void EdBuffer::DeleteOneOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &arg
         return;
     }
 
+    // size_t memUsageBefore = obj->actual_->memUsage();
+
     obj->actual_->deleteOneOffsetLen(offset, len);
+
+    // size_t memUsageAfter = obj->actual_->memUsage();
+    // printf("mem usage: %lf KB -> %lf KB\n", ((double)memUsageBefore) / 1024, ((double)memUsageAfter) / 1024);
+
 }
 
 v8::Local<v8::Object> EdBuffer::Create(v8::Isolate *isolate, const v8::Local<v8::Object> builder)

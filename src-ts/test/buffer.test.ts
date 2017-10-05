@@ -13,6 +13,14 @@ suite('Loading', () => {
     test('checker.txt', () => {
         assertBuffer('checker.txt');
     });
+
+    test('checker-400.txt', () => {
+        assertBuffer('checker-400.txt');
+    });
+
+    test('checker-10.txt', () => {
+        assertBuffer('checker-10.txt');
+    });
 });
 
 function applyOffsetLengthEdits(initialContent: string, edits: IOffsetLengthEdit[]): string {
@@ -55,6 +63,18 @@ suite('DeleteOneOffsetLen', () => {
         }
     }
 
+    function _tt(name: string, fileInfo: IFileInfo, edits: IOffsetLengthDelete[]): void {
+        if (name.charAt(0) === '_') {
+            test.only(name, () => {
+                assertConsecutiveDeleteOneOffsetLen(fileInfo, edits);
+            });
+        } else {
+            test(name, () => {
+                assertConsecutiveDeleteOneOffsetLen(fileInfo, edits);
+            });
+        }
+    }
+
     suite('checker-400.txt', () => {
         const FILE_INFO: IFileInfo = {
             fileName: 'checker-400.txt',
@@ -62,9 +82,7 @@ suite('DeleteOneOffsetLen', () => {
         };
 
         function tt(name: string, edits: IOffsetLengthDelete[]): void {
-            test(name, () => {
-                assertConsecutiveDeleteOneOffsetLen(FILE_INFO, edits);
-            });
+            _tt(name, FILE_INFO, edits);
         }
 
         tt('simple delete: first char', [{ offset: 0, length: 1 }]);
@@ -89,9 +107,7 @@ suite('DeleteOneOffsetLen', () => {
         };
 
         function tt(name: string, edits: IOffsetLengthDelete[]): void {
-            test(name, () => {
-                assertConsecutiveDeleteOneOffsetLen(FILE_INFO, edits);
-            });
+            _tt(name, FILE_INFO, edits);
         }
 
         tt('simple delete: first char', [{ offset: 0, length: 1 }]);
@@ -178,6 +194,17 @@ suite('DeleteOneOffsetLen', () => {
             ]);
         });
 
+        test('gen9 - join bug', () => {
+            runTest(4603, [{ "offset": 12682, "length": 7664 }]);
+        });
+
+        test('gen10 - join bug', () => {
+            runTest(7255, [{ "offset": 2327, "length": 14103 }]);
+        });
+
+        test('gen11 - join bug', () => {
+            runTest(43728, [{ offset: 16159, length: 3017 }]);
+        });
     });
 });
 

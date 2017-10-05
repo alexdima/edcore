@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <assert.h>
+#include <cstring>
 
 #define PARENT(i) (i >> 1)
 #define LEFT_CHILD(i) (i << 1)
@@ -45,14 +46,16 @@ void printIndent(ostream &os, int indent)
 
 size_t Buffer::memUsage() const
 {
+    const size_t leafsCount = leafs_.length();
+
     size_t leafs = 0;
-    for (size_t i = 0; i < leafsCount_; i++)
+    for (size_t i = 0; i < leafsCount; i++)
     {
         leafs += leafs_[i]->memUsage();
     }
     return (
         sizeof(Buffer) +
-        leafsCount_ * sizeof(BufferPiece *) +
+        leafs_.memUsage() +
         nodesCount_ * sizeof(BufferNode) +
         leafs);
 }
@@ -61,17 +64,18 @@ Buffer::Buffer(vector<BufferPiece *> &pieces, size_t minLeafLength, size_t maxLe
 {
     assert(2 * minLeafLength >= maxLeafLength);
 
-    leafsCount_ = pieces.size();
-    leafs_ = new BufferPiece *[leafsCount_];
-    for (size_t i = 0; i < leafsCount_; i++)
+    const size_t leafsCount = pieces.size();
+    BufferPiece **tmp = new BufferPiece *[leafsCount];
+    for (size_t i = 0; i < leafsCount; i++)
     {
-        leafs_[i] = pieces[i];
+        tmp[i] = pieces[i];
     }
+    leafs_.init(tmp, leafsCount);
 
-    nodesCount_ = 1 << log2(leafsCount_);
+    nodesCount_ = 1 << log2(leafsCount);
 
     leafsStart_ = nodesCount_;
-    leafsEnd_ = leafsStart_ + leafsCount_;
+    leafsEnd_ = leafsStart_ + leafsCount;
 
     nodes_ = new BufferNode[nodesCount_];
     memset(nodes_, 0, nodesCount_ * sizeof(nodes_[0]));
@@ -124,11 +128,11 @@ void Buffer::_updateSingleNode(size_t nodeIndex)
 Buffer::~Buffer()
 {
     delete[] nodes_;
-    for (size_t i = 0; i < leafsCount_; i++)
+    const size_t leafsCount = leafs_.length();
+    for (size_t i = 0; i < leafsCount; i++)
     {
         delete leafs_[i];
     }
-    delete[] leafs_;
 }
 
 void Buffer::extractString(BufferCursor start, size_t len, uint16_t *dest)
@@ -257,6 +261,7 @@ bool Buffer::_findLineStart(size_t &lineIndex, BufferCursor &result)
 
 void Buffer::_findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t innerLineIndex, BufferCursor &result)
 {
+    const size_t leafsCount = leafs_.length();
     while (true)
     {
         BufferPiece *leaf = leafs_[leafIndex];
@@ -274,7 +279,7 @@ void Buffer::_findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t inner
 
         leafIndex++;
 
-        if (leafIndex >= leafsCount_)
+        if (leafIndex >= leafsCount)
         {
             result.offset = leafStartOffset + leaf->length();
             result.leafIndex = leafIndex - 1;
@@ -301,6 +306,7 @@ bool Buffer::findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end)
 
 void Buffer::deleteOneOffsetLen(size_t offset, size_t len)
 {
+    const size_t leafsCount = leafs_.length();
     assert(offset + len <= nodes_[1].length);
 
     BufferCursor start;
@@ -341,7 +347,7 @@ void Buffer::deleteOneOffsetLen(size_t offset, size_t len)
             {
                 size_t nextLeafIndex = leafIndex > start.leafIndex ? leafIndex : start.leafIndex + 1;
                 BufferPiece *nextLeaf = NULL;
-                while (nextLeafIndex < leafsCount_)
+                while (nextLeafIndex < leafsCount)
                 {
                     nextLeaf = leafs_[nextLeafIndex];
                     if (nextLeaf->length() > 0)
@@ -361,12 +367,63 @@ void Buffer::deleteOneOffsetLen(size_t offset, size_t len)
         }
     }
 
+    size_t deleteLeafFrom = leafsCount;
+    size_t deleteLeafTo = 0;
+
+    size_t analyzeFrom = max(1UL, firstDirtyIndex);
+    size_t analyzeTo = min(lastDirtyIndex + 2, leafsCount);
+
+    BufferPiece *prevLeaf = leafs_[analyzeFrom - 1];
+    size_t prevLeafIndex = analyzeFrom - 1;
+    bool deletingSomething = false;
+    for (size_t i = analyzeFrom; i < analyzeTo; i++)
+    {
+        size_t prevLeafLength = prevLeaf->length();
+
+        BufferPiece *leaf = leafs_[i];
+        size_t leafLength = leaf->length();
+
+        if ((prevLeafLength < minLeafLength_ || leafLength < minLeafLength_) && prevLeafLength + leafLength <= maxLeafLength_)
+        {
+            firstDirtyIndex = min(firstDirtyIndex, prevLeafIndex);
+            prevLeaf->join(leaf);
+
+            // This leaf must be deleted
+            deleteLeafFrom = min(deleteLeafFrom, i);
+            deleteLeafTo = max(deleteLeafTo, i + 1);
+            deletingSomething = true;
+
+            delete leafs_[i];
+            leafs_[i] = NULL;
+
+            continue;
+        }
+        else
+        {
+            if (deletingSomething)
+            {
+                // ensure we are deleting only contiguous zones
+                break;
+            }
+        }
+        prevLeafIndex = i;
+        prevLeaf = leaf;
+    }
+
+    if (deleteLeafFrom < deleteLeafTo)
+    {
+        lastDirtyIndex = leafsCount - 1;
+        leafs_.deleteRange(deleteLeafFrom, deleteLeafTo - deleteLeafFrom);
+        leafsEnd_ -= (deleteLeafTo - deleteLeafFrom);
+    }
+
     size_t fromNodeIndex = LEAF_TO_NODE_INDEX(firstDirtyIndex) / 2;
     size_t toNodeIndex = LEAF_TO_NODE_INDEX(lastDirtyIndex) / 2;
 
-    // TODO: Let's see if we should merge some leafs
-
+    assert(toNodeIndex < nodesCount_);
     _updateNodes(fromNodeIndex, toNodeIndex);
+
+    assertInvariants();
 }
 
 void Buffer::_updateNodes(size_t fromNodeIndex, size_t toNodeIndex)
@@ -380,6 +437,58 @@ void Buffer::_updateNodes(size_t fromNodeIndex, size_t toNodeIndex)
         fromNodeIndex /= 2;
         toNodeIndex /= 2;
     }
+}
+
+void Buffer::assertInvariants()
+{
+    const size_t leafsCount = leafs_.length();
+    assert(leafsCount <= leafs_.capacity());
+    assert(leafsStart_ == nodesCount_);
+    assert(leafsEnd_ == leafsStart_ + leafsCount);
+
+    for (size_t i = 0; i < leafsCount; i++)
+    {
+        leafs_[i]->assertInvariants();
+    }
+
+    for (size_t i = 1; i < nodesCount_; i++)
+    {
+        assertNodeInvariants(i);
+    }
+}
+
+void Buffer::assertNodeInvariants(size_t nodeIndex)
+{
+    size_t left = LEFT_CHILD(nodeIndex);
+    size_t right = RIGHT_CHILD(nodeIndex);
+
+    size_t length = 0;
+    size_t newLineCount = 0;
+
+    if (IS_NODE(left))
+    {
+        length += nodes_[left].length;
+        newLineCount += nodes_[left].newLineCount;
+    }
+    else if (IS_LEAF(left))
+    {
+        length += leafs_[NODE_TO_LEAF_INDEX(left)]->length();
+        newLineCount += leafs_[NODE_TO_LEAF_INDEX(left)]->newLineCount();
+    }
+
+    if (IS_NODE(right))
+    {
+        length += nodes_[right].length;
+        newLineCount += nodes_[right].newLineCount;
+    }
+    else if (IS_LEAF(right))
+    {
+        length += leafs_[NODE_TO_LEAF_INDEX(right)]->length();
+        newLineCount += leafs_[NODE_TO_LEAF_INDEX(right)]->newLineCount();
+    }
+
+    assert(nodes_[nodeIndex].length == length);
+    assert(nodes_[nodeIndex].newLineCount == newLineCount);
 }
 
 void Buffer::print(ostream &os, size_t index, size_t indent)

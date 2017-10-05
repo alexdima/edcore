@@ -14,7 +14,8 @@
         "iterator": "cpp",
         "utility": "cpp",
         "vector": "cpp",
-        "memory": "cpp"
+        "memory": "cpp",
+        "array": "cpp"
     },
     "search.exclude": {
         "**/node_modules": true,
