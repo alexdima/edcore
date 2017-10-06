@@ -188,7 +188,8 @@ class BufferPiece
     bool hasLonelyCR_;
 
     void _rebuildLineStarts();
-    bool _tryApplyEditsInline(vector<LeafOffsetLenEdit> &edits, size_t newLength);
+    bool _tryApplyEditsNoAllocate(vector<LeafOffsetLenEdit> &edits, size_t newLength);
+    void _applyEditsAllocate(vector<LeafOffsetLenEdit> &edits, size_t newLength);
 };
 }
 

@@ -291,45 +291,8 @@ void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit> &edits)
     }
     const size_t newLength = chars_.length() + delta;
 
-    if (!_tryApplyEditsInline(edits, newLength)) {
-        const bool didAllocateNewChars = true;//(newLength > chars_.capacity());
-        uint16_t *target = (didAllocateNewChars ? new uint16_t[newLength] : chars_.data());
-
-        size_t srcToIndex = chars_.length();
-        for (size_t i = 0; i < edits.size(); i++)
-        {
-            LeafOffsetLenEdit &edit = edits[i];
-
-            // printf("~~~~leaf edit: %lu,%lu -> [%lu] -- final start will be %lu\n", edit.start, edit.length, edit.dataLength, edit.resultStart);
-
-            // copy the chars that survive to the right of this edit
-            size_t srcFromIndex = edit.start + edit.length;
-            if (srcFromIndex < srcToIndex)
-            {
-                memcpy(target + edit.resultStart + edit.dataLength, chars_.data() + srcFromIndex, sizeof(uint16_t) * (srcToIndex - srcFromIndex));
-            }
-            srcToIndex = edit.start;
-
-            // copy the chars that are introduced by this edit
-            if (edit.dataLength > 0)
-            {
-                memcpy(target + edit.resultStart, edit.data, sizeof(uint16_t) * edit.dataLength);
-            }
-        }
-        // copy the chars that survive to the left of the first edit
-        if (0 < srcToIndex)
-        {
-            memcpy(target, chars_.data(), sizeof(uint16_t) * srcToIndex);
-        }
-
-        if (didAllocateNewChars)
-        {
-            chars_.assign(target, newLength);
-        }
-        else
-        {
-            chars_.setLength(newLength);
-        }
+    if (!_tryApplyEditsNoAllocate(edits, newLength)) {
+        _applyEditsAllocate(edits, newLength);
     }
 
     // TODO
@@ -424,7 +387,7 @@ bool _tryOrExecuteEditsInline(uint16_t *data, vector<MemMoveOp> &moves, bool exe
     return true;
 }
 
-bool BufferPiece::_tryApplyEditsInline(vector<LeafOffsetLenEdit> &edits, size_t newLength)
+bool BufferPiece::_tryApplyEditsNoAllocate(vector<LeafOffsetLenEdit> &edits, size_t newLength)
 {
     if (newLength > chars_.capacity())
     {
@@ -469,6 +432,38 @@ bool BufferPiece::_tryApplyEditsInline(vector<LeafOffsetLenEdit> &edits, size_t 
 
     chars_.setLength(newLength);
     return true;
+}
+
+void BufferPiece::_applyEditsAllocate(vector<LeafOffsetLenEdit> &edits, size_t newLength)
+{
+    uint16_t *target = new uint16_t[newLength];
+
+    size_t srcToIndex = chars_.length();
+    for (size_t i = 0, editsSize = edits.size(); i < editsSize; i++)
+    {
+        LeafOffsetLenEdit &edit = edits[i];
+
+        // copy the chars that survive to the right of this edit
+        size_t srcFromIndex = edit.start + edit.length;
+        if (srcFromIndex < srcToIndex)
+        {
+            memcpy(target + edit.resultStart + edit.dataLength, chars_.data() + srcFromIndex, sizeof(uint16_t) * (srcToIndex - srcFromIndex));
+        }
+        srcToIndex = edit.start;
+
+        // copy the chars that are introduced by this edit
+        if (edit.dataLength > 0)
+        {
+            memcpy(target + edit.resultStart, edit.data, sizeof(uint16_t) * edit.dataLength);
+        }
+    }
+    // copy the chars that survive to the left of the first edit
+    if (0 < srcToIndex)
+    {
+        memcpy(target, chars_.data(), sizeof(uint16_t) * srcToIndex);
+    }
+
+    chars_.assign(target, newLength);
 }
 
 void BufferPiece::assertInvariants()

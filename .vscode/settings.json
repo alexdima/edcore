@@ -17,7 +17,8 @@
         "memory": "cpp",
         "array": "cpp",
         "*.tcc": "cpp",
-        "system_error": "cpp"
+        "system_error": "cpp",
+        "functional": "cpp"
     },
     "search.exclude": {
         "**/node_modules": true,
