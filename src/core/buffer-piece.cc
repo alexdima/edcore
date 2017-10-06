@@ -303,7 +303,6 @@ void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit> &edits)
 
         size_t lineStartCount = lineStarts_.length();
         size_t lineStartIndex = 0;
-        // size_t lineStart = ( lineStartIndex < lineStartCount ? lineStarts_[lineStartIndex] : 0);
 
         long delta = 0;
         for (size_t i1 = edits.size(); i1 > 0; i1--)
@@ -311,32 +310,16 @@ void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit> &edits)
             LeafOffsetLenEdit &edit = edits[i1 - 1];
 
             // Handle line starts before the edit
-            while (lineStartIndex < lineStartCount)
+            while (lineStartIndex < lineStartCount && lineStarts_[lineStartIndex] <= edit.start)
             {
-                LINE_START_T lineStart = lineStarts_[lineStartIndex];
-                if (lineStart <= edit.start)
-                {
-                    lineStarts.push_back(lineStart + delta);
-                    lineStartIndex++;
-                }
-                else
-                {
-                    break;
-                }
+                lineStarts.push_back(lineStarts_[lineStartIndex] + delta);
+                lineStartIndex++;
             }
 
             // Handle line starts deleted by the edit
-            while (lineStartIndex < lineStartCount)
+            while (lineStartIndex < lineStartCount && lineStarts_[lineStartIndex] <= edit.start + edit.length)
             {
-                LINE_START_T lineStart = lineStarts_[lineStartIndex];
-                if (lineStart <= edit.start + edit.length)
-                {
-                    lineStartIndex++;
-                }
-                else
-                {
-                    break;
-                }
+                lineStartIndex++;
             }
 
             for (size_t dataIndex = 0, dataLength = edit.dataLength; dataIndex < dataLength; dataIndex++)
@@ -375,11 +358,8 @@ void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit> &edits)
                 size_t shorterBy = (edit.length - edit.dataLength);
                 delta -= shorterBy;
             }
-
-
         }
 
-        // TODO: remaining line starts
         while (lineStartIndex < lineStartCount)
         {
             LINE_START_T lineStart = lineStarts_[lineStartIndex];
@@ -388,7 +368,6 @@ void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit> &edits)
         }
 
         lineStarts_.assign(lineStarts);
-        // assert(false);
     }
 }
 

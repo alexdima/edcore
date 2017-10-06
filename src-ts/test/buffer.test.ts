@@ -39,12 +39,11 @@ suite('Loading', () => {
 });
 
 function applyOffsetLengthEdits(initialContent: string, edits: IOffsetLengthEdit[]): string {
-    // TODO: ensure edits are sorted bottom up
     edits = edits.slice(0);
-
     edits.sort((e1, e2) => {
         return e1.offset - e2.offset;
     });
+
     let result = initialContent;
     for (let i = edits.length - 1; i >= 0; i--) {
         result = (
@@ -61,6 +60,7 @@ suite('DeleteOneOffsetLen', () => {
     interface IOffsetLengthDelete {
         offset: number;
         length: number;
+        text?: string;
     }
 
     interface IFileInfo {
@@ -157,147 +157,6 @@ suite('DeleteOneOffsetLen', () => {
         tt('simple delete: last line with preceding EOL', [{ offset: 23150, length: 49 }]);
         tt('simple delete: entire file', [{ offset: 0, length: 23199 }]);
     });
-
-    suite('generated', () => {
-        function runTest(chunkSize: number, edits: IOffsetLengthDelete[]): void {
-            assertConsecutiveDeleteOneOffsetLen({
-                fileName: 'checker-400-CRLF.txt',
-                chunkSize: chunkSize
-            }, edits);
-        }
-
-        test('gen1 - \\r\\n boundary case within chunk', () => {
-            runTest(59302, [{ "offset": 13501, "length": 2134 }]);
-        });
-
-        test('gen2 - endless loop', () => {
-            runTest(36561, [{ "offset": 23199, "length": 0 }]);
-        });
-
-        test('gen3 - \\r\\n boundary case outisde chunk 1', () => {
-            runTest(20646, [{ "offset": 19478, "length": 1287 }]);
-        });
-
-        test('gen4 - \\r\\n boundary case outisde chunk 2', () => {
-            runTest(2195, [{ "offset": 12512, "length": 2249 }]);
-        });
-
-        test('gen5 - \\r\\n boundary case outisde chunk 3', () => {
-            runTest(201, [{ "offset": 19720, "length": 2203 }]);
-        });
-
-        test('gen6 - invalidate nodes', () => {
-            runTest(192, [{ "offset": 8062, "length": 13646 }, { "offset": 7469, "length": 1925 }]);
-        });
-
-        test('gen7', () => {
-            runTest(53340, [
-                { "offset": 807, "length": 22287 },
-                { "offset": 278, "length": 109 },
-                { "offset": 628, "length": 152 },
-                { "offset": 348, "length": 271 },
-                { "offset": 282, "length": 29 },
-                { "offset": 282, "length": 6 }
-            ]);
-        });
-
-        test('gen8', () => {
-            runTest(19671, [
-                { "offset": 3478, "length": 12195 },
-                { "offset": 645, "length": 830 },
-                { "offset": 1346, "length": 7120 },
-                { "offset": 1572, "length": 419 },
-                { "offset": 1449, "length": 918 },
-                { "offset": 391, "length": 161 },
-                { "offset": 28, "length": 516 },
-                { "offset": 805, "length": 0 },
-                { "offset": 1005, "length": 19 },
-                { "offset": 969, "length": 23 },
-                { "offset": 718, "length": 72 },
-                { "offset": 811, "length": 29 },
-                { "offset": 6, "length": 318 },
-                { "offset": 303, "length": 44 },
-                { "offset": 126, "length": 155 },
-                { "offset": 68, "length": 107 },
-                { "offset": 198, "length": 46 }
-            ]);
-        });
-
-        test('gen9 - join bug', () => {
-            runTest(4603, [{ "offset": 12682, "length": 7664 }]);
-        });
-
-        test('gen10 - join bug', () => {
-            runTest(7255, [{ "offset": 2327, "length": 14103 }]);
-        });
-
-        test('gen11 - join bug', () => {
-            runTest(43728, [{ offset: 16159, length: 3017 }]);
-        });
-    });
-
-    (function () {
-        const CONSECUTIVE_EDITS_CNT = 100;
-        const MIN_CHUNK_SIZE = 10;
-        const MAX_CHUNK_SIZE = 1 << 16;
-
-        class AutoTest {
-            private _buff: EdBuffer;
-            private _content: string;
-            private _chunkSize: number;
-            private _editsCnt: number;
-            private _edits: IOffsetLengthDelete[];
-
-            constructor() {
-                this._chunkSize = getRandomInt(MIN_CHUNK_SIZE, MAX_CHUNK_SIZE);
-                this._buff = buildBufferFromFixture('checker-400-CRLF.txt', this._chunkSize);
-                this._content = readFixture('checker-400-CRLF.txt');
-                this._editsCnt = getRandomInt(CONSECUTIVE_EDITS_CNT, CONSECUTIVE_EDITS_CNT);
-                this._edits = [];
-            }
-
-            run(): void {
-                // console.log(this._chunkSize);
-                for (let i = 0; i < this._editsCnt; i++) {
-                    let _edits = generateEdits(this._content, 1, 1);
-                    if (_edits.length === 0) {
-                        continue;
-                    }
-                    let _edit = _edits[0];
-                    let edit: IOffsetLengthDelete = {
-                        offset: _edit.offset,
-                        length: _edit.length
-                    };
-                    // console.log(edit);
-                    this._edits[i] = edit;
-
-                    this._content = applyOffsetLengthEdits(this._content, [{ offset: edit.offset, length: edit.length, text: '' }]);
-                    this._buff.DeleteOneOffsetLen(edit.offset, edit.length);
-                    assertAllMethods(this._buff, this._content);
-                    if (ASSERT_INVARIANTS) {
-                        this._buff.AssertInvariants();
-                    }
-                }
-            }
-
-            toString(): void {
-                console.log(`runTest(${this._chunkSize}, ${JSON.stringify(this._edits)});`);
-            }
-        }
-
-        const GENERATE_CNT = GENERATE_DELETE_TESTS ? 100000 : -1;
-        for (let i = GENERATE_CNT; i >= 0; i--) {
-            console.log(`REMAINING... ${i}`);
-            let test = new AutoTest();
-            try {
-                test.run();
-            } catch (err) {
-                console.log(err);
-                console.log(test.toString());
-                i = -1;
-            }
-        }
-    })();
 });
 
 suite('InsertOneOffsetLen', () => {
@@ -457,10 +316,78 @@ suite('ReplaceOffsetLen', () => {
             }, edits);
         }
 
-        // test.only('gen1 - \\r\\n boundary case within chunk', () => {
-        //     runTest('checker-400-CRLF.txt', 35315, [[{"offset":22641,"length":112,"text":"\ne\n"}]]);
-        //     // runTest(59302, [{ "offset": 13501, "length": 2134 }]);
-        // });
+
+        test('gen1 - \\r\\n boundary case within chunk', () => {
+            runTest('checker-400-CRLF.txt', 59302, [[{ offset: 13501, length: 2134, text: '' }]]);
+        });
+
+        test('gen2 - endless loop', () => {
+            runTest('checker-400-CRLF.txt', 36561, [[{ offset: 23199, length: 0, text: '' }]]);
+        });
+
+        test('gen3 - \\r\\n boundary case outisde chunk 1', () => {
+            runTest('checker-400-CRLF.txt', 20646, [[{ offset: 19478, length: 1287, text: '' }]]);
+        });
+
+        test('gen4 - \\r\\n boundary case outisde chunk 2', () => {
+            runTest('checker-400-CRLF.txt', 2195, [[{ offset: 12512, length: 2249, text: '' }]]);
+        });
+
+        test('gen5 - \\r\\n boundary case outisde chunk 3', () => {
+            runTest('checker-400-CRLF.txt', 201, [[{ offset: 19720, length: 2203, text: '' }]]);
+        });
+
+        test('gen6 - invalidate nodes', () => {
+            runTest('checker-400-CRLF.txt', 192, [
+                [{ offset: 8062, length: 13646, text: '' }],
+                [{ offset: 7469, length: 1925, text: '' }]
+            ]);
+        });
+
+        test('gen7', () => {
+            runTest('checker-400-CRLF.txt', 53340, [
+                [{ offset: 807, length: 22287, text: '' }],
+                [{ offset: 278, length: 109, text: '' }],
+                [{ offset: 628, length: 152, text: '' }],
+                [{ offset: 348, length: 271, text: '' }],
+                [{ offset: 282, length: 29, text: '' }],
+                [{ offset: 282, length: 6, text: '' }]
+            ]);
+        });
+
+        test('gen8', () => {
+            runTest('checker-400-CRLF.txt', 19671, [
+                [{ offset: 3478, length: 12195, text: '' }],
+                [{ offset: 645, length: 830, text: '' }],
+                [{ offset: 1346, length: 7120, text: '' }],
+                [{ offset: 1572, length: 419, text: '' }],
+                [{ offset: 1449, length: 918, text: '' }],
+                [{ offset: 391, length: 161, text: '' }],
+                [{ offset: 28, length: 516, text: '' }],
+                [{ offset: 805, length: 0, text: '' }],
+                [{ offset: 1005, length: 19, text: '' }],
+                [{ offset: 969, length: 23, text: '' }],
+                [{ offset: 718, length: 72, text: '' }],
+                [{ offset: 811, length: 29, text: '' }],
+                [{ offset: 6, length: 318, text: '' }],
+                [{ offset: 303, length: 44, text: '' }],
+                [{ offset: 126, length: 155, text: '' }],
+                [{ offset: 68, length: 107, text: '' }],
+                [{ offset: 198, length: 46, text: '' }]
+            ]);
+        });
+
+        test('gen9 - join bug', () => {
+            runTest('checker-400-CRLF.txt', 4603, [[{ offset: 12682, length: 7664, text: '' }]]);
+        });
+
+        test('gen10 - join bug', () => {
+            runTest('checker-400-CRLF.txt', 7255, [[{ offset: 2327, length: 14103, text: '' }]]);
+        });
+
+        test('gen11 - join bug', () => {
+            runTest('checker-400-CRLF.txt', 43728, [[{ offset: 16159, length: 3017, text: '' }]]);
+        });
 
         test('auto1', () => {
             runTest("checker-10.txt", 44576, [[{ "offset": 177, "length": 17, "text": "\n" }]]);
