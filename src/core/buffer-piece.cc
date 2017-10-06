@@ -438,18 +438,21 @@ void BufferPiece::_applyEditsAllocate(vector<LeafOffsetLenEdit> &edits, size_t n
 {
     uint16_t *target = new uint16_t[newLength];
 
-    size_t srcToIndex = chars_.length();
-    for (size_t i = 0, editsSize = edits.size(); i < editsSize; i++)
+    size_t originalFromIndex = 0;
+    for (size_t i1 = edits.size(); i1 > 0; i1--)
     {
-        LeafOffsetLenEdit &edit = edits[i];
+        LeafOffsetLenEdit &edit = edits[i1 - 1];
 
-        // copy the chars that survive to the right of this edit
-        size_t srcFromIndex = edit.start + edit.length;
-        if (srcFromIndex < srcToIndex)
+        // printf("~~~~leaf edit: %lu,%lu -> [%lu] -- final start will be %lu\n", edit.start, edit.length, edit.dataLength, edit.resultStart);
+
+        // copy the chars that survive to the left of this edit
+        size_t originalToIndex = edit.start;
+        size_t originalCount = originalToIndex - originalFromIndex;
+        if (originalCount > 0)
         {
-            memcpy(target + edit.resultStart + edit.dataLength, chars_.data() + srcFromIndex, sizeof(uint16_t) * (srcToIndex - srcFromIndex));
+            memcpy(target + edit.resultStart - originalCount, chars_.data() + originalFromIndex, sizeof(uint16_t) * originalCount);
         }
-        srcToIndex = edit.start;
+        originalFromIndex = edit.start + edit.length;
 
         // copy the chars that are introduced by this edit
         if (edit.dataLength > 0)
@@ -457,10 +460,12 @@ void BufferPiece::_applyEditsAllocate(vector<LeafOffsetLenEdit> &edits, size_t n
             memcpy(target + edit.resultStart, edit.data, sizeof(uint16_t) * edit.dataLength);
         }
     }
-    // copy the chars that survive to the left of the first edit
-    if (0 < srcToIndex)
+    // copy the chars that survive to the right of the last edit
+    size_t originalToIndex = chars_.length();
+    size_t originalCount = originalToIndex - originalFromIndex;
+    if (originalCount > 0)
     {
-        memcpy(target, chars_.data(), sizeof(uint16_t) * srcToIndex);
+        memcpy(target + newLength - originalCount, chars_.data() + originalFromIndex, sizeof(uint16_t) * originalCount);
     }
 
     chars_.assign(target, newLength);
