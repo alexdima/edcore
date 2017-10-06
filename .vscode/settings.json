@@ -15,7 +15,9 @@
         "utility": "cpp",
         "vector": "cpp",
         "memory": "cpp",
-        "array": "cpp"
+        "array": "cpp",
+        "*.tcc": "cpp",
+        "system_error": "cpp"
     },
     "search.exclude": {
         "**/node_modules": true,

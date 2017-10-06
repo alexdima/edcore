@@ -62,11 +62,10 @@ Buffer::Buffer(vector<BufferPiece *> &pieces, size_t minLeafLength, size_t maxLe
     {
         tmp[i] = pieces[i];
     }
-    leafs_.init(tmp, leafsCount);
+    leafs_.assign(tmp, leafsCount);
 
     nodes_ = NULL;
     _rebuildNodes();
-
 
     minLeafLength_ = minLeafLength;
     maxLeafLength_ = maxLeafLength;
@@ -78,7 +77,7 @@ void Buffer::_rebuildNodes()
 {
     if (nodes_ != NULL)
     {
-        delete []nodes_;
+        delete[] nodes_;
     }
 
     const size_t leafsCount = leafs_.length();
@@ -165,6 +164,8 @@ void Buffer::extractString(BufferCursor start, size_t len, uint16_t *dest)
     }
 }
 
+#define GET_NODE_LENGTH(nodeIndex) (IS_NODE(nodeIndex) ? nodes_[nodeIndex].length : IS_LEAF(nodeIndex) ? leafs_[NODE_TO_LEAF_INDEX(nodeIndex)]->length() : 0)
+
 bool Buffer::findOffset(size_t offset, BufferCursor &result)
 {
     if (offset > nodes_[1].length)
@@ -180,17 +181,10 @@ bool Buffer::findOffset(size_t offset, BufferCursor &result)
         size_t left = LEFT_CHILD(it);
         size_t right = RIGHT_CHILD(it);
 
-        size_t leftLength = 0;
-        if (IS_NODE(left))
-        {
-            leftLength = nodes_[left].length;
-        }
-        else if (IS_LEAF(left))
-        {
-            leftLength = leafs_[NODE_TO_LEAF_INDEX(left)]->length();
-        }
+        size_t leftLength = GET_NODE_LENGTH(left);
+        size_t rightLength = GET_NODE_LENGTH(right);
 
-        if (searchOffset < leftLength || !(IS_NODE(right) || IS_LEAF(right)))
+        if (searchOffset < leftLength || rightLength == 0)
         {
             // go left
             it = left;
@@ -450,7 +444,7 @@ void Buffer::insertOneOffsetLen(size_t offset, const uint16_t *data, size_t len)
         assert(false);
         return;
     }
-    
+
     size_t innerLeafOffset = start.offset - start.leafStartOffset;
     size_t leafIndex = start.leafIndex;
     BufferPiece *leaf = leafs_[leafIndex];
@@ -467,10 +461,270 @@ void Buffer::insertOneOffsetLen(size_t offset, const uint16_t *data, size_t len)
 
     _updateNodes(fromNodeIndex, toNodeIndex);
 
-
     // printf("TODO: insertOneOffsetLen @ %lu of length %lu\n", offset, len);
     // printf("cursor: %lu, --(%lu)\n", start.leafIndex, start.leafStartOffset);
 }
+
+void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
+{
+    // The edits are sorted ascending
+    // for (size_t i = 0; i < _edits.size(); i++)
+    // {
+    //     printf("replace @ (%lu,%lu) -> [%lu]\n", _edits[i].offset, _edits[i].length, _edits[i].dataLength);
+    //     // for (size_t j = 0; j < _edits[i].dataLength; j++)
+    //     // {
+    //     //     printf("  -> %lu\n", _edits[i].data[j]);
+    //     // }
+    // }
+
+    vector<InternalOffsetLenEdit> edits(_edits.size());
+    BufferCursor tmp;
+    for (size_t i = 0; i < _edits.size(); i++)
+    {
+        OffsetLenEdit &_edit = _edits[i];
+        InternalOffsetLenEdit &edit = edits[i];
+        edit.data = _edit.data;
+        edit.dataLength = _edit.dataLength;
+        findOffset(_edit.offset, tmp);
+        edit.startLeafIndex = tmp.leafIndex;
+        edit.startInnerOffset = tmp.offset - tmp.leafStartOffset;
+        findOffset(_edit.offset + _edit.length, tmp);
+        edit.endLeafIndex = tmp.leafIndex;
+        edit.endInnerOffset = tmp.offset - tmp.leafStartOffset;
+    }
+
+    // for (size_t i = 0; i < edits.size(); i++) {
+    //     printf("replace @ ([%lu,%lu,%lu],%lu) -> [%lu]\n", edits[i].start.offset, edits[i].start.leafIndex, edits[i].start.leafStartOffset, edits[i].length, edits[i].dataLength);
+    // }
+
+    size_t accumulatedLeafIndex = leafs_.length();
+    vector<LeafOffsetLenEdit> accumulatedLeafEdits;
+
+    size_t firstDirtyIndex = leafs_.length();
+    size_t lastDirtyIndex = 0;
+    for (size_t i1 = edits.size(); i1 > 0; i1--)
+    {
+        InternalOffsetLenEdit &edit = edits[i1 - 1];
+
+        // printf("---> replace @ [%lu,%lu] -> [%lu,%lu] with [%lu]\n", edit.startLeafIndex, edit.startInnerOffset, edit.endLeafIndex, edit.endInnerOffset, edit.dataLength);
+
+        size_t startLeafIndex = edit.startLeafIndex;
+        size_t endLeafIndex = edit.endLeafIndex;
+
+        if (endLeafIndex != accumulatedLeafIndex)
+        {
+            if (accumulatedLeafEdits.size() > 0)
+            {
+                leafs_[accumulatedLeafIndex]->replaceOffsetLen(accumulatedLeafEdits);
+                firstDirtyIndex = min(firstDirtyIndex, accumulatedLeafIndex);
+                lastDirtyIndex = max(lastDirtyIndex, accumulatedLeafIndex);
+            }
+
+            accumulatedLeafEdits.clear();
+            accumulatedLeafIndex = endLeafIndex;
+        }
+
+        // if (endLeafIndex == accumulatedLeafIndex)
+        // {
+        // This edit can go into the accumulated leaf edits
+        if (startLeafIndex == endLeafIndex)
+        {
+            // The entire edit goes into the accumulated leaf edits
+            LeafOffsetLenEdit tmp;
+            tmp.start = edit.startInnerOffset;
+            tmp.length = edit.endInnerOffset - edit.startInnerOffset;
+            tmp.dataLength = edit.dataLength;
+            tmp.data = edit.data;
+            if (tmp.length != 0 || tmp.dataLength != 0)
+            {
+                accumulatedLeafEdits.push_back(tmp);
+            }
+            continue;
+        }
+        else
+        {
+            // The edit goes only partially into the accumulated leaf edits
+            LeafOffsetLenEdit tmp;
+            tmp.start = 0;
+            tmp.length = edit.endInnerOffset;
+            tmp.dataLength = min(edit.dataLength, edit.endInnerOffset);
+            tmp.data = edit.data + edit.dataLength - tmp.dataLength;
+            if (tmp.length != 0 || tmp.dataLength != 0)
+            {
+                accumulatedLeafEdits.push_back(tmp);
+            }
+
+            edit.endLeafIndex = edit.endLeafIndex - 1;
+            edit.endInnerOffset = leafs_[edit.endLeafIndex]->length();
+            edit.dataLength = edit.dataLength - tmp.dataLength;
+            i1++;
+            continue;
+        }
+        // }
+
+        // printf(" I NEED TO FLUSH?!!?\n");
+
+        // if (endLeafIndex != accumulatedLeafIndex && accumulatedLeafEdits.size() > 0)
+        // {
+        //     printf("FLUSH ACCUMULATED");
+        // }
+
+        // size_t innerLeafOffset = edit.start.offset - edit.start.leafStartOffset;
+        // size_t leafIndex = edit.start.leafIndex;
+
+        // size_t deleteCnt = edit.length;
+        // size_t didDeleteCnt = 0;
+
+        // size_t insertCnt = edit.dataLength;
+        // size_t didInsertCnt = 0;
+
+        // while (didDeleteCnt < deleteCnt || didInsertCnt < insertCnt)
+        // {
+        //     BufferPiece *leaf = leafs_[leafIndex];
+        //     size_t maxLeafDeleteCnt = leaf->length() - innerLeafOffset;
+        //     size_t maxLeafInsertCnt;
+        //     size_t leafDeleteCnt;
+        //     if (deleteCnt - didDeleteCnt > maxLeafDeleteCnt)
+        //     {
+        //         // deleting will spill over to next leaf
+        //         leafDeleteCnt = maxLeafDeleteCnt;
+
+        //         // insert as much as the capacity allows
+        //         maxLeafInsertCnt = leaf->capacity() - innerLeafOffset;
+        //     }
+        //     else
+        //     {
+        //         // deleting will stop in this leaf
+        //         leafDeleteCnt = deleteCnt - didDeleteCnt;
+
+        //         // insert everything remaining
+        //         maxLeafInsertCnt = (insertCnt - didInsertCnt);
+        //     }
+
+        //     size_t leafInsertCnt = min(insertCnt - didInsertCnt, maxLeafInsertCnt);
+
+        //     // size_t leafDeleteCnt = min
+
+        //     // size_t
+        //     // if (maxLeafDeleteCnt >= (deleteCnt - didDeleteCnt))
+        //     // {
+        //     //     // deletion finishes in this leaf
+
+        //     // }
+
+        //     printf("leafDeleteCnt: %lu, leafInsertCnt: %lu\n", leafDeleteCnt, leafInsertCnt);
+
+        //     break;
+        //     // size_t cnt = min(toDelete)
+        // }
+
+        // printf("replace @ ([%lu,%lu,%lu],%lu) -> [%lu]\n", edit.start.offset, edit.start.leafIndex, edit.start.leafStartOffset, edit.length, edit.dataLength);
+    }
+
+    if (accumulatedLeafEdits.size() > 0)
+    {
+        leafs_[accumulatedLeafIndex]->replaceOffsetLen(accumulatedLeafEdits);
+        // printf("FIRST CHAR WHEN LEAVING EDIT: %lu\n", leafs_[0]->data()[0]);
+        firstDirtyIndex = min(firstDirtyIndex, accumulatedLeafIndex);
+        lastDirtyIndex = max(lastDirtyIndex, accumulatedLeafIndex);
+    }
+
+    // Check that a leaf doesn't end in \r and the next one begins in \n
+    size_t from = firstDirtyIndex;
+    size_t to = lastDirtyIndex;
+    for (size_t leafIndex = from; leafIndex <= to; leafIndex++)
+    {
+        BufferPiece *leaf = leafs_[leafIndex];
+        size_t leafLength = leaf->length();
+        if (leafLength == 0)
+        {
+            continue;
+        }
+        uint16_t lastChar = leaf->data()[leafLength - 1];
+        bool shouldMove = (lastChar >= 0xd800 && lastChar <= 0xdbff);
+        if (!shouldMove && lastChar != '\r')
+        {
+            continue;
+        }
+
+        size_t nextLeafIndex = _nextNonEmptyLeafIndex(leafIndex);
+        if (nextLeafIndex == leafIndex)
+        {
+            // signal for missing
+            continue;
+        }
+
+        BufferPiece *nextLeaf = leafs_[nextLeafIndex];
+        if (!shouldMove)
+        {
+            uint16_t firstChar = nextLeaf->data()[0];
+            if (firstChar == '\n')
+            {
+                shouldMove = true;
+            }
+            else
+            {
+                continue;
+            }
+        }
+
+        leaf->deleteLastChar();
+        nextLeaf->insertFirstChar(lastChar);
+        lastDirtyIndex = max(lastDirtyIndex, nextLeafIndex);
+    }
+
+    // TODO: Maintain invariant that a leaf does not end in \r or a high surrogate pair
+
+    // printf("firstDirtyIndex: %lu, lastDirtyIndex: %lu\n", firstDirtyIndex, lastDirtyIndex);
+
+    // printf("TODO!\n");
+
+    // printf("FIRST CHAR WHEN LEAVING EDIT: %lu\n", leafs_[0]->data()[0]);
+
+    size_t fromNodeIndex = LEAF_TO_NODE_INDEX(firstDirtyIndex) / 2;
+    size_t toNodeIndex = LEAF_TO_NODE_INDEX(lastDirtyIndex) / 2;
+
+    assert(toNodeIndex < nodesCount_);
+    _updateNodes(fromNodeIndex, toNodeIndex);
+    assertInvariants();
+}
+
+size_t Buffer::_nextNonEmptyLeafIndex(size_t leafIndex)
+{
+    const size_t leafsCount = leafs_.length();
+
+    for (size_t index = leafIndex + 1; index < leafsCount; index++)
+    {
+        BufferPiece *leaf = leafs_[index];
+        if (leaf->length() > 0)
+        {
+            return index;
+        }
+    }
+    return leafIndex;
+}
+// void Buffer::_nextChar(BufferCursor cursor, BufferCursor &result)
+// {
+//     BufferPiece *leaf = leafs_[cursor.leafIndex];
+
+
+//     const size_t leafsCount = leafs_.length();
+//     // for (size_t i = cursor.leafIndex)
+//     size_t nextLeafIndex = cursor.leafIndex + 1;
+//     while (nextLeafIndex < leafsCount)
+//     {
+//         nextLeaf = leafs_[nextLeafIndex];
+//         if (nextLeaf->length() > 0)
+//         {
+//             break;
+//         }
+//         nextLeafIndex++;
+//     }
+
+//     if (nextLeaf != NULL && nextLeaf->length() > 0)
+//     {
+//     }
+// }
 
 void Buffer::_updateNodes(size_t fromNodeIndex, size_t toNodeIndex)
 {

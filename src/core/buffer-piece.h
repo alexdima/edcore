@@ -7,6 +7,8 @@
 #define EDCORE_BUFFER_PIECE_H_
 
 #include <memory>
+#include <vector>
+#include <cstring>
 
 using namespace std;
 
@@ -31,25 +33,48 @@ class MyArray
         capacity_ = 0;
     }
 
-    MyArray(size_t capacity)
-    {
-        data_ = new T[capacity];
-        length_ = 0;
-        capacity_ = capacity;
-    }
+    // MyArray(size_t capacity)
+    // {
+    //     data_ = new T[capacity];
+    //     length_ = 0;
+    //     capacity_ = capacity;
+    // }
 
-    MyArray(T *data, size_t length)
+    // MyArray(T *data, size_t length)
+    // {
+    //     data_ = data;
+    //     length_ = length;
+    //     capacity_ = length;
+    // }
+
+    void assign(T *data, size_t length)
     {
+        if (data_ != NULL)
+        {
+            delete []data_;
+        }
         data_ = data;
         length_ = length;
         capacity_ = length;
     }
 
-    void init(T *data, size_t length)
+    void assign(vector<T> &v)
     {
-        data_ = data;
+        T *newData = new T[v.size()];
+        memcpy(newData, &v[0], sizeof(T) * v.size());
+        assign(newData, v.size());
+    }
+
+    // void init(T *data, size_t length)
+    // {
+    //     data_ = data;
+    //     length_ = length;
+    //     capacity_ = length;
+    // }
+
+    void setLength(size_t length)
+    {
         length_ = length;
-        capacity_ = length;
     }
 
     ~MyArray()
@@ -144,6 +169,17 @@ class MyArray
     }
 };
 
+struct LeafOffsetLenEdit
+{
+    size_t start;
+    size_t length;
+    const uint16_t *data;
+    size_t dataLength;
+    
+    size_t resultStart;
+};
+typedef struct LeafOffsetLenEdit LeafOffsetLenEdit;
+
 class BufferPiece
 {
   public:
@@ -152,6 +188,7 @@ class BufferPiece
 
     const uint16_t *data() const { return chars_.data(); }
     size_t length() const { return chars_.length(); }
+    size_t capacity() const { return chars_.capacity(); }
     const LINE_START_T *lineStarts() const { return lineStarts_.data(); }
     size_t newLineCount() const { return lineStarts_.length(); }
     size_t memUsage() const;
@@ -161,6 +198,7 @@ class BufferPiece
     uint16_t deleteLastChar();
     void insertFirstChar(uint16_t character);
     void join(const BufferPiece *other);
+    void replaceOffsetLen(vector<LeafOffsetLenEdit> &edits);
 
     void assertInvariants();
 
@@ -168,8 +206,10 @@ class BufferPiece
 
     MyArray<uint16_t> chars_;
     MyArray<LINE_START_T> lineStarts_;
+    bool hasLonelyCR_;
 
-    void _init(uint16_t *data, size_t len, LINE_START_T *lineStarts, size_t lineStartsCount);
+    // void _init(uint16_t *data, size_t len, LINE_START_T *lineStarts, size_t lineStartsCount);
+    void _rebuildLineStarts();
 };
 }
 

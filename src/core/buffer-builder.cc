@@ -17,7 +17,7 @@ BufferBuilder::BufferBuilder()
     _previousChar = 0;
 }
 
-void BufferBuilder::AcceptChunk(uint16_t *chunk, size_t chunkLen)
+void BufferBuilder::AcceptChunk(const uint16_t *chunk, size_t chunkLen)
 {
     if (chunkLen == 0)
     {

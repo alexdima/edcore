@@ -9,6 +9,7 @@ import { EdBuffer } from '../../index';
 import { IOffsetLengthEdit, getRandomInt, generateEdits } from './utils';
 
 const GENERATE_DELETE_TESTS = false;
+const GENERATE_TESTS = false;
 const PRINT_TIMES = false;
 const ASSERT_INVARIANTS = true;
 
@@ -39,6 +40,11 @@ suite('Loading', () => {
 
 function applyOffsetLengthEdits(initialContent: string, edits: IOffsetLengthEdit[]): string {
     // TODO: ensure edits are sorted bottom up
+    edits = edits.slice(0);
+
+    edits.sort((e1, e2) => {
+        return e1.offset - e2.offset;
+    });
     let result = initialContent;
     for (let i = edits.length - 1; i >= 0; i--) {
         result = (
@@ -70,7 +76,11 @@ suite('DeleteOneOffsetLen', () => {
         for (let i = 0; i < edits.length; i++) {
             expected = applyOffsetLengthEdits(expected, [{ offset: edits[i].offset, length: edits[i].length, text: '' }]);
             const time = PRINT_TIMES ? process.hrtime() : null;
-            buff.DeleteOneOffsetLen(edits[i].offset, edits[i].length);
+            buff.ReplaceOffsetLen([{
+                offset: edits[i].offset,
+                length: edits[i].length,
+                text: ''
+            }]);
             const diff = PRINT_TIMES ? process.hrtime(time) : null;
             if (PRINT_TIMES) {
                 console.log(`DeleteOneOffsetLen took ${diff[0] * 1e9 + diff[1]} nanoseconds, i.e. ${(diff[0] * 1e9 + diff[1]) / 1e6} ms.`);
@@ -358,6 +368,165 @@ suite('InsertOneOffsetLen', () => {
         // tt('simple delete: last line with preceding EOL', [{ offset: 22753, length: 48 }]);
         // tt('simple delete: entire file', [{ offset: 0, length: 22801 }]);
     });
+});
+
+suite('ReplaceOffsetLen', () => {
+
+    interface IFileInfo {
+        fileName: string;
+        chunkSize: number;
+    }
+
+    function assertOffsetLenEdits(fileInfo: IFileInfo, edits: IOffsetLengthEdit[][]): void {
+        const buff = buildBufferFromFixture(fileInfo.fileName, fileInfo.chunkSize);
+        const initialContent = readFixture(fileInfo.fileName);
+
+        let expected = initialContent;
+        for (let i = 0; i < edits.length; i++) {
+            const parallelEdits = edits[i];
+
+            expected = applyOffsetLengthEdits(expected, parallelEdits);
+            const time = PRINT_TIMES ? process.hrtime() : null;
+            buff.ReplaceOffsetLen(parallelEdits);
+            const diff = PRINT_TIMES ? process.hrtime(time) : null;
+            if (PRINT_TIMES) {
+                console.log(`ReplaceOffsetLen took ${diff[0] * 1e9 + diff[1]} nanoseconds, i.e. ${(diff[0] * 1e9 + diff[1]) / 1e6} ms.`);
+            }
+            if (ASSERT_INVARIANTS) {
+                buff.AssertInvariants();
+            }
+            assertAllMethods(buff, expected);
+        }
+    }
+
+    function _tt(name: string, fileInfo: IFileInfo, edits: IOffsetLengthEdit[][]): void {
+        if (name.charAt(0) === '_') {
+            test.only(name, () => {
+                assertOffsetLenEdits(fileInfo, edits);
+            });
+        } else {
+            test(name, () => {
+                assertOffsetLenEdits(fileInfo, edits);
+            });
+        }
+    }
+
+    suite('checker-400.txt', () => {
+        const FILE_INFO: IFileInfo = {
+            fileName: 'checker-400.txt',
+            chunkSize: 1000
+        };
+
+        function tt(name: string, edits: IOffsetLengthEdit[][]): void {
+            _tt(name, FILE_INFO, edits);
+        }
+
+        tt('simple insert: first char', [
+            [
+                { offset: 1, length: 0, text: 'a' },
+                { offset: 0, length: 0, text: 'a' },
+            ]
+        ]);
+        // tt('simple delete: first line without EOL', [{ offset: 0, length: 45 }]);
+        // tt('simple delete: first line with EOL', [{ offset: 0, length: 46 }]);
+        // tt('simple delete: second line without EOL', [{ offset: 46, length: 33 }]);
+        // tt('simple delete: second line with EOL', [{ offset: 46, length: 34 }]);
+        // tt('simple delete: first two lines without EOL', [{ offset: 0, length: 79 }]);
+        // tt('simple delete: first two lines with EOL', [{ offset: 0, length: 80 }]);
+        // tt('simple delete: first chunk - 1', [{ offset: 0, length: 999 }]);
+        // tt('simple delete: first chunk', [{ offset: 0, length: 1000 }]);
+        // tt('simple delete: first chunk + 1', [{ offset: 0, length: 1001 }]);
+        // tt('simple delete: last line', [{ offset: 22754, length: 47 }]);
+        // tt('simple delete: last line with preceding EOL', [{ offset: 22753, length: 48 }]);
+        // tt('simple delete: entire file', [{ offset: 0, length: 22801 }]);
+    });
+
+     suite('generated', () => {
+        function runTest(fileName: string, chunkSize: number, edits: IOffsetLengthEdit[][]): void {
+            assertOffsetLenEdits({
+                fileName: fileName,
+                chunkSize: chunkSize
+            }, edits);
+        }
+
+        // test.only('gen1 - \\r\\n boundary case within chunk', () => {
+        //     runTest('checker-400-CRLF.txt', 35315, [[{"offset":22641,"length":112,"text":"\ne\n"}]]);
+        //     // runTest(59302, [{ "offset": 13501, "length": 2134 }]);
+        // });
+
+        test.only('auto1', () => {
+            runTest("checker-10.txt", 44576, [[{"offset":177,"length":17,"text":"\n"}]]);
+        });
+     });
+
+    (function () {
+        const FILE_NAME = 'checker-400-CRLF.txt';
+        const MIN_PARALLEL_EDITS_CNT = 1;
+        const MAX_PARALLEL_EDITS_CNT = 10;
+        const MIN_CONSECUTIVE_EDITS_CNT = 1;
+        const MAX_CONSECUTIVE_EDITS_CNT = 10;
+        const MIN_CHUNK_SIZE = 10;
+        const MAX_CHUNK_SIZE = 1 << 16;
+
+        class AutoTest {
+            private _buff: EdBuffer;
+            private _content: string;
+            private _chunkSize: number;
+            private _editsCnt: number;
+            private _edits: IOffsetLengthEdit[][];
+
+            constructor() {
+                this._chunkSize = getRandomInt(MIN_CHUNK_SIZE, MAX_CHUNK_SIZE);
+                this._buff = buildBufferFromFixture(FILE_NAME, this._chunkSize);
+                this._content = readFixture(FILE_NAME);
+                this._editsCnt = getRandomInt(MIN_CONSECUTIVE_EDITS_CNT, MAX_CONSECUTIVE_EDITS_CNT);
+                this._edits = [];
+            }
+
+            run(): void {
+                // console.log(this._chunkSize);
+                for (let i = 0; i < this._editsCnt; i++) {
+                    let _edits = generateEdits(this._content, MIN_PARALLEL_EDITS_CNT, MAX_PARALLEL_EDITS_CNT);
+                    if (_edits.length === 0) {
+                        continue;
+                    }
+                    this._edits.push(_edits);
+                    this._content = applyOffsetLengthEdits(this._content, _edits);
+                    this._buff.ReplaceOffsetLen(_edits);
+                    assertAllMethods(this._buff, this._content);
+                    if (ASSERT_INVARIANTS) {
+                        this._buff.AssertInvariants();
+                    }
+                }
+            }
+
+            toString(): void {
+                console.log(`runTest(${JSON.stringify(FILE_NAME)}, ${this._chunkSize}, ${JSON.stringify(this._edits)});`);
+            }
+        }
+
+        const GENERATE_CNT = GENERATE_TESTS ? 10000 : -1;
+        for (let i = GENERATE_CNT; i > 0; i--) {
+            // if (global.gc) {
+            //     // if (i % 100 === 0) {
+            //         global.gc();
+            //     // }
+            // } else {
+            //     console.log('Garbage collection unavailable.  Pass --expose-gc '
+            //       + 'when launching node to enable forced garbage collection.');
+            // }
+            console.log(`REMAINING... ${i}`);
+            let test = new AutoTest();
+            try {
+                test.run();
+            } catch (err) {
+                console.log(err);
+                console.log(test.toString());
+                i = -1;
+            }
+            test = null;
+        }
+    })();
 });
 
 function assertAllMethods(buff: EdBuffer, text: string): void {

@@ -31,6 +31,27 @@ struct BufferCursor
 };
 typedef struct BufferCursor BufferCursor;
 
+struct OffsetLenEdit
+{
+    size_t initialIndex;
+    size_t offset;
+    size_t length;
+    const uint16_t *data;
+    size_t dataLength;
+};
+typedef struct OffsetLenEdit OffsetLenEdit;
+
+struct InternalOffsetLenEdit
+{
+    size_t startLeafIndex;
+    size_t startInnerOffset;
+    size_t endLeafIndex;
+    size_t endInnerOffset;
+    const uint16_t *data;
+    size_t dataLength;
+};
+typedef struct InternalOffsetLenEdit InternalOffsetLenEdit;
+
 class Buffer
 {
   public:
@@ -46,6 +67,7 @@ class Buffer
 
     void deleteOneOffsetLen(size_t offset, size_t len);
     void insertOneOffsetLen(size_t offset, const uint16_t *data, size_t len);
+    void replaceOffsetLen(vector<OffsetLenEdit> &edits);
 
     void assertInvariants();
     void assertNodeInvariants(size_t nodeIndex);
@@ -66,6 +88,7 @@ class Buffer
     void _updateNodes(size_t fromNodeIndex, size_t toNodeIndex);
     void _updateSingleNode(size_t nodeIndex);
     void _rebuildNodes();
+    size_t _nextNonEmptyLeafIndex(size_t leafIndex);
 };
 }
 

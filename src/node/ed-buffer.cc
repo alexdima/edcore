@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include "ed-buffer.h"
+#include <algorithm>
 
 using namespace std;
 
@@ -105,7 +106,6 @@ void EdBuffer::DeleteOneOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &arg
 
     // size_t memUsageAfter = obj->actual_->memUsage();
     // printf("mem usage: %lf KB -> %lf KB\n", ((double)memUsageBefore) / 1024, ((double)memUsageAfter) / 1024);
-
 }
 
 void EdBuffer::InsertOneOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
@@ -137,6 +137,159 @@ void EdBuffer::InsertOneOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &arg
     obj->actual_->insertOneOffsetLen(offset, *utf16Value, utf16Value.length());
     // size_t memUsageAfter = obj->actual_->memUsage();
     // printf("mem usage: %lf KB -> %lf KB\n", ((double)memUsageBefore) / 1024, ((double)memUsageAfter) / 1024);
+}
+
+bool compareEdits(edcore::OffsetLenEdit &a, edcore::OffsetLenEdit &b)
+{
+    if (a.offset == b.offset)
+    {
+        return (a.initialIndex < b.initialIndex);
+    }
+    return (a.offset < b.offset);
+}
+
+void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
+{
+    v8::Isolate *isolate = args.GetIsolate();
+    v8::Local<v8::Context> ctx = isolate->GetCurrentContext();
+    EdBuffer *obj = ObjectWrap::Unwrap<EdBuffer>(args.Holder());
+
+    if (args.Length() != 1 || !args[0]->IsArray())
+    {
+        isolate->ThrowException(v8::Exception::Error(
+            v8::String::NewFromUtf8(isolate, "Expected one array argument")));
+        return;
+    }
+    v8::Local<v8::Array> _edits = v8::Local<v8::Array>::Cast(args[0]);
+
+    v8::Local<v8::String> offsetStr = v8::String::NewFromUtf8(isolate, "offset", v8::NewStringType::kNormal).ToLocalChecked();
+    v8::Local<v8::String> lengthStr = v8::String::NewFromUtf8(isolate, "length", v8::NewStringType::kNormal).ToLocalChecked();
+    v8::Local<v8::String> textStr = v8::String::NewFromUtf8(isolate, "text", v8::NewStringType::kNormal).ToLocalChecked();
+
+    const size_t maxPosition = obj->actual_->length();
+
+    size_t totalDataLength = 0;
+    vector<edcore::OffsetLenEdit> edits(_edits->Length());
+    for (size_t i = 0; i < _edits->Length(); i++)
+    {
+        v8::Local<v8::Value> _element = _edits->Get(i);
+        if (!_element->IsObject())
+        {
+            isolate->ThrowException(v8::Exception::Error(
+                v8::String::NewFromUtf8(isolate, "Expected object in array elements")));
+            return;
+        }
+
+        v8::Local<v8::Object> element = v8::Local<v8::Object>::Cast(_element);
+
+        v8::MaybeLocal<v8::Value> maybeOffset_ = element->GetRealNamedProperty(ctx, offsetStr);
+        v8::Local<v8::Value> offset_;
+        if (!maybeOffset_.ToLocal(&offset_) || !offset_->IsNumber())
+        {
+            isolate->ThrowException(v8::Exception::Error(
+                v8::String::NewFromUtf8(isolate, "Expected .offset to be a number")));
+            return;
+        }
+
+        v8::MaybeLocal<v8::Value> maybeLength_ = element->GetRealNamedProperty(ctx, lengthStr);
+        v8::Local<v8::Value> length_;
+        if (!maybeLength_.ToLocal(&length_) || !length_->IsNumber())
+        {
+            isolate->ThrowException(v8::Exception::Error(
+                v8::String::NewFromUtf8(isolate, "Expected .length to be a number")));
+            return;
+        }
+
+        v8::MaybeLocal<v8::Value> maybeText_ = element->GetRealNamedProperty(ctx, textStr);
+        v8::Local<v8::Value> text_;
+        if (!maybeText_.ToLocal(&text_) || !text_->IsString())
+        {
+            isolate->ThrowException(v8::Exception::Error(
+                v8::String::NewFromUtf8(isolate, "Expected .text to be a string")));
+            return;
+        }
+
+        size_t offset = offset_->NumberValue();
+        size_t length = length_->NumberValue();
+
+        // Validate that edit is within bounds
+        if (offset > maxPosition)
+        {
+            isolate->ThrowException(v8::Exception::Error(
+                v8::String::NewFromUtf8(isolate, "Invalid position")));
+            return;
+        }
+        if (offset + length > maxPosition)
+        {
+            isolate->ThrowException(v8::Exception::Error(
+                v8::String::NewFromUtf8(isolate, "Invalid length")));
+            return;
+        }
+
+        edits[i].initialIndex = i;
+        edits[i].offset = offset;
+        edits[i].length = length;
+        v8::Local<v8::String> text = v8::Local<v8::String>::Cast(text_);
+        // v8::String::Value utf16Value(text);
+        edits[i].data = NULL;//*utf16Value;
+        edits[i].dataLength = text->Length();//utf16Value->length();
+
+        totalDataLength += text->Length();
+    }
+
+    // Sort edits
+    std::sort(edits.begin(), edits.end(), compareEdits);
+
+    // Check that there are no overlapping edits
+    for (size_t i = 1; i < edits.size(); i++)
+    {
+        edcore::OffsetLenEdit &prev = edits[i - 1];
+        edcore::OffsetLenEdit &curr = edits[i];
+        if (prev.offset + prev.length > curr.offset)
+        {
+            isolate->ThrowException(v8::Exception::Error(
+                v8::String::NewFromUtf8(isolate, "Invalid edits: overlapping")));
+            return;
+        }
+    }
+
+    // Extract data
+    // printf("totalDataLength: %lu\n", totalDataLength);
+    uint16_t *allData = new uint16_t[totalDataLength];
+    uint16_t *currData = allData;
+    for (size_t i = 0; i < edits.size(); i++)
+    {
+        edcore::OffsetLenEdit &edit = edits[i];
+        v8::Local<v8::Value> _element = _edits->Get(edit.initialIndex);
+        v8::Local<v8::Object> element = v8::Local<v8::Object>::Cast(_element);
+        v8::Local<v8::Value> text_ = element->GetRealNamedProperty(ctx, textStr).ToLocalChecked();
+        v8::Local<v8::String> text = v8::Local<v8::String>::Cast(text_);
+        v8::String::Value utf16Value(text);
+
+        const uint16_t *utf16Data = *utf16Value;
+        // for (size_t j = 0; j < text->Length(); j++)
+        // {
+        //     printf("  -> %lu\n", utf16Data[j]);
+        // }
+
+        memcpy(currData, utf16Data, sizeof(uint16_t) * text->Length());
+        edit.data = currData;
+
+        currData += text->Length();
+        // v8::Local<v8::Value> text_;
+        // if (!maybeText_.ToLocal(&text_) || !text_->IsString())
+        // {
+        //     isolate->ThrowException(v8::Exception::Error(
+        //         v8::String::NewFromUtf8(isolate, "Expected .text to be a string")));
+        //     return;
+        // }
+    }
+
+    // assert(false);
+
+    obj->actual_->replaceOffsetLen(edits);
+
+    delete []allData;
 }
 
 void EdBuffer::AssertInvariants(const v8::FunctionCallbackInfo<v8::Value> &args)
@@ -197,6 +350,7 @@ void EdBuffer::Init(v8::Local<v8::Object> exports)
     NODE_SET_PROTOTYPE_METHOD(tpl, "GetLineContent", GetLineContent);
     NODE_SET_PROTOTYPE_METHOD(tpl, "DeleteOneOffsetLen", DeleteOneOffsetLen);
     NODE_SET_PROTOTYPE_METHOD(tpl, "InsertOneOffsetLen", InsertOneOffsetLen);
+    NODE_SET_PROTOTYPE_METHOD(tpl, "ReplaceOffsetLen", ReplaceOffsetLen);
     NODE_SET_PROTOTYPE_METHOD(tpl, "AssertInvariants", AssertInvariants);
 
     constructor.Reset(isolate, tpl->GetFunction());

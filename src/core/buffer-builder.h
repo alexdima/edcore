@@ -21,7 +21,7 @@ class BufferBuilder
 {
   public:
     BufferBuilder();
-    void AcceptChunk(uint16_t *chunk, size_t chunkLen);
+    void AcceptChunk(const uint16_t *chunk, size_t chunkLen);
     void Finish();
     Buffer *Build();
 

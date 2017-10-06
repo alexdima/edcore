@@ -3,6 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+export interface IOffsetLenEdit {
+    offset: number;
+    length: number;
+    text: string;
+}
+
 export declare class EdBuffer {
     _nativeEdBufferBrand: void;
     constructor();
@@ -14,6 +20,7 @@ export declare class EdBuffer {
     GetLineContent(lineNumber: number): string;
     DeleteOneOffsetLen(offset: number, length: number): void;
     InsertOneOffsetLen(offset: number, text: string): void;
+    ReplaceOffsetLen(edits: IOffsetLenEdit[]): void;
 }
 
 export declare class EdBufferBuilder {

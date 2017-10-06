@@ -37,10 +37,12 @@ void EdBufferBuilder::AcceptChunk(const v8::FunctionCallbackInfo<v8::Value> &arg
     }
 
     v8::String::Value utf16Value(chunk);
-    uint16_t *myChunk = new uint16_t[utf16Value.length()];
-    memcpy(myChunk, *utf16Value, sizeof(uint16_t) * utf16Value.length());
+    // uint16_t *myChunk = new uint16_t[10 * utf16Value.length()];
+    // printf("LEAKING %lu\n", 10 * utf16Value.length());
+    // myChunk = NULL;
+    // memcpy(myChunk, *utf16Value, sizeof(uint16_t) * utf16Value.length());
     // printf("%p chunk\n", *utf16Value);
-    obj->actual_->AcceptChunk(myChunk, utf16Value.length());
+    obj->actual_->AcceptChunk(*utf16Value, utf16Value.length());
 }
 
 void EdBufferBuilder::Finish(const v8::FunctionCallbackInfo<v8::Value> &args)

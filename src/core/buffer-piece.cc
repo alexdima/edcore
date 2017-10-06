@@ -24,66 +24,107 @@ BufferPiece::BufferPiece(uint16_t *data, size_t len)
 {
     assert(data != NULL && len != 0);
 
-    // Do a first pass to count the number of line starts
-    size_t lineStartsCount = 0;
-    for (size_t i = 0; i < len; i++)
-    {
-        uint16_t chr = data[i];
+    // // Do a first pass to count the number of line starts
+    // size_t lineStartsCount = 0;
+    // for (size_t i = 0; i < len; i++)
+    // {
+    //     uint16_t chr = data[i];
 
-        if (chr == '\r')
-        {
-            if (i + 1 < len && data[i + 1] == '\n')
-            {
-                // \r\n... case
-                lineStartsCount++;
-                i++; // skip \n
-            }
-            else
-            {
-                // \r... case
-                lineStartsCount++;
-            }
-        }
-        else if (chr == '\n')
-        {
-            lineStartsCount++;
-        }
-    }
+    //     if (chr == '\r')
+    //     {
+    //         if (i + 1 < len && data[i + 1] == '\n')
+    //         {
+    //             // \r\n... case
+    //             lineStartsCount++;
+    //             i++; // skip \n
+    //         }
+    //         else
+    //         {
+    //             // \r... case
+    //             lineStartsCount++;
+    //         }
+    //     }
+    //     else if (chr == '\n')
+    //     {
+    //         lineStartsCount++;
+    //     }
+    // }
 
-    LINE_START_T *lineStarts = new LINE_START_T[lineStartsCount];
+    // LINE_START_T *lineStarts = new LINE_START_T[lineStartsCount];
 
-    size_t dest = 0;
-    for (size_t i = 0; i < len; i++)
-    {
-        uint16_t chr = data[i];
+    // size_t dest = 0;
+    // for (size_t i = 0; i < len; i++)
+    // {
+    //     uint16_t chr = data[i];
 
-        if (chr == '\r')
-        {
-            if (i + 1 < len && data[i + 1] == '\n')
-            {
-                // \r\n... case
-                lineStarts[dest++] = i + 2;
-                i++; // skip \n
-            }
-            else
-            {
-                // \r... case
-                lineStarts[dest++] = i + 1;
-            }
-        }
-        else if (chr == '\n')
-        {
-            lineStarts[dest++] = i + 1;
-        }
-    }
-    _init(data, len, lineStarts, lineStartsCount);
+    //     if (chr == '\r')
+    //     {
+    //         if (i + 1 < len && data[i + 1] == '\n')
+    //         {
+    //             // \r\n... case
+    //             lineStarts[dest++] = i + 2;
+    //             i++; // skip \n
+    //         }
+    //         else
+    //         {
+    //             // \r... case
+    //             lineStarts[dest++] = i + 1;
+    //         }
+    //     }
+    //     else if (chr == '\n')
+    //     {
+    //         lineStarts[dest++] = i + 1;
+    //     }
+    // }
+    // _init(data, len, lineStarts, lineStartsCount);
+
+    chars_.assign(data, len);
+    _rebuildLineStarts();
+
+    assertInvariants();
 }
 
-void BufferPiece::_init(uint16_t *data, size_t len, LINE_START_T *lineStarts, size_t lineStartsCount)
+void BufferPiece::_rebuildLineStarts()
 {
-    chars_.init(data, len);
-    lineStarts_.init(lineStarts, lineStartsCount);
+    const size_t length = chars_.length();
+
+    bool hasLonelyCR = false;
+    vector<LINE_START_T> lineStarts;
+
+    for (size_t i = 0; i < length; i++)
+    {
+        uint16_t chr = chars_[i];
+
+        if (chr == '\r')
+        {
+            if (i + 1 < length && chars_[i + 1] == '\n')
+            {
+                // \r\n... case
+                lineStarts.push_back(i + 2);
+                i++; // skip \n
+            }
+            else
+            {
+                // \r... case
+                hasLonelyCR = true;
+                lineStarts.push_back(i + 1);
+            }
+        }
+        else if (chr == '\n')
+        {
+            lineStarts.push_back(i + 1);
+        }
+    }
+
+    lineStarts_.assign(lineStarts);
+    hasLonelyCR_ = hasLonelyCR;
 }
+
+// void BufferPiece::_init(uint16_t *data, size_t len, LINE_START_T *lineStarts, size_t lineStartsCount)
+// {
+//     chars_.init(data, len);
+//     lineStarts_.init(lineStarts, lineStartsCount);
+// }
 
 BufferPiece::~BufferPiece()
 {
@@ -128,7 +169,7 @@ void BufferPiece::deleteOneOffsetLen(size_t offset, size_t len)
 {
     const size_t charsLength = chars_.length();
     const size_t lineStartsLength = lineStarts_.length();
-    
+
     assert(offset + len <= charsLength);
 
     if (offset == 0 && len == charsLength)
@@ -251,8 +292,108 @@ void BufferPiece::insertOneOffsetLen(size_t offset, const uint16_t *data, size_t
     chars_.insert(offset, data, len);
 
     // printf("TODO: insertOneOffsetLen %lu (data of %lu)\n", offset, len);
+}
 
+void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit> &edits)
+{
+    // for (size_t i = 0; i < edits.size(); i++)
+    // {
+    //     LeafOffsetLenEdit &edit = edits[i];
 
+    //     printf("~~~~leaf edit: %lu,%lu -> [%lu]\n", edit.start, edit.length, edit.dataLength);
+        
+    // }
+
+    // Determine if line starts need to be recreated (i.e. for the complicated cases)
+    bool recreateLineStarts = false;
+    for (size_t i = 0, len = edits.size(); i < len; i++)
+    {
+        LeafOffsetLenEdit &edit = edits[i];
+        const size_t editStart = edit.start;
+
+        // check if the edit has a \r before its start point
+        if (editStart > 0 && chars_[editStart - 1] == '\r')
+        {
+            recreateLineStarts = true;
+            break;
+        }
+
+        // check if the edit has a \r before its end point
+        const size_t editEnd = edit.start + edit.length;
+        if (editEnd > 0 && chars_[editEnd - 1] == '\r')
+        {
+            recreateLineStarts = true;
+            break;
+        }
+
+        // check if the edit introduces a final \r
+        if (edit.dataLength > 0 && edit.data[edit.dataLength - 1] == '\r')
+        {
+            recreateLineStarts = true;
+            break;
+        }
+    }
+
+    long delta = 0;
+    for (size_t i1 = edits.size(); i1 > 0; i1--)
+    {
+        LeafOffsetLenEdit &edit = edits[i1 - 1];
+
+        edit.resultStart = edit.start + delta;
+        if (edit.dataLength > edit.length)
+        {
+            size_t longerBy = (edit.dataLength - edit.length);
+            delta += longerBy;
+        }
+        else
+        {
+            size_t shorterBy = (edit.length - edit.dataLength);
+            delta -= shorterBy;
+        }
+    }
+    const size_t newLength = chars_.length() + delta;
+    
+    const bool didAllocateNewChars = true;//(newLength > chars_.capacity());
+    uint16_t *target = (didAllocateNewChars ? new uint16_t[newLength] : chars_.data());
+
+    size_t srcToIndex = chars_.length();
+    for (size_t i = 0; i < edits.size(); i++)
+    {
+        LeafOffsetLenEdit &edit = edits[i];
+
+        // printf("~~~~leaf edit: %lu,%lu -> [%lu] -- final start will be %lu\n", edit.start, edit.length, edit.dataLength, edit.resultStart);
+        
+        // copy the chars that survive to the right of this edit
+        size_t srcFromIndex = edit.start + edit.length;
+        if (srcFromIndex < srcToIndex)
+        {
+            memcpy(target + edit.resultStart + edit.dataLength, chars_.data() + srcFromIndex, sizeof(uint16_t) * (srcToIndex - srcFromIndex));
+        }
+        srcToIndex = edit.start;
+
+        // copy the chars that are introduced by this edit
+        if (edit.dataLength > 0)
+        {
+            memcpy(target + edit.resultStart, edit.data, sizeof(uint16_t) * edit.dataLength);
+        }
+    }
+    // copy the chars that survive to the left of the first edit
+    if (0 < srcToIndex)
+    {
+        memcpy(target, chars_.data(), sizeof(uint16_t) * srcToIndex);
+    }
+
+    if (didAllocateNewChars)
+    {
+        chars_.assign(target, newLength);
+    }
+    else
+    {
+        chars_.setLength(newLength);
+    }
+
+    // TODO
+    _rebuildLineStarts();
 }
 
 void BufferPiece::assertInvariants()
@@ -288,5 +429,4 @@ void BufferPiece::assertInvariants()
         }
     }
 }
-
 }
