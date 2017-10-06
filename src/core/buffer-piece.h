@@ -33,20 +33,6 @@ class MyArray
         capacity_ = 0;
     }
 
-    // MyArray(size_t capacity)
-    // {
-    //     data_ = new T[capacity];
-    //     length_ = 0;
-    //     capacity_ = capacity;
-    // }
-
-    // MyArray(T *data, size_t length)
-    // {
-    //     data_ = data;
-    //     length_ = length;
-    //     capacity_ = length;
-    // }
-
     void assign(T *data, size_t length)
     {
         if (data_ != NULL)
@@ -64,13 +50,6 @@ class MyArray
         memcpy(newData, &v[0], sizeof(T) * v.size());
         assign(newData, v.size());
     }
-
-    // void init(T *data, size_t length)
-    // {
-    //     data_ = data;
-    //     length_ = length;
-    //     capacity_ = length;
-    // }
 
     void setLength(size_t length)
     {
@@ -208,7 +187,6 @@ class BufferPiece
     MyArray<LINE_START_T> lineStarts_;
     bool hasLonelyCR_;
 
-    // void _init(uint16_t *data, size_t len, LINE_START_T *lineStarts, size_t lineStartsCount);
     void _rebuildLineStarts();
 };
 }

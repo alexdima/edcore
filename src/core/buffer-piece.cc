@@ -24,64 +24,8 @@ BufferPiece::BufferPiece(uint16_t *data, size_t len)
 {
     assert(data != NULL && len != 0);
 
-    // // Do a first pass to count the number of line starts
-    // size_t lineStartsCount = 0;
-    // for (size_t i = 0; i < len; i++)
-    // {
-    //     uint16_t chr = data[i];
-
-    //     if (chr == '\r')
-    //     {
-    //         if (i + 1 < len && data[i + 1] == '\n')
-    //         {
-    //             // \r\n... case
-    //             lineStartsCount++;
-    //             i++; // skip \n
-    //         }
-    //         else
-    //         {
-    //             // \r... case
-    //             lineStartsCount++;
-    //         }
-    //     }
-    //     else if (chr == '\n')
-    //     {
-    //         lineStartsCount++;
-    //     }
-    // }
-
-    // LINE_START_T *lineStarts = new LINE_START_T[lineStartsCount];
-
-    // size_t dest = 0;
-    // for (size_t i = 0; i < len; i++)
-    // {
-    //     uint16_t chr = data[i];
-
-    //     if (chr == '\r')
-    //     {
-    //         if (i + 1 < len && data[i + 1] == '\n')
-    //         {
-    //             // \r\n... case
-    //             lineStarts[dest++] = i + 2;
-    //             i++; // skip \n
-    //         }
-    //         else
-    //         {
-    //             // \r... case
-    //             lineStarts[dest++] = i + 1;
-    //         }
-    //     }
-    //     else if (chr == '\n')
-    //     {
-    //         lineStarts[dest++] = i + 1;
-    //     }
-    // }
-    // _init(data, len, lineStarts, lineStartsCount);
-
     chars_.assign(data, len);
     _rebuildLineStarts();
-
-    assertInvariants();
 }
 
 void BufferPiece::_rebuildLineStarts()
@@ -119,12 +63,6 @@ void BufferPiece::_rebuildLineStarts()
     lineStarts_.assign(lineStarts);
     hasLonelyCR_ = hasLonelyCR;
 }
-
-// void BufferPiece::_init(uint16_t *data, size_t len, LINE_START_T *lineStarts, size_t lineStartsCount)
-// {
-//     chars_.init(data, len);
-//     lineStarts_.init(lineStarts, lineStartsCount);
-// }
 
 BufferPiece::~BufferPiece()
 {
@@ -299,9 +237,7 @@ void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit> &edits)
     // for (size_t i = 0; i < edits.size(); i++)
     // {
     //     LeafOffsetLenEdit &edit = edits[i];
-
     //     printf("~~~~leaf edit: %lu,%lu -> [%lu]\n", edit.start, edit.length, edit.dataLength);
-        
     // }
 
     // Determine if line starts need to be recreated (i.e. for the complicated cases)

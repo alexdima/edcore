@@ -454,7 +454,7 @@ suite('ReplaceOffsetLen', () => {
         //     // runTest(59302, [{ "offset": 13501, "length": 2134 }]);
         // });
 
-        test.only('auto1', () => {
+        test('auto1', () => {
             runTest("checker-10.txt", 44576, [[{"offset":177,"length":17,"text":"\n"}]]);
         });
      });
