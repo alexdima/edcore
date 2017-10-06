@@ -11,12 +11,15 @@ const FIXTURES_FOLDER = path.join(__dirname, '../../../test/fixtures');
 
 export function buildBufferFromFixture(fileName: string, chunkSize: number = 1 << 16): EdBuffer {
     const fileContentsStr = readFixture(fileName);
+    return buildBufferFromString(fileContentsStr, chunkSize);
+}
 
+export function buildBufferFromString(fileContents: string, chunkSize: number = 1 << 16): EdBuffer {
     const builder = new EdBufferBuilder();
     let offset = 0;
-    while (offset < fileContentsStr.length) {
-        const toOffset = Math.min(offset + chunkSize, fileContentsStr.length);
-        builder.AcceptChunk(fileContentsStr.substring(offset, toOffset));
+    while (offset < fileContents.length) {
+        const toOffset = Math.min(offset + chunkSize, fileContents.length);
+        builder.AcceptChunk(fileContents.substring(offset, toOffset));
         offset = toOffset;
     }
     builder.Finish();

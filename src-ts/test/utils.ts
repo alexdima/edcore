@@ -26,13 +26,21 @@ function getRandomString(minLength: number, maxLength: number): string {
     return r;
 }
 
+function getRandomEOL(): string {
+	switch (getRandomInt(1, 3)) {
+		case 1: return '\r';
+		case 2: return '\n';
+		case 3: return '\r\n';
+	}
+}
+
 function generateFile(small: boolean): string {
     let lineCount = getRandomInt(1, small ? 3 : 10);
     let lines: string[] = [];
     for (let i = 0; i < lineCount; i++) {
-        lines.push(getRandomString(0, small ? 3 : 10));
+        lines.push(getRandomString(0, small ? 3 : 10) + getRandomEOL());
     }
-    return lines.join('\n');
+    return lines.join('');
 }
 
 export function generateEdits(content: string, min: number, max: number): IOffsetLengthEdit[] {

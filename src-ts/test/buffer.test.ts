@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { buildBufferFromFixture, readFixture } from './utils/bufferBuilder';
+import { buildBufferFromFixture, readFixture, buildBufferFromString } from './utils/bufferBuilder';
 import { EdBuffer } from '../../index';
 import { IOffsetLengthEdit, getRandomInt, generateEdits } from './utils';
 
@@ -377,10 +377,7 @@ suite('ReplaceOffsetLen', () => {
         chunkSize: number;
     }
 
-    function assertOffsetLenEdits(fileInfo: IFileInfo, edits: IOffsetLengthEdit[][]): void {
-        const buff = buildBufferFromFixture(fileInfo.fileName, fileInfo.chunkSize);
-        const initialContent = readFixture(fileInfo.fileName);
-
+    function assertOffsetLenEdits_(buff: EdBuffer, initialContent: string, edits: IOffsetLengthEdit[][]): void {
         let expected = initialContent;
         for (let i = 0; i < edits.length; i++) {
             const parallelEdits = edits[i];
@@ -397,6 +394,17 @@ suite('ReplaceOffsetLen', () => {
             }
             assertAllMethods(buff, expected);
         }
+    }
+
+    function assertOffsetLenEdits(fileInfo: IFileInfo, edits: IOffsetLengthEdit[][]): void {
+        const buff = buildBufferFromFixture(fileInfo.fileName, fileInfo.chunkSize);
+        const initialContent = readFixture(fileInfo.fileName);
+        assertOffsetLenEdits_(buff, initialContent, edits);
+    }
+
+    function assertCustomOffsetLenEdits(initialContent: string, edits: IOffsetLengthEdit[][]): void {
+        const buff = buildBufferFromString(initialContent);
+        assertOffsetLenEdits_(buff, initialContent, edits);
     }
 
     function _tt(name: string, fileInfo: IFileInfo, edits: IOffsetLengthEdit[][]): void {
@@ -485,24 +493,179 @@ suite('ReplaceOffsetLen', () => {
         test('auto5', () => {
             runTest("checker-10.txt", 1949, [
                 [
-                    { "offset": 1, "length": 1, "text": "ab\nc\neo" }, 
-                    { "offset": 3, "length": 4, "text": "uj" }, 
-                    { "offset": 9, "length": 11, "text": "p\nepp" }, 
+                    { "offset": 1, "length": 1, "text": "ab\nc\neo" },
+                    { "offset": 3, "length": 4, "text": "uj" },
+                    { "offset": 9, "length": 11, "text": "p\nepp" },
                     { "offset": 22, "length": 199, "text": "m" }
                 ]
             ]);
         });
 
+        test('auto6', () => {
+            runTest("checker-10.txt", 52166, [
+                [
+                    { "offset": 81, "length": 1, "text": "tmx\nra\ne" },
+                    { "offset": 123, "length": 20, "text": "\nkup\no" }
+                ]
+            ]);
+        });
+
         // GENERATE_TESTS=false;
+
+
+        test('simple insert', () => {
+            assertCustomOffsetLenEdits('abc', [[{ offset: 1, length: 0, text: 'x' }]]);
+        });
+        test('simple delete', () => {
+            assertCustomOffsetLenEdits('abc', [[{ offset: 1, length: 1, text: '' }]]);
+        });
+        test('simple replace', () => {
+            assertCustomOffsetLenEdits('abc', [[{ offset: 1, length: 1, text: 'x' }]]);
+        });
+        test('generated 1', () => {
+            assertCustomOffsetLenEdits("\n\nhtz", [[
+                { "offset": 2, "length": 0, "text": "\n" },
+                { "offset": 2, "length": 3, "text": "xrz" }
+            ]]);
+        });
+        test('generated 1 inverse', () => {
+            assertCustomOffsetLenEdits("\n\n\nxrz", [[
+                { "offset": 2, "length": 1, "text": "" },
+                { "offset": 3, "length": 3, "text": "htz" }
+            ]]);
+        });
+        test('generated 2', () => {
+            assertCustomOffsetLenEdits(
+                "cwtkf\nn\nk\njkpkfwamq\nic\nexvwbbn\njulh\nk\nveyiig",
+                [[
+                    { "offset": 0, "length": 1, "text": "\ne\n" },
+                    { "offset": 1, "length": 3, "text": "trf\nl" },
+                    { "offset": 6, "length": 7, "text": "" },
+                    { "offset": 15, "length": 0, "text": "" },
+                    { "offset": 15, "length": 9, "text": "qqq" }
+                ]]
+            );
+        });
+        test('generated 3', () => {
+            assertCustomOffsetLenEdits(
+                "xxxxxx\n",
+                [[
+                    { "offset": 6, "length": 1, "text": "ecxa\rk\r" }
+                ]]
+            );
+        });
+        test('generated 4', () => {
+            assertCustomOffsetLenEdits(
+                "\n",
+                [[
+                    { "offset": 1, "length": 0, "text": "\nh\rsg\r\n" }
+                ]]
+            );
+        });
+        test('generated 5 - replacing CR', () => {
+            assertCustomOffsetLenEdits(
+                "lk\r\n",
+                [[
+                    { "offset": 2, "length": 1, "text": "qqe\r" }
+                ]]
+            );
+        });
+        test('generated 6 - adding LF after CR', () => {
+            assertCustomOffsetLenEdits(
+                "mzv\r",
+                [[
+                    { "offset": 4, "length": 0, "text": "\n" }
+                ]]
+            );
+        });
+        test('generated 7', () => {
+            assertCustomOffsetLenEdits(
+                "\nhy\n",
+                [[
+                    { "offset": 2, "length": 1, "text": "p\r" }
+                ]]
+            );
+        });
+        test('generated 8', () => {
+            assertCustomOffsetLenEdits(
+                "swc\r\n",
+                [[
+                    { "offset": 4, "length": 0, "text": "d\r\n\r" }
+                ]]
+            );
+        });
+        test('generated 9', () => {
+            assertCustomOffsetLenEdits(
+                "\r",
+                [[
+                    { "offset": 0, "length": 1, "text": "t\r" }
+                ]]
+            );
+        });
+        test('generated 10', () => {
+            assertCustomOffsetLenEdits(
+                "x\r\nw\r",
+                [[
+                    { "offset": 2, "length": 2, "text": "" }
+                ]]
+            );
+        });
+        test('generated 11', () => {
+            assertCustomOffsetLenEdits(
+                "\r\n",
+                [[
+                    { "offset": 1, "length": 1, "text": "oi\r\ng\r\n\r" }
+                ]]
+            );
+        });
+        test('generated 12', () => {
+            assertCustomOffsetLenEdits(
+                "bda\rj\r\r\n",
+                [[
+                    { "offset": 3, "length": 4, "text": "\r" }
+                ]]
+            );
+        });
+        test('generated 13', () => {
+            assertCustomOffsetLenEdits(
+                "ph\rdg\n\n",
+                [[
+                    { "offset": 2, "length": 3, "text": "\r" }
+                ]]
+            );
+        });
+        test('generated 14', () => {
+            assertCustomOffsetLenEdits("tz\ro\r\n",
+                [[
+                    { "offset": 2, "length": 4, "text": "\r\r\n\n" }
+                ]]
+            );
+        });
+        test('generated 15', () => {
+            assertCustomOffsetLenEdits(
+                "\r\nje\n",
+                [[
+                    { "offset": 1, "length": 2, "text": "\n" }
+                ]]
+            );
+        });
+        test('generated 16', () => {
+            assertCustomOffsetLenEdits(
+                "grx\r\n",
+                [[
+                    { "offset": 4, "length": 1, "text": "lf_" }
+                ]]
+            );
+        });
     });
 
     (function () {
-        // const FILE_NAME = 'checker-400-CRLF.txt';
         const FILE_NAME = 'checker-400-CRLF.txt';
+        // const FILE_NAME = 'checker-10.txt';
         const MIN_PARALLEL_EDITS_CNT = 1;
         const MAX_PARALLEL_EDITS_CNT = 10;
         const MIN_CONSECUTIVE_EDITS_CNT = 1;
-        const MAX_CONSECUTIVE_EDITS_CNT = 1;
+        const MAX_CONSECUTIVE_EDITS_CNT = 10;
         const MIN_CHUNK_SIZE = 10;
         const MAX_CHUNK_SIZE = 1 << 16;
 

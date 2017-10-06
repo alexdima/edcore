@@ -22,7 +22,7 @@ size_t BufferPiece::memUsage() const
 
 BufferPiece::BufferPiece(uint16_t *data, size_t len)
 {
-    assert(data != NULL && len != 0);
+    assert(data != NULL);
 
     chars_.assign(data, len);
     _rebuildLineStarts();
@@ -205,7 +205,6 @@ void BufferPiece::join(const BufferPiece *other)
 
 void BufferPiece::insertOneOffsetLen(size_t offset, const uint16_t *data, size_t len)
 {
-    const size_t charsLength = chars_.length();
     const size_t lineStartsLength = lineStarts_.length();
 
     for (size_t i = 0; i < lineStartsLength; i++)
@@ -231,8 +230,6 @@ void BufferPiece::insertOneOffsetLen(size_t offset, const uint16_t *data, size_t
 
     // printf("TODO: insertOneOffsetLen %lu (data of %lu)\n", offset, len);
 }
-
-
 
 void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit> &edits)
 {
@@ -291,12 +288,108 @@ void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit> &edits)
     }
     const size_t newLength = chars_.length() + delta;
 
-    if (!_tryApplyEditsNoAllocate(edits, newLength)) {
+    if (!_tryApplyEditsNoAllocate(edits, newLength))
+    {
         _applyEditsAllocate(edits, newLength);
     }
 
-    // TODO
-    _rebuildLineStarts();
+    if (recreateLineStarts)
+    {
+        _rebuildLineStarts();
+    }
+    else
+    {
+        vector<LINE_START_T> lineStarts;
+
+        size_t lineStartCount = lineStarts_.length();
+        size_t lineStartIndex = 0;
+        // size_t lineStart = ( lineStartIndex < lineStartCount ? lineStarts_[lineStartIndex] : 0);
+
+        long delta = 0;
+        for (size_t i1 = edits.size(); i1 > 0; i1--)
+        {
+            LeafOffsetLenEdit &edit = edits[i1 - 1];
+
+            // Handle line starts before the edit
+            while (lineStartIndex < lineStartCount)
+            {
+                LINE_START_T lineStart = lineStarts_[lineStartIndex];
+                if (lineStart <= edit.start)
+                {
+                    lineStarts.push_back(lineStart + delta);
+                    lineStartIndex++;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            // Handle line starts deleted by the edit
+            while (lineStartIndex < lineStartCount)
+            {
+                LINE_START_T lineStart = lineStarts_[lineStartIndex];
+                if (lineStart <= edit.start + edit.length)
+                {
+                    lineStartIndex++;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            for (size_t dataIndex = 0, dataLength = edit.dataLength; dataIndex < dataLength; dataIndex++)
+            {
+                uint16_t chr = edit.data[dataIndex];
+
+                if (chr == '\r')
+                {
+                    if (dataIndex + 1 < dataLength && edit.data[dataIndex + 1] == '\n')
+                    {
+                        // \r\n... case
+                        lineStarts.push_back(edit.resultStart + dataIndex + 2);
+                        dataIndex++; // skip \n
+                    }
+                    else
+                    {
+                        // \r... case
+                        lineStarts.push_back(edit.resultStart + dataIndex + 1);
+                    }
+                }
+                else if (chr == '\n')
+                {
+                    lineStarts.push_back(edit.resultStart + dataIndex + 1);
+                }
+            }
+
+            // printf("~~~~leaf edit: %lu,%lu -> [%lu] -- final start will be %lu\n", edit.start, edit.length, edit.dataLength, edit.resultStart);
+            // long delta;
+            if (edit.dataLength > edit.length)
+            {
+                size_t longerBy = (edit.dataLength - edit.length);
+                delta += longerBy;
+            }
+            else
+            {
+                size_t shorterBy = (edit.length - edit.dataLength);
+                delta -= shorterBy;
+            }
+
+
+        }
+
+        // TODO: remaining line starts
+        while (lineStartIndex < lineStartCount)
+        {
+            LINE_START_T lineStart = lineStarts_[lineStartIndex];
+            lineStarts.push_back(lineStart + delta);
+            lineStartIndex++;
+        }
+
+        lineStarts_.assign(lineStarts);
+        // assert(false);
+    }
 }
 
 struct MemMoveOp
@@ -305,7 +398,6 @@ struct MemMoveOp
     size_t destStart;
     size_t origEnd;
     size_t destEnd;
-    // size_t count;
 
     void set(size_t origStart, size_t destStart, size_t count)
     {
@@ -340,7 +432,7 @@ bool _tryOrExecuteEditsInline(uint16_t *data, vector<MemMoveOp> &moves, bool exe
             startIndex++;
             continue;
         }
-        
+
         MemMoveOp &next = moves[startIndex + 1];
         if (start.destEnd <= next.origStart)
         {
@@ -352,7 +444,7 @@ bool _tryOrExecuteEditsInline(uint16_t *data, vector<MemMoveOp> &moves, bool exe
             startIndex++;
             continue;
         }
-        
+
         // Try to consume `lastIndex`
         MemMoveOp &last = moves[lastIndex];
         if (last.origStart == last.origEnd)
@@ -397,7 +489,7 @@ bool BufferPiece::_tryApplyEditsNoAllocate(vector<LeafOffsetLenEdit> &edits, siz
 
     // Plan our memmoves
     vector<MemMoveOp> moves(editsSize + 1);
-    
+
     size_t toIndex = chars_.length();
     for (size_t i = 0; i < editsSize; i++)
     {
@@ -415,7 +507,7 @@ bool BufferPiece::_tryApplyEditsNoAllocate(vector<LeafOffsetLenEdit> &edits, siz
         // Cannot execute edits inline
         return false;
     }
-    
+
     uint16_t *data = chars_.data();
     _tryOrExecuteEditsInline(data, moves, true);
 
