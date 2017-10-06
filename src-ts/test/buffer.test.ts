@@ -8,7 +8,6 @@ import { buildBufferFromFixture, readFixture, buildBufferFromString } from './ut
 import { EdBuffer } from '../../index';
 import { IOffsetLengthEdit, getRandomInt, generateEdits } from './utils';
 
-const GENERATE_DELETE_TESTS = false;
 const GENERATE_TESTS = false;
 const PRINT_TIMES = false;
 const ASSERT_INVARIANTS = true;
@@ -458,7 +457,7 @@ suite('ReplaceOffsetLen', () => {
             }
         }
 
-        const GENERATE_CNT = GENERATE_TESTS ? 10000 : -1;
+        const GENERATE_CNT = GENERATE_TESTS ? 20000 : -1;
         for (let i = GENERATE_CNT; i > 0; i--) {
             // if (global.gc) {
             //     // if (i % 100 === 0) {

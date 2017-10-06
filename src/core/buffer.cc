@@ -467,6 +467,8 @@ void Buffer::insertOneOffsetLen(size_t offset, const uint16_t *data, size_t len)
 
 void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
 {
+    const size_t initialLeafLength = leafs_.length();
+
     // The edits are sorted ascending
     // for (size_t i = 0; i < _edits.size(); i++)
     // {
@@ -493,10 +495,10 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
     //     printf("replace @ ([%lu,%lu,%lu],%lu) -> [%lu]\n", edits[i].start.offset, edits[i].start.leafIndex, edits[i].start.leafStartOffset, edits[i].length, edits[i].dataLength);
     // }
 
-    size_t accumulatedLeafIndex = leafs_.length();
+    size_t accumulatedLeafIndex = initialLeafLength;
     vector<LeafOffsetLenEdit> accumulatedLeafEdits;
 
-    size_t firstDirtyIndex = leafs_.length();
+    size_t firstDirtyIndex = initialLeafLength;
     size_t lastDirtyIndex = 0;
     for (size_t i1 = edits.size(); i1 > 0; i1--)
     {
@@ -605,6 +607,91 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
         leaf->deleteLastChar();
         nextLeaf->insertFirstChar(lastChar);
         lastDirtyIndex = max(lastDirtyIndex, nextLeafIndex);
+    }
+
+    size_t analyzeFrom = max(1UL, firstDirtyIndex);
+    size_t analyzeTo = min(lastDirtyIndex + 2, initialLeafLength);
+    bool splitOrJoinLeafs = false;
+
+    for (size_t i = analyzeFrom; i < analyzeTo; i++)
+    {
+        size_t prevLeafLength = leafs_[i - 1]->length();
+        size_t currLeafLength = leafs_[i]->length();
+
+        if ((prevLeafLength < minLeafLength_ || currLeafLength < minLeafLength_) && prevLeafLength + currLeafLength <= maxLeafLength_)
+        {
+            // Should join prev and curr
+            splitOrJoinLeafs = true;
+            break;
+        }
+
+        if (currLeafLength > maxLeafLength_)
+        {
+            // Should split curr
+            splitOrJoinLeafs = true;
+            break;
+        }
+    }
+
+    if (splitOrJoinLeafs)
+    {
+        vector<BufferPiece*> leafs;
+
+        BufferPiece *prevLeaf;
+        for (size_t i = 0; i < analyzeFrom; i++)
+        {
+            prevLeaf = leafs_[i];
+            leafs.push_back(prevLeaf);
+        }
+        size_t prevLeafIndex = analyzeFrom - 1;
+
+        for (size_t i = analyzeFrom; i < analyzeTo; i++)
+        {
+            size_t prevLeafLength = prevLeaf->length();
+
+            BufferPiece *leaf = leafs_[i];
+            size_t leafLength = leaf->length();
+
+            if ((prevLeafLength < minLeafLength_ || leafLength < minLeafLength_) && prevLeafLength + leafLength <= maxLeafLength_)
+            {
+                firstDirtyIndex = min(firstDirtyIndex, prevLeafIndex);
+                prevLeaf->join(leaf);
+
+                // This leaf must be deleted
+                delete leaf;
+                continue;
+            }
+
+            // TODO: split leaf if necessary
+            leafs.push_back(leaf);
+
+            prevLeafIndex = i;
+            prevLeaf = leaf;
+        }
+        for (size_t i = analyzeTo; i < initialLeafLength; i++)
+        {
+            BufferPiece *leaf = leafs_[i];
+            leafs.push_back(leaf);
+        }
+
+        leafs_.assign(leafs);
+
+        size_t newNodesCount = 1 << log2(leafs_.length());
+        if (newNodesCount != nodesCount_)
+        {
+            _rebuildNodes();
+            return;
+        }
+
+        lastDirtyIndex = initialLeafLength - 1;
+        if (initialLeafLength > leafs_.length())
+        {
+            leafsEnd_ -= (initialLeafLength - leafs_.length());
+        }
+        else
+        {
+            leafsEnd_ += (leafs_.length() - initialLeafLength);
+        }
     }
 
     // printf("firstDirtyIndex: %lu, lastDirtyIndex: %lu\n", firstDirtyIndex, lastDirtyIndex);
