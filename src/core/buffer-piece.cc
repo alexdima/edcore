@@ -232,6 +232,8 @@ void BufferPiece::insertOneOffsetLen(size_t offset, const uint16_t *data, size_t
     // printf("TODO: insertOneOffsetLen %lu (data of %lu)\n", offset, len);
 }
 
+
+
 void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit> &edits)
 {
     // for (size_t i = 0; i < edits.size(); i++)
@@ -288,48 +290,185 @@ void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit> &edits)
         }
     }
     const size_t newLength = chars_.length() + delta;
-    
-    const bool didAllocateNewChars = true;//(newLength > chars_.capacity());
-    uint16_t *target = (didAllocateNewChars ? new uint16_t[newLength] : chars_.data());
 
-    size_t srcToIndex = chars_.length();
-    for (size_t i = 0; i < edits.size(); i++)
-    {
-        LeafOffsetLenEdit &edit = edits[i];
+    if (!_tryApplyEditsInline(edits, newLength)) {
+        const bool didAllocateNewChars = true;//(newLength > chars_.capacity());
+        uint16_t *target = (didAllocateNewChars ? new uint16_t[newLength] : chars_.data());
 
-        // printf("~~~~leaf edit: %lu,%lu -> [%lu] -- final start will be %lu\n", edit.start, edit.length, edit.dataLength, edit.resultStart);
-        
-        // copy the chars that survive to the right of this edit
-        size_t srcFromIndex = edit.start + edit.length;
-        if (srcFromIndex < srcToIndex)
+        size_t srcToIndex = chars_.length();
+        for (size_t i = 0; i < edits.size(); i++)
         {
-            memcpy(target + edit.resultStart + edit.dataLength, chars_.data() + srcFromIndex, sizeof(uint16_t) * (srcToIndex - srcFromIndex));
-        }
-        srcToIndex = edit.start;
+            LeafOffsetLenEdit &edit = edits[i];
 
-        // copy the chars that are introduced by this edit
-        if (edit.dataLength > 0)
+            // printf("~~~~leaf edit: %lu,%lu -> [%lu] -- final start will be %lu\n", edit.start, edit.length, edit.dataLength, edit.resultStart);
+
+            // copy the chars that survive to the right of this edit
+            size_t srcFromIndex = edit.start + edit.length;
+            if (srcFromIndex < srcToIndex)
+            {
+                memcpy(target + edit.resultStart + edit.dataLength, chars_.data() + srcFromIndex, sizeof(uint16_t) * (srcToIndex - srcFromIndex));
+            }
+            srcToIndex = edit.start;
+
+            // copy the chars that are introduced by this edit
+            if (edit.dataLength > 0)
+            {
+                memcpy(target + edit.resultStart, edit.data, sizeof(uint16_t) * edit.dataLength);
+            }
+        }
+        // copy the chars that survive to the left of the first edit
+        if (0 < srcToIndex)
         {
-            memcpy(target + edit.resultStart, edit.data, sizeof(uint16_t) * edit.dataLength);
+            memcpy(target, chars_.data(), sizeof(uint16_t) * srcToIndex);
         }
-    }
-    // copy the chars that survive to the left of the first edit
-    if (0 < srcToIndex)
-    {
-        memcpy(target, chars_.data(), sizeof(uint16_t) * srcToIndex);
-    }
 
-    if (didAllocateNewChars)
-    {
-        chars_.assign(target, newLength);
-    }
-    else
-    {
-        chars_.setLength(newLength);
+        if (didAllocateNewChars)
+        {
+            chars_.assign(target, newLength);
+        }
+        else
+        {
+            chars_.setLength(newLength);
+        }
     }
 
     // TODO
     _rebuildLineStarts();
+}
+
+struct MemMoveOp
+{
+    size_t origStart;
+    size_t destStart;
+    size_t origEnd;
+    size_t destEnd;
+    // size_t count;
+
+    void set(size_t origStart, size_t destStart, size_t count)
+    {
+        this->origStart = origStart;
+        this->origEnd = origStart + count;
+        this->destStart = destStart;
+        this->destEnd = destStart + count;
+    }
+};
+typedef struct MemMoveOp MemMoveOp;
+
+void _applyMemMove(uint16_t *data, MemMoveOp &move)
+{
+    size_t cnt = move.destEnd - move.destStart;
+    if (cnt != 0)
+    {
+        memmove(data + move.destStart, data + move.origStart, sizeof(*data) * cnt);
+    }
+}
+
+bool _tryOrExecuteEditsInline(uint16_t *data, vector<MemMoveOp> &moves, bool execute)
+{
+    size_t startIndex = 0;
+    size_t lastIndex = moves.size() - 1;
+    while (startIndex < lastIndex)
+    {
+        // Try to consume `startIndex`
+        MemMoveOp &start = moves[startIndex];
+        if (start.origStart == start.origEnd)
+        {
+            // no-op
+            startIndex++;
+            continue;
+        }
+        
+        MemMoveOp &next = moves[startIndex + 1];
+        if (start.destEnd <= next.origStart)
+        {
+            // Consume startIndex
+            if (execute)
+            {
+                _applyMemMove(data, start);
+            }
+            startIndex++;
+            continue;
+        }
+        
+        // Try to consume `lastIndex`
+        MemMoveOp &last = moves[lastIndex];
+        if (last.origStart == last.origEnd)
+        {
+            // no-op
+            lastIndex--;
+            continue;
+        }
+
+        MemMoveOp &prev = moves[lastIndex - 1];
+        if (last.destStart >= prev.origEnd)
+        {
+            // Consume lastIndex
+            if (execute)
+            {
+                _applyMemMove(data, last);
+            }
+            lastIndex--;
+            continue;
+        }
+
+        // Cannot execute these edits inline
+        return false;
+    }
+
+    if (execute)
+    {
+        _applyMemMove(data, moves[startIndex]);
+    }
+
+    // Can execute these edits inline
+    return true;
+}
+
+bool BufferPiece::_tryApplyEditsInline(vector<LeafOffsetLenEdit> &edits, size_t newLength)
+{
+    if (newLength > chars_.capacity())
+    {
+        return false;
+    }
+    const size_t editsSize = edits.size();
+
+    // Plan our memmoves
+    vector<MemMoveOp> moves(editsSize + 1);
+    
+    size_t toIndex = chars_.length();
+    for (size_t i = 0; i < editsSize; i++)
+    {
+        LeafOffsetLenEdit &edit = edits[i];
+        // copy the chars that survive to the right of this edit
+        size_t fromIndex = edit.start + edit.length;
+        moves[editsSize - i].set(fromIndex, edit.resultStart + edit.dataLength, toIndex - fromIndex);
+        toIndex = edit.start;
+    }
+    // copy the chars that survive to the left of the first edit
+    moves[0].set(0, 0, toIndex);
+
+    if (!_tryOrExecuteEditsInline(NULL, moves, false))
+    {
+        // Cannot execute edits inline
+        return false;
+    }
+    
+    uint16_t *data = chars_.data();
+    _tryOrExecuteEditsInline(data, moves, true);
+
+    // insert the new text
+    for (size_t i = 0; i < editsSize; i++)
+    {
+        LeafOffsetLenEdit &edit = edits[i];
+        // copy the chars that are introduced by this edit
+        if (edit.dataLength > 0)
+        {
+            memcpy(data + edit.resultStart, edit.data, sizeof(*data) * edit.dataLength);
+        }
+    }
+
+    chars_.setLength(newLength);
+    return true;
 }
 
 void BufferPiece::assertInvariants()

@@ -441,7 +441,7 @@ suite('ReplaceOffsetLen', () => {
         // tt('simple delete: entire file', [{ offset: 0, length: 22801 }]);
     });
 
-     suite('generated', () => {
+    suite('generated', () => {
         function runTest(fileName: string, chunkSize: number, edits: IOffsetLengthEdit[][]): void {
             assertOffsetLenEdits({
                 fileName: fileName,
@@ -455,16 +455,54 @@ suite('ReplaceOffsetLen', () => {
         // });
 
         test('auto1', () => {
-            runTest("checker-10.txt", 44576, [[{"offset":177,"length":17,"text":"\n"}]]);
+            runTest("checker-10.txt", 44576, [[{ "offset": 177, "length": 17, "text": "\n" }]]);
         });
-     });
+
+        test('auto2', () => {
+            runTest("checker-10.txt", 29797, [[{ "offset": 11, "length": 27, "text": "u\n" }, { "offset": 44, "length": 31, "text": "x\nntd\nj" }]])
+        });
+
+        test('auto3', () => {
+            runTest("checker-10.txt", 55940, [
+                [
+                    { offset: 1, length: 0, text: 'bgm\nme\n' },
+                    { offset: 1, length: 0, text: '\n' },
+                    { offset: 1, length: 82, text: '\npq' }
+                ]
+            ]);
+        });
+
+        test('auto4', () => {
+            runTest("checker-10.txt", 5779, [
+                [
+                    { offset: 10, length: 2, text: 'bp\n' },
+                    { offset: 17, length: 0, text: 'msf\nn' },
+                    { offset: 18, length: 121, text: 'sp' }
+                ]
+            ]);
+        });
+
+        test('auto5', () => {
+            runTest("checker-10.txt", 1949, [
+                [
+                    { "offset": 1, "length": 1, "text": "ab\nc\neo" }, 
+                    { "offset": 3, "length": 4, "text": "uj" }, 
+                    { "offset": 9, "length": 11, "text": "p\nepp" }, 
+                    { "offset": 22, "length": 199, "text": "m" }
+                ]
+            ]);
+        });
+
+        // GENERATE_TESTS=false;
+    });
 
     (function () {
+        // const FILE_NAME = 'checker-400-CRLF.txt';
         const FILE_NAME = 'checker-400-CRLF.txt';
         const MIN_PARALLEL_EDITS_CNT = 1;
         const MAX_PARALLEL_EDITS_CNT = 10;
         const MIN_CONSECUTIVE_EDITS_CNT = 1;
-        const MAX_CONSECUTIVE_EDITS_CNT = 10;
+        const MAX_CONSECUTIVE_EDITS_CNT = 1;
         const MIN_CHUNK_SIZE = 10;
         const MAX_CHUNK_SIZE = 1 << 16;
 
@@ -486,13 +524,14 @@ suite('ReplaceOffsetLen', () => {
             run(): void {
                 // console.log(this._chunkSize);
                 for (let i = 0; i < this._editsCnt; i++) {
-                    let _edits = generateEdits(this._content, MIN_PARALLEL_EDITS_CNT, MAX_PARALLEL_EDITS_CNT);
-                    if (_edits.length === 0) {
+                    let edits = generateEdits(this._content, MIN_PARALLEL_EDITS_CNT, MAX_PARALLEL_EDITS_CNT);
+                    if (edits.length === 0) {
                         continue;
                     }
-                    this._edits.push(_edits);
-                    this._content = applyOffsetLengthEdits(this._content, _edits);
-                    this._buff.ReplaceOffsetLen(_edits);
+                    // console.log(_edits);
+                    this._edits.push(edits);
+                    this._content = applyOffsetLengthEdits(this._content, edits);
+                    this._buff.ReplaceOffsetLen(edits);
                     assertAllMethods(this._buff, this._content);
                     if (ASSERT_INVARIANTS) {
                         this._buff.AssertInvariants();
