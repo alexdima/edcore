@@ -69,6 +69,7 @@ Buffer::Buffer(vector<BufferPiece *> &pieces, size_t minLeafLength, size_t maxLe
 
     minLeafLength_ = minLeafLength;
     maxLeafLength_ = maxLeafLength;
+    idealLeafLength_ = (minLeafLength_ + maxLeafLength_) / 2;
 
     // printf("mem usage: %lu B = %lf MB\n", memUsage(), ((double)memUsage()) / 1024 / 1024);
 }
@@ -662,7 +663,18 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
                 continue;
             }
 
-            // TODO: split leaf if necessary
+            if (leafLength > maxLeafLength_)
+            {
+                leaf->split(idealLeafLength_, leafs);
+
+                prevLeafIndex = leafs.size() - 1;
+                prevLeaf = leafs[prevLeafIndex];
+
+                // delete it
+                delete leaf;
+                continue;
+            }
+
             leafs.push_back(leaf);
 
             prevLeafIndex = i;
@@ -683,7 +695,7 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
             return;
         }
 
-        lastDirtyIndex = initialLeafLength - 1;
+        lastDirtyIndex = max(initialLeafLength - 1, leafs_.length() - 1);
         if (initialLeafLength > leafs_.length())
         {
             leafsEnd_ -= (initialLeafLength - leafs_.length());

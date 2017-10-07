@@ -27,26 +27,32 @@ function getRandomString(minLength: number, maxLength: number): string {
 }
 
 function getRandomEOL(): string {
-	switch (getRandomInt(1, 3)) {
-		case 1: return '\r';
-		case 2: return '\n';
-		case 3: return '\r\n';
-	}
-}
-
-function generateFile(small: boolean): string {
-    let lineCount = getRandomInt(1, small ? 3 : 10);
-    let lines: string[] = [];
-    for (let i = 0; i < lineCount; i++) {
-        lines.push(getRandomString(0, small ? 3 : 10) + getRandomEOL());
+    switch (getRandomInt(1, 3)) {
+        case 1: return '\r';
+        case 2: return '\n';
+        case 3: return '\r\n';
     }
-    return lines.join('');
 }
 
-export function generateEdits(content: string, min: number, max: number): IOffsetLengthEdit[] {
+function generateFile(length: number): string {
+    let result = '';
+    while (result.length < length) {
+        let line = getRandomString(0, Math.min(100, length - result.length))
+        if (result.length + line.length >= length) {
+            result += line;
+        } else {
+            result += line + getRandomEOL();
+        }
+    }
+    return result;
+}
+
+export const enum EditType { Regular, Inserts, Deletes };
+
+export function generateEdits(editType: EditType, content: string, minCnt: number, maxCnt: number): IOffsetLengthEdit[] {
 
     let result: IOffsetLengthEdit[] = [];
-    let cnt = getRandomInt(min, max);
+    let cnt = getRandomInt(minCnt, maxCnt);
 
     let maxOffset = content.length;
 
@@ -54,7 +60,14 @@ export function generateEdits(content: string, min: number, max: number): IOffse
 
         let offset = getRandomInt(0, maxOffset);
         let length = getRandomInt(0, maxOffset - offset);
-        let text = generateFile(true);
+        let textLength = (
+            editType === EditType.Inserts
+                ? Math.round(0.50 * maxOffset)
+                : editType === EditType.Deletes
+                    ? Math.round(0.01 * maxOffset)
+                    : Math.round(0.10 * maxOffset)
+        );
+        let text = generateFile(textLength);
 
         result.push({
             offset: offset,

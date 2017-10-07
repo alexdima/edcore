@@ -6,11 +6,21 @@
 import * as assert from 'assert';
 import { buildBufferFromFixture, readFixture, buildBufferFromString } from './utils/bufferBuilder';
 import { EdBuffer } from '../../index';
-import { IOffsetLengthEdit, getRandomInt, generateEdits } from './utils';
+import { IOffsetLengthEdit, getRandomInt, generateEdits, EditType } from './utils';
 
 const GENERATE_TESTS = false;
 const PRINT_TIMES = false;
 const ASSERT_INVARIANTS = true;
+
+// const FILE_NAME = 'checker.txt';
+const FILE_NAME = 'checker-400.txt';
+const MIN_PARALLEL_EDITS_CNT = 1;
+const MAX_PARALLEL_EDITS_CNT = 10;
+const MIN_CONSECUTIVE_EDITS_CNT = 1;
+const MAX_CONSECUTIVE_EDITS_CNT = 10;
+const MIN_CHUNK_SIZE = 10;
+const MAX_CHUNK_SIZE = 1 << 16;
+const EDIT_TYPES = EditType.Inserts;
 
 suite('Loading', () => {
 
@@ -406,18 +416,98 @@ suite('ReplaceOffsetLen', () => {
             ]);
         });
 
+        test('gen18 - split', () => {
+            runTest("checker-10.txt", 112, [
+                [{
+                    offset: 191,
+                    length: 15,
+                    text: 'fdcikriiawh\nnrjoetvoutbsygijyxgswiwffmmujejrxahlpq\nxarqqujywjchvgenmlryaaljgozuwfllctaeypltvpcoivqrjguqulxgrpzvfr'
+                }]
+            ]);
+        });
+
+        test('gen19 - split issue', () => {
+            runTest("checker-400.txt", 320, [
+                [{
+                    "offset": 9825,
+                    "length": 6071,
+                    "text": [
+                        "vozacoymjbydesaqyotuaqzydf\r\nznqwrvrfgafzpwiirirtpusqzwmyenxtvnxgdprjrxebcmyaaa\r\njgrasesfuoefnres\r\nxksamgrchiqqywazgjqtdebtzsgzbfntubeazkbsnbeaqmwffyacxmllmoqjtah\r\nlbr",
+                        "abbhzwexugreosbems\rzyde\riuwmxxrbwacnmxcxydxbgnanniascehgwuroytpasldzjgajwrtuomqsdiybxgmgskiaqerbnxulvycqdzasep\r\nqkappghdvihmjuerkkjiapmhgtwgjoeqwkqdplqkqkxymamhtkncgzvngt",
+                        "acumvqpwolol\rumobpcmffrlcmur\nqxfpjmkqyybnggwmtvoijgsomuwkdvqamabfdqsojagwpifqcf\r\niipocqoniweizegxzlydgrwsjxnpoutkglyzczetdiumcamgbvfvehsekfkzjnzxdwbhasavorupxtmgqslpozstr",
+                        "\rvsmxqrjkyxyevhaavqbczsvbaetiwkkrwelztjqmauphkwgdgoqxcoyufgihyraykbbiehcqcktuuvcqoczbau\r\nkvdmjkyhqlncpkwyzpeyfwutryizrqiassnkqdvnwkdhvmhvznvybint\r\nddkfkecwibxxsyjeujcuth",
+                        "fjnbytatslxhzfjirfrdkkdwoogpdpjiqoltzfibelyqctitpqjvropohitg\r\ngdvqzymibitvthvqtrntqvawjuvqxbryjlevmeosygjmljonkiajnutdifskooovsehcswchjtzvzkiuxaemkk\rtxguxvefgwiaqfuwsipats",
+                        "epeelbnfezvbydmogqblnjcxfkjpzfa\nrvhliidfduyzqweofiqzcastetygzfpzqwuzdocgddzfwkxgtxlnyparodgtnohrldazfnihmh\nausutrqxmlsjgxuzchpouiutiqu\r\nejombrncvousem\rykdzcjdnszbzvgdnzb",
+                        "jgfvioptusysfzotsukzavssbvwgrxrt\rqgbmlujipjrxzfcpymfnz\r\noavfdlmjugzwtdsmzixxdrawsoqqinuy\rqozasuvvivftfazthnclicesbiajkxpifnvtynzprrlgfthuqoepwjhzeiupbwpfmftvdqjz\r\nmhtyf",
+                        "rvkzdnjuijhrcqvtjxuwqhhrphkrzrutwjptxuvrgcvvblvjth\nwrfrljxh\rqegeqdclsoiohbgteoizdipnlpkbbfsathkohvqvorwsckowv\ndb\r\njaeawekuvncecxtuybudruvhisoayfuiccxuobexkajemidddcnbwfa",
+                        "yieifzgryljyjknoyepgndd\r\nvcguruljigowbbzcahtvizrvaduwbkdvglqioiulugdwggbetpixputylcigvxiezjdpoausbedvqrkypbysnwwfez\r\nlwstcwconpgnihhinphxjalxblcajaybcxvhstcfxdrniwqajhinx",
+                        "cwgzfrhsjqcapgvfzxmqtxaedxnlsxbayzpnj\ryoemcnpnn\nwehppkrxunkdkbegkrjxidffjbchjkepsxdstrpljfeelhqvupekygubvjnlkrgknjnuxffeglsu\r\ngaytqslgsfyheoogznrbxghdlihplvgumwfigxftsrlb",
+                        "rjh\r\npdajhjsjslfxzcpqghbdyuflhxlfsqosxe\r\nsmgwfikdqsxemdbmv\roumefegsdjthqmsetbqtlaakwnqxcyldzmjoonkeeiigxxanvihjgjyjqu\nvypxfrvexaafcwhnnprehngjyzfoxcmtrruwsmjo\nrrzs\r\n",
+                        "vnmffhvonarwyjwjfmobcdipxztwafcxshxddpftnirwahnverjvmyaavggroalavdz\r\nlpakmtbtjbavupyawoxav\ngekjmvfjnhwuyzondujtsppstybrgwtvvysdcw\rfdbzqahnt\rihuegnuboglcbyyoyeutclgmgpdev",
+                        "acjomtrytbllhcfdhcsqjizshlbhzmxjbztfxpatdfwxjw\nkpsxmkqesgammv\ntmjmazdpygnggceksbsejtczhsnsyflsbpgtpbiqcvxclwsdseehdsrufauxqptaeppzlqvtwlqkszgpbsbnbzzowctjxb\r\num\rkxtwhruy",
+                        "vmupxpnrqmgtybhhqirextomrmtbzjnyaqsqiyyqmdlxtopjmmgpqqutoibklnclkdfsiwjxgaxmdmmfnoegewsjo\nxwruqowqg\rdgsdhhyrcmxdxnejskmipixtol\r\npsfgqremayhrduvxyka\njfoqnkvmlxqjecrdbmbco",
+                        "nscusyu\novartgpuybnmbtqaldpzwvhlpxlhyiqvfiutpmxlgtohhnohtfxpftxaybxg\r\nw\r\nfuucuibbwajtiraahyylpmowyrirhugutwhtnhsaainizduyjsyarciemzybiismngdizcewvygxcfwzkkcagxhux\rhpkgw",
+                        "uittxgcwnjuzedogwcgqcwsiayzprpjxuudclgwcqpwzhjsyrzxekthjwqbqdxykjdzld\rbewvyoksaposhwxnmxtr\r\nqviqgypocmufkpyigurdfvhxaddeqtdieqcfzafxevsilulhgkszlswuqkhj\rwzrhotrevmdkmtjxz",
+                        "zskkygvqltdczmcexqkoqt\r\njhpjaizyepibgtnwnziygwfoerxrppapxgsdtarnwasa\nbbdlsjygdodyxcsmenmplrxecjpgzvkmjdbwlgfwgrcjmzlylunobadgzfvalgjnjkcgxphtecgonlhnlidbvloiobq\n\r\nbsvxf",
+                        "bqbzypduwdaeryjkxennsaxrykmzyzmypqxgwvqpbzityq\rihyjnroeqhjjnztlyesajzlqqpjjgnajchmdbydqxkqivvhxurbj\nizvwycycyuvyriuwkukpgooxjywrwyubaeayagrfffowaptcvrryewxbycjbvyezsotomkcn",
+                        "mixswzmp\rfwbfdbglulypkezxacvynprnxl\nhmjvgydgvqnexeptrvgnhxbipdoayzb\r\nvnmxshxfxbwppeoxpwpeheaccekvwcjiaozbcrkmnvfifggdzldjunzhpqxizwdzofufjtp\nkkockahqznyrgrdiuababkbvrvtr",
+                        "njpbwcjeflpofufmxkosaqothpoifk\rsyrdnqntzysuqekuwizztekgvvlpfhlqaycrluufggbcqwitqjiighkyieemfvqrbaowdxyxbaqxqtyvoaj\rcmrulvhftzpfhwglzgxwuastilbqytldyzvldwguujsdxnzlbbajrukht",
+                        "ecfnrapsittzho\nodaiwpicwmefixnshbrgegkcoqupujpjvqhiahgsiaczqulypkoxojzgmpigexzpdccxmmhbgmeqbyelgivxlbbfprpqbcw\r\ngcklzuz\rcwuqvrqyncvhapnaecdikyjjkvqxgacwygcvohxhzdz\r\nyao",
+                        "tjsntvlzysgnxkew\n\rmykixyvyeserksorqdzhguiprltckqgecrdydvrvzwhrzqhtjyxiuqkiiyzllwmzica\nesvfsezdsvolqgnbwmausfioiogjlzpqrcipnhyfsolgu\rgamuiqcxivsjczhtbwtarzhekkaphyehpktxfy",
+                        "vcjsiebagawv\rpmsyztco\rdcrqfgzithqsfsdrbnsvpcxrifluzajphwglexqzdpxnqqtmkghepdjuuwoxihnrudnzaeshpxcnqjdhnupqnoioihfweah\r\nxuuaygjoaepcvpcdyjbjrwrtvlmnuasdheejemshm\r\nkbffun",
+                        "hguvflukvlcndzwlkxrzvssipnywvxuja\rvtkhl\nbopxgylholvqgccxctxgmelvcbwcgg\rkpqaamnvmelnyuuhdcnrgerc\nichgjgdhctwibaucszkbrtihhwxfrndvizbdtmlhbkl\nbgblneztojnhvh\nlnelijcqhfvko",
+                        "bdlxghbeqmxxfsyj\rlnvujjzdwaodeovlloihymuimrqeecroxmtgfwrmfqoeramyacyufxmlqaa\r\noiffokuobuxldcnlkvmmdwkufoimkdkvvzcdpmdkeetvsrjedwhdcfnhhhjjvzwgqz\rehfzrgoexhtqhgxefgyhfvire",
+                        "awwtryulpoke\nnjxasqtlshizulqyoolljahkumctdsqgkaydjbzcksxcgxxgdvujymctaneogfauecwyripzfgdbipoewospmooxosrpuqkqb\rnsgbdsqrepxkrlejfxtrurgniuspbqkpemrtbmbvxtudbtrhnsytq\neqgtrb",
+                        "rggdzejufuqdbghvgfbnysygsguyppsskxswtcuousvzdikrtpmaabftyokedydxjifvkhpvwafkxgszquiaqmimstojrp\r\njer\rtfyfhjleqtjezpdghqvfimnackonbysrklhhdkoroupodatvkkclyevygqlavytlehrfrcu",
+                        "gbsmulvcn\rzrsylljluasimeoiomzlxhlaljdckzpflvoficenvbasmecobecddegovauucbttxbqnnvwxdmwshjdpswda\nkgodvsudjtlurgpwuzjldshp\r\njltdllgckyesoxbmuscotrimrlxyfzpuypmmwvhquhofrvmwn",
+                        "fvgihmcwtxwrvumxeo\noudmvbxyuz\niyenoigwwvfoopuhejzjxwqdrjyngskyfhtsggmbbnnfbbfsax\nbefqzgnjqxegkweoxflfzyvthycxbrbpphildufxwnhnveyiohgsuxnocrymmygcjp\ntgvskvwsszqmseqjeqvwwd",
+                        "bdfklrvquushkxvpjejntcvsviozhmymfeicayqlslykwkmjn\noxtygqkvohnfrzxtmugmjilrzzmbsptqopuyrazrmuqpwenjxeblbjptjrvg\r\nfdvljsotbdaymtfpxpnfrddssrytzrgsgnqmji\r\njrylalajtylddcjfr",
+                        "tpawfkba\rsilxmrtlyyvsjlpbcnltueskbpyujrmw\r\nhgiljygyxcvrrpe\rih\nygxkphrepvzkigoafaebewbcvcmlbubxyiqouhefmstonxfzpgrz\rvaomqlpzczdaxoypzjkgy\naoihxumshvkhmzru\rzistoaboiqpq",
+                        "dfiquncwtgwqyobejkegjhoewsvbkfzhi\nksnowrdctealwnqaqqmprthnbgbayrkztylxfumneelglsmdazztpppxjtko\r\ncaouxuwzfjvrialzxnfxkyxabgdufxojnafsu\nvzdgqyzlmeaykvgyepfeobixzmglckhw\nbf",
+                        "jixrjyyhqkckdpymyjvrisxkupxhugaoqxgaigbsrskkvu\nzqmxwqlqcvfcclmynulohwracl\rcyjtrwkxcqljokzyqonidzdlfxmqrlbcipfcsqyedfkonnfmuad\r\nhacffjinaylcrpgmmruayaksrkkjwcuzbrtdklkd\r\n",
+                        "fqbfptpceuuekzjbdsugzvloufickfxqxjyeighruygjiiznqbzkgboszrez\ndjgluwtwzaxruoqexsdjdnqrt\robnmlwshgkfrckuhusqjcqkyvyymabzqiosrrmyth\rzykujpbxfwnnvmqxyltsnwugihejyn\r\nzlzqzaxz",
+                        "rnzqlxatgdtydnmxrlnkupzqpundwtvjnmgdkjxhammfjhpueppcqmfupdbrmunzyirwazzouaafcydnabk\nbeykfrftxwomrkzuxhlqxmcqywyunlwxf\neba\rfycqrfwsihnltnfajknouklqgoeiahuttvzcjzyobxjhcxtbp",
+                        "ldlrafbzsbydzdqcfollxctuavhndvmpthvxuarxy\nmasllvytqklexyynerwveohuacvhuplhoedjwhorxqqcctxdaswmlfyywauuddhxfjeah\r\nisnpszuvsxzbkvtfjxxktmwoxgjaaphcrwtanhjosekzkrqocysvffqefg",
+                        "lcv\ratfllpmrvfvibekkkgpkaptljqtrnqzafsmvbscxhyawsssnjshssyylnitbedyujsro\r\nvdkohfpdvtibqzhtarhnqqhrcmqoeugkvkkxucpxktykknrhuabmhdfnsuffzubicmzptydgoxbtnuqinpaxtzalhoft\r\nu",
+                        "nampjr\nxurfodsrypnyanuloaldoffvkxpdnfahvmuswahgczcbzgofhtwjyznaeohxepvljazdcqasi\r\njxdcficdrnwculdwyhxtryioidmoqmisukslelgjegjwxgwpoesybsovqoietcaaftimhkwpniuaakvyvvnlj\ngq",
+                        "wszbecfvfelrxwgcbjzaainsjfptshiuxnqkqzmdpqaitpkqgpdlskuedeqpcowezzo\nqsaczsvhtwpmhdwnqzfbbuigz\r\nhjvdxzlkyddmfumoxtrjubbmgnmzn\rqmbryohtsqikyfshblzcndxoeonxrsuawlzquledla\rx",
+                        "xfglkyhuxwoxmqbqsbsfzgxrwqzcvbmiwrnxzaprxxdcijuaueusmcnmbvjwh\n\r\nvlajjtefnbxmrlodxfnesvue\rmd\rzwmuh\rzyryfriklfrxzvhasdvuhlcwseapno\ntdemykvvqevkgerbnaykoiqhcgzlkfyusewnwe",
+                        "cqdebm\r\ngaggbpocbeyfdscwzqilaiwhtkrarpfkxfxuvwiepxhcniwqxegpvuhteiwaryqvdppfyvhvvtbk\rsiwlfgsddoreeorsdipxxprsepareikcigzhifwqhfibxseconakdwjtyfrlbw\r\ncrksbrqebfjrivvoaucd",
+                        "vbfszvenfodmynr\r\nzaxmgxhyucnyrwafbloysksxzrkmnrcsbizstfewtbiacpvcfjehgfydupwflcgppyufkspyyywdvzetwrnpvksij\r\n\rrxfcjxstxhvafhnumwirrktpntbsjksyehqcrskgjlybetbqjbibgumwlnjt",
+                        "hfpcmqnslmgsymnqmkmpmueorntnaixmqieecmqj\ngptpnuhtwlwitolzpqgtggccjxsfrjjorfjqmotobfmbqwmwfmdndrtmtclgombmhewqiaalyn\rkqzzvcrzlniekq\ryfhbtjsewunycliccdfzclqiqachbd\rshdlzxyx",
+                        "engzcbctnrcemlsznojbhbbsvrqonnx\rufnqfrrqsdttmmzndeiadhwjsxuodvwjvogajgxmmnoumxzykwaqbointktlhtokwptekofywntcwlerrzqqc\rfridrdcfqmxeujzaymlhapdthczmtrllxo\rpyswzgpqzaejdtoxut",
+                        "wgtjykjwi\neklvgvupysffpodbmmjjzpqlgwynhxgdrhacpoanqmbukcieelkhddtxlxfcbhsxykxrahhvtehauwbyjrkoabvbq\nxebjmdyobjkcgbc\nonujwrrainczuravgwfyhhzxfsknnlgmhieqzdmw\r\nhdwsbymjmsa",
+                        "mksvdffqkbkiuontjlbgvofdqvzzcftywjafuygz\rjgdeyvuwwtmioigsckrafveidgq\n\nouezqrzhsgsqpvjyqt\rrcwscynrdnmjfqknbkcialegdednclwusxzmqnguvnxxcjnymiqtkvutmhsbcebsodfxhlgmeqyngpcvc",
+                        "vxwmtxljruie\ntwkadmbudwcpnouvgdzmxynqwrzyw\rxqsxljwmnifutaigmymldrpwpjqrmgqdqgyivecremullnwpznqzvimwfdnpzqjwinkcetxcnhmtmmmanqz\riglecubnrtaebqvjxgjsk\nedziplkrxqjxjbmswssp\r",
+                        "pcmfpxsnlokoibrkxcbrbpyrqblvmgkapnhlhaynbxjyyvcxedpwakommdgtda\nrprnvwwxurptjgtrusukcijsiotwcwwqtffnttgd\nahcbezvynoxfzfnrjxfnenlghuqyq\rwyexkbnwuxbywsgludigxoqymcfnlslvqwikm",
+                        "\r\nxmwjwrzskltkjxaghzqycvvxyguqzujhjbwgxkfsjbsqdwbjoyxtzihppjtbwleujabyhoszmfwwveyuylgkmhefehxccbafix\r\ngiruyokaymdkctjowwhpoplxptphoikbithhdilfwvvuqcttqfzvbd\rrtlxxaelrhlv",
+                        "ypmzfdecztotxxinzygggbhqxqfewsxvplxnqfpknnnhlfljcmatderpftimytc\rkwqszxcpmuxoinuxlinz\nvfcpbgmwfrqjnvuswlgolgjbbflvfqvjznxfpmcohctrjbrkbisponcqdfycsccrszblpjfnqqdhgrvsotbddwr",
+                        "cvhqmnivwz\r\nuzutfqibkwksrluviudhlnfgbsvdpxxbtdgiiadeunoqtebxnqovcvjxjwifhrcemooaevtpbfnclpkchjyodffnakr\r\nqdquzrsijyukehjqrawbpywibeykjuhktvejgburpvrgqksfxfvxfvbk\radtxrvr",
+                        "hxxyympbcfjjlvgfcgxvvxmwuzfxnnksrb\r\nwaashovtjyzzkbclgekldvxrynwpnqarcvmxffvtbmjlfwosczhdjrwgvkcflcaitghvenrjzkldfwtokvqqybhh\r\nfdoxceltcqdrogsedgnsobgxxjrokjbjjfmnsi\r\nya",
+                        "unukwsykszzogsgceposmteavpslgtlekchsinsbilpinubjfrjecsibznlltizxigmlnequmbjqbltqpjkmsjkhjmai\r\ngofulbhagfhavoymjxzy\r\nrjppnaehnuglllcah\nnhsualdpdfvyrxhmxcyowifktmwwvfuyj\r",
+                        "ocwrpojnkrfjdsofvfmhyxbyhoekzkmovrmoywwwm\rfttvzznkbmkxgwfwsjdtffvxqatxkwlvogpxn\negrveymlayazdhjtsrxoeexatlsmyjpeyaaliqsvioxjdpzbig\r\nqlrdskshzocnjkgkcnqkbdttyaf\noqpyegied",
+                        "tjcvyzuftpawttuorhcrnzlwshpkh\r\nkeciammhlonteqigjbxunevcgbcohfkyiqdnuffktaeuqywjpvmlkkgajjafbxshmqocccdwq\rlewwtkpmaqxzzxlltddwdwcveawyocgvzliwkqcfoncdpxjfsddjuzvsybzxwiiiob",
+                        "hkviceaaqrjs\r\nxxvoxqtriiygmbivtwdpjooozjwwlyjbmrcjkmqagovbjlcbdkmmnbendltahwgwkltlclpsvlmlhjrozlbgrpnmxrikr\r\ntljzwtoxixvpnajtnqltqxqdmpealsrvucrhltxj\rmndbzeqrthnjbnbjcoy",
+                        "ebnewkaqxqinzvenxaxcevsuvixxhxjdxatmebjipkimyctjbkjkliznswtlfarzgc\nfsixpqenhuceafyawkcadpsczepbueibqzrxpyvrcmajsjfrssufxlfgarfesnonzxutyqvizqlpummitwtlcgqnnwvwjosvzo\noungez",
+                        "lsqflhsxapyuspgtsprbbrlydiwpzbqsjxmmpvyodsizrbkyllgzdftcvceooapfltuktxlztilspboawkbgtzpoiohcl\ntrptyjlkuinxseqlnzirnaphpiowcfumyidkvovupbqpifmzjpe\r\naxaaegselusiphifclefwuel",
+                        "icrfbuctkey\ngkcisxxaljryfmjjpkigkfcccusuphxsiaqihidmkvirmpenlyiduwymlxgprp\r\nnrnmeufnlqmpqknsjikeqnemkdkjschwxpflddmajgvoxgvuqhbadjhlabzgaamifwotqufvxbykzxlmbqk\rwcoxoly\rd",
+                        "xfitwnwjvxrhaqlkaaavyamtawbeuulvesqummgxchntqij\rutefhnfounuofqxyqfvoigrcvzyhzfdnbslasmvbovruhimeazybhijgnocsgeecpteolk\r\njcodftfrcrhvskbavppwpuueyrjibaejgtf\rwvsfutqzejpllc",
+                        "gxgkkbsveiqew\rzcpoxvdpzdqoihwhykunwcvkdaabyrufxkyxbjgkemswbfgeyvfenbchxgfkxekkq\nixzezavmripvswvvsbogcdrewzaplrhsbjgzbnbzfxgyvynliobdnedagstjjpdr\r\nssqvptz\nmykcllomejqvmvw",
+                        "rltvzj\r\nxldzlisnmzcypfqutsqefgyaqvtlewqvsjgdptz\r\r\ndxzbvvwabxlvzpydjflrgvmhlgjdheax\nwdosidhwcpimddziaukwvdikbzvyrdplojnymiydniayuwnqdqrbnykkj\rfnmylxt\r\nfdgghmtmevqtcen",
+                        "mgwibqhlqmcwbwihkosaugj\rsmsuwoklctvyhlwzaabgnhppufbyftdpjggpbbhvyxgwyuxclnzdpjzydbcpc\nuabndgmiuwsfyokckbmsrztcresjuvrhtimobiwnvjecgqlobrkzarrtbnvvmdntoxqobdsktqecomyyuwdwop",
+                        "eutnq\r\ncqvnilxuvnjgwfeczviwtkijkmixsunlmdvgktiawlrlpqjngrxyksyqzhfepcybxt\rggvnynocgwikozgn\r\nhcbxxnhvasqbixhjeadydcuagtlikaazbpmrephkqvqnmdprsahcrpdzkkpuwykekaauefublkvta",
+                        "dktanohzchjwf\rkuzbuhtjqabchuxlxddzwfnkjvygwrtjadmrvdbwkdfxgrw\r\nckmbyqlaoawmkzaivxdeqdrzfpljhciyuoafkabxarcmckqlikiwvhufgimtkeqxabmbbnnhirl\nunecoligekanemxbkfqlkxklewazahz",
+                        "antbtgovowuxxcxoxootfehmhtwbskannykfqnbwepfaa\ntjqcljubucoriblcjbxflfyiahcsrsxtjkodysagbyigdktdthovfsaodwftprwmeujtmflwnpdtbqnmvdzvt\r\nngdgcvarsoynewohsqbukgfpdsbvpjwxjspczt",
+                        "krntceggxlnmofykbdaygzsdeqskehagr\r\nbscmnroypfascbgappnceky\nbrnrpfrkxijltwsdomonxeqsp\newjqaxobmbjakmqxunsycqkfg\r\ngtcnbhjgqckrrulcswtlbxvj\rzpx\nlsbaytxdwpfbq\nbypaehyeha",
+                        "toctcfgzrupjtqgfediomekjdobsamixackgcf\ngpmfgvlvqstvfikv\r"
+                    ].join('')
+                }]]);
+        });
+
         // GENERATE_TESTS=false;
     });
 
     (function () {
-        const FILE_NAME = 'checker-400-CRLF.txt';
-        // const FILE_NAME = 'checker-10.txt';
-        const MIN_PARALLEL_EDITS_CNT = 1;
-        const MAX_PARALLEL_EDITS_CNT = 10;
-        const MIN_CONSECUTIVE_EDITS_CNT = 1;
-        const MAX_CONSECUTIVE_EDITS_CNT = 10;
-        const MIN_CHUNK_SIZE = 10;
-        const MAX_CHUNK_SIZE = 1 << 16;
 
         class AutoTest {
             private _buff: EdBuffer;
@@ -437,14 +527,21 @@ suite('ReplaceOffsetLen', () => {
             run(): void {
                 // console.log(this._chunkSize);
                 for (let i = 0; i < this._editsCnt; i++) {
-                    let edits = generateEdits(this._content, MIN_PARALLEL_EDITS_CNT, MAX_PARALLEL_EDITS_CNT);
+                    let edits = generateEdits(EDIT_TYPES, this._content, MIN_PARALLEL_EDITS_CNT, MAX_PARALLEL_EDITS_CNT);
                     if (edits.length === 0) {
                         continue;
                     }
-                    // console.log(_edits);
+                    // console.log(edits);
                     this._edits.push(edits);
                     this._content = applyOffsetLengthEdits(this._content, edits);
+
+                    const time = PRINT_TIMES ? process.hrtime() : null;
                     this._buff.ReplaceOffsetLen(edits);
+                    const diff = PRINT_TIMES ? process.hrtime(time) : null;
+                    if (PRINT_TIMES) {
+                        console.log(`ReplaceOffsetLen (${this._chunkSize},${this._buff.GetLength()}) took ${diff[0] * 1e9 + diff[1]} nanoseconds, i.e. ${(diff[0] * 1e9 + diff[1]) / 1e6} ms.`);
+                    }
+
                     assertAllMethods(this._buff, this._content);
                     if (ASSERT_INVARIANTS) {
                         this._buff.AssertInvariants();

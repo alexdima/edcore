@@ -82,6 +82,7 @@ class Buffer
 
     size_t minLeafLength_;
     size_t maxLeafLength_;
+    size_t idealLeafLength_;
 
     bool _findLineStart(size_t &lineIndex, BufferCursor &result);
     void _findLineEnd(size_t leafIndex, size_t leafStartOffset, size_t innerLineIndex, BufferCursor &result);

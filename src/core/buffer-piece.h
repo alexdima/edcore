@@ -154,7 +154,7 @@ struct LeafOffsetLenEdit
     size_t length;
     const uint16_t *data;
     size_t dataLength;
-    
+
     size_t resultStart;
 };
 typedef struct LeafOffsetLenEdit LeafOffsetLenEdit;
@@ -177,11 +177,15 @@ class BufferPiece
     uint16_t deleteLastChar();
     void insertFirstChar(uint16_t character);
     void join(const BufferPiece *other);
+    void split(size_t idealLeafLength, vector<BufferPiece*> &dest) const;
     void replaceOffsetLen(vector<LeafOffsetLenEdit> &edits);
 
     void assertInvariants();
 
   private:
+
+    BufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength);
+
 
     MyArray<uint16_t> chars_;
     MyArray<LINE_START_T> lineStarts_;

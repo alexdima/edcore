@@ -28,6 +28,12 @@ BufferPiece::BufferPiece(uint16_t *data, size_t len)
     _rebuildLineStarts();
 }
 
+BufferPiece::BufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength)
+{
+    chars_.assign(data, dataLength);
+    lineStarts_.assign(lineStarts, lineStartsLength);
+}
+
 void BufferPiece::_rebuildLineStarts()
 {
     const size_t length = chars_.length();
@@ -201,6 +207,60 @@ void BufferPiece::join(const BufferPiece *other)
 
     lineStarts_.append(other->lineStarts_.data(), otherLineStartsLength);
     chars_.append(other->chars_.data(), otherCharsLength);
+}
+
+void BufferPiece::split(size_t idealLeafLength, vector<BufferPiece*> &dest) const
+{
+    const size_t lineStartCount = lineStarts_.length();
+    size_t lineStartIndex = 0;
+    const size_t charCount = chars_.length();
+    size_t charIndex = 0;
+
+    while(charIndex < charCount)
+    {
+        size_t toCharIndex;
+        if (charIndex + idealLeafLength >= charCount)
+        {
+            toCharIndex = charCount;
+        }
+        else
+        {
+            toCharIndex = charIndex + idealLeafLength;
+            uint16_t lastChar = chars_[toCharIndex - 1];
+            if (lastChar == '\r' || (lastChar >= 0xd800 && lastChar <= 0xdbff)) {
+                toCharIndex--;
+            }
+        }
+
+        size_t pieceLineStartCount = 0;
+        for (size_t i = lineStartIndex; i < lineStartCount; i++)
+        {
+            LINE_START_T lineStart = lineStarts_[i];
+            if (lineStart > toCharIndex)
+            {
+                break;
+            }
+            pieceLineStartCount++;
+            // printf("lineStart: %lu\n", lineStart);
+        }
+        // printf("PIECE: %lu -> %lu, pieceLineStartCount: %lu\n", charIndex, toCharIndex, pieceLineStartCount);
+
+        LINE_START_T *pieceLineStarts = new LINE_START_T[pieceLineStartCount];
+        for (size_t i = 0; i < pieceLineStartCount; i++)
+        {
+            LINE_START_T lineStart = lineStarts_[lineStartIndex + i];
+            pieceLineStarts[i] = lineStart - charIndex;
+        }
+
+        uint16_t *pieceChars = new uint16_t[toCharIndex - charIndex];
+        memcpy(pieceChars, chars_.data() + charIndex, sizeof(*pieceChars) * (toCharIndex - charIndex));
+
+        BufferPiece *piece = new BufferPiece(pieceChars, toCharIndex - charIndex, pieceLineStarts, pieceLineStartCount);
+        dest.push_back(piece);
+
+        charIndex = toCharIndex;
+        lineStartIndex += pieceLineStartCount;
+    }
 }
 
 void BufferPiece::insertOneOffsetLen(size_t offset, const uint16_t *data, size_t len)
