@@ -466,6 +466,12 @@ void Buffer::insertOneOffsetLen(size_t offset, const uint16_t *data, size_t len)
     // printf("cursor: %lu, --(%lu)\n", start.leafIndex, start.leafStartOffset);
 }
 
+void Buffer::replaceOffsetLen(vector<OffsetLenEdit2> &edits)
+{
+    
+}
+
+
 void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
 {
     const size_t initialLeafLength = leafs_.length();

@@ -7,6 +7,7 @@
 #define EDCORE_BUFFER_H_
 
 #include "buffer-piece.h"
+#include "buffer-string.h"
 
 #include <memory>
 #include <vector>
@@ -41,6 +42,15 @@ struct OffsetLenEdit
 };
 typedef struct OffsetLenEdit OffsetLenEdit;
 
+struct OffsetLenEdit2
+{
+    size_t initialIndex;
+    size_t offset;
+    size_t length;
+    BufferString *text;
+};
+typedef struct OffsetLenEdit2 OffsetLenEdit2;
+
 struct InternalOffsetLenEdit
 {
     size_t startLeafIndex;
@@ -68,6 +78,7 @@ class Buffer
     void deleteOneOffsetLen(size_t offset, size_t len);
     void insertOneOffsetLen(size_t offset, const uint16_t *data, size_t len);
     void replaceOffsetLen(vector<OffsetLenEdit> &edits);
+    void replaceOffsetLen(vector<OffsetLenEdit2> &edits);
 
     void assertInvariants();
     void assertNodeInvariants(size_t nodeIndex);
