@@ -9,13 +9,13 @@ import { EdBuffer } from '../../index';
 import { IOffsetLengthEdit, getRandomInt, generateEdits, EditType } from './utils';
 
 const GENERATE_TESTS = false;
-const PRINT_TIMES = false;
+const PRINT_TIMES = true;
 const ASSERT_INVARIANTS = true;
 
 // const FILE_NAME = 'checker.txt';
 const FILE_NAME = 'checker-400.txt';
 const MIN_PARALLEL_EDITS_CNT = 1;
-const MAX_PARALLEL_EDITS_CNT = 10;
+const MAX_PARALLEL_EDITS_CNT = 1;
 const MIN_CONSECUTIVE_EDITS_CNT = 1;
 const MAX_CONSECUTIVE_EDITS_CNT = 10;
 const MIN_CHUNK_SIZE = 10;
@@ -290,6 +290,24 @@ suite('ReplaceOffsetLen', () => {
                     { "offset": 4, "length": 1, "text": "lf_" }
                 ]]
             );
+        });
+    });
+
+    suite('speed', () => {
+        test.only('copy-paste checker.txt', () => {
+            const buff = buildBufferFromFixture('checker.txt');
+            const initialContent = readFixture('checker.txt');
+
+            const time = PRINT_TIMES ? process.hrtime() : null;
+            buff.ReplaceOffsetLen([{
+                offset: buff.GetLength(),
+                length: 0,
+                text: initialContent
+            }]);
+            const diff = PRINT_TIMES ? process.hrtime(time) : null;
+            if (PRINT_TIMES) {
+                console.log(`ReplaceOffsetLen took ${diff[0] * 1e9 + diff[1]} nanoseconds, i.e. ${(diff[0] * 1e9 + diff[1]) / 1e6} ms.`);
+            }
         });
     });
 

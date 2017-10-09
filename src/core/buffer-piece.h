@@ -195,6 +195,9 @@ class BufferPiece
     bool _tryApplyEditsNoAllocate(vector<LeafOffsetLenEdit> &edits, size_t newLength);
     void _applyEditsAllocate(vector<LeafOffsetLenEdit> &edits, size_t newLength);
 };
+
+timespec time_diff(timespec start, timespec end);
+void print_diff(const char *pre, timespec start);
 }
 
 #endif

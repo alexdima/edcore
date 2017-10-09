@@ -287,7 +287,12 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
 
     // assert(false);
 
+    timespec start;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
+
     obj->actual_->replaceOffsetLen(edits);
+
+    edcore::print_diff("actual->replaceOffsetLen", start);
 
     delete []allData;
 }

@@ -476,6 +476,8 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
     //     printf("replace @ (%lu,%lu) -> [%lu]\n", _edits[i].offset, _edits[i].length, _edits[i].dataLength);
     // }
 
+    timespec start;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
     vector<InternalOffsetLenEdit> edits(_edits.size());
     BufferCursor tmp;
     for (size_t i = 0; i < _edits.size(); i++)
@@ -491,11 +493,13 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
         edit.endLeafIndex = tmp.leafIndex;
         edit.endInnerOffset = tmp.offset - tmp.leafStartOffset;
     }
+    print_diff("locateLeafs", start);
 
     // for (size_t i = 0; i < edits.size(); i++) {
     //     printf("replace @ ([%lu,%lu,%lu],%lu) -> [%lu]\n", edits[i].start.offset, edits[i].start.leafIndex, edits[i].start.leafStartOffset, edits[i].length, edits[i].dataLength);
     // }
 
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
     size_t accumulatedLeafIndex = initialLeafLength;
     vector<LeafOffsetLenEdit> accumulatedLeafEdits;
 
@@ -566,6 +570,9 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
         lastDirtyIndex = max(lastDirtyIndex, accumulatedLeafIndex);
     }
 
+    print_diff("edits", start);
+
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
     // Check that a leaf doesn't end in \r and the next one begins in \n
     size_t from = firstDirtyIndex;
     size_t to = lastDirtyIndex;
@@ -609,6 +616,7 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
         nextLeaf->insertFirstChar(lastChar);
         lastDirtyIndex = max(lastDirtyIndex, nextLeafIndex);
     }
+    print_diff("\\r high surrogate check", start);
 
     size_t analyzeFrom = max(1UL, firstDirtyIndex);
     size_t analyzeTo = min(lastDirtyIndex + 2, initialLeafLength);
@@ -636,6 +644,8 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
 
     if (splitOrJoinLeafs)
     {
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
+
         vector<BufferPiece*> leafs;
 
         BufferPiece *prevLeaf;
@@ -688,10 +698,14 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
 
         leafs_.assign(leafs);
 
+        print_diff("split&join", start);
+
         size_t newNodesCount = 1 << log2(leafs_.length());
         if (newNodesCount != nodesCount_)
         {
+            clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
             _rebuildNodes();
+            print_diff("_rebuildNodes", start);
             return;
         }
 
