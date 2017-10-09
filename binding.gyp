@@ -3,6 +3,9 @@
     {
       "target_name": "edcore",
       "sources": [
+        "src/core/array.h",
+        "src/core/buffer-string.cc",
+        "src/core/buffer-string.h",
         "src/core/buffer-piece.cc",
         "src/core/buffer-piece.h",
         "src/core/buffer.cc",
