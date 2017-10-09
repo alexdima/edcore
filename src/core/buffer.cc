@@ -468,7 +468,7 @@ void Buffer::insertOneOffsetLen(size_t offset, const uint16_t *data, size_t len)
 
 void Buffer::replaceOffsetLen(vector<OffsetLenEdit2> &edits)
 {
-    
+
 }
 
 
@@ -771,9 +771,34 @@ void Buffer::assertInvariants()
     assert(leafsStart_ == nodesCount_);
     assert(leafsEnd_ == leafsStart_ + leafsCount);
 
+    BufferPiece *prevLeafWithContent = NULL;
     for (size_t i = 0; i < leafsCount; i++)
     {
-        leafs_[i]->assertInvariants();
+        BufferPiece *leaf = leafs_[i];
+        if (leaf->length() > 0 && prevLeafWithContent != NULL)
+        {
+            uint16_t lastChar = prevLeafWithContent->data()[prevLeafWithContent->length() - 1];
+            uint16_t firstChar = leaf->data()[0];
+
+            bool lastIsHighSurrogate = (0xD800 <= lastChar && lastChar <= 0xDBFF);
+            bool firstIsLowSurrogate = (0xDC00 <= firstChar && firstChar <= 0xDFFF);
+            if (lastIsHighSurrogate && firstIsLowSurrogate)
+            {
+                assert(false);
+            }
+
+            bool lastIsCR = (lastChar == '\r');
+            bool firstIsLF = (firstChar == '\n');
+            if (lastIsCR && firstIsLF)
+            {
+                assert(false);
+            }
+        }
+        leaf->assertInvariants();
+        if (leaf->length() > 0)
+        {
+            prevLeafWithContent = leaf;
+        }
     }
 
     for (size_t i = 1; i < nodesCount_; i++)
