@@ -602,6 +602,193 @@ void BufferPiece::_applyEditsAllocate(vector<LeafOffsetLenEdit> &edits, size_t n
     chars_.assign(target, newLength);
 }
 
+struct Piece {
+
+    const BufferString *text;
+
+    bool hasLineStarts;
+    LINE_START_T *lineStarts;
+    size_t lineStartsCount;
+    size_t lineStartsOffset;
+};
+typedef struct Piece Piece;
+
+class BufferPieceString : public BufferString
+{
+public:
+    BufferPieceString(const BufferPiece *target) { target_ = target; }
+    size_t length() const { return target_->length(); }
+    void write(uint16_t *buffer, size_t start, size_t length) const {
+        const uint16_t *src = target_->data();
+        memcpy(buffer, src + start, sizeof(*buffer) * length);
+    }
+    void writeOneByte(uint8_t *buffer, size_t start, size_t length) const { assert(false); /* TODO! */ }
+    bool isOneByte() const { return false; /* TODO! */ }
+    bool containsOnlyOneByte() const { return false; /* TODO! */ }
+private:
+    const BufferPiece *target_;
+};
+
+void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t minLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const
+{
+    assert(edits.size() > 0);
+
+    if (edits.size() == 1 && edits[0].text->length() == 0 && edits[0].start == 0 && edits[0].length == chars_.length())
+    {
+        // special case => deleting everything
+        return;
+    }
+
+
+    vector<BufferString*> toDelete;
+
+    BufferString *myString = new BufferPieceString(this);
+    toDelete.push_back(myString);
+
+    size_t originalFromIndex = 0;
+
+    // LINE_START_T *originalLineStarts = lineStarts_.data();
+    // size_t lineStartCount = lineStarts_.length();
+    // size_t lineStartIndex = 0;
+
+    vector<Piece> pieces;
+    size_t piecesTextLength = 0;
+    for (size_t i = 0; i < edits.size(); i++)
+    {
+        LeafOffsetLenEdit2 &edit = edits[i];
+        printf("~~~~leaf edit: %lu,%lu -> [%lu ~ ", edit.start, edit.length, edit.text->length());
+        // edit.text->print();
+        printf("]\n");
+
+        // maintain the chars that survive to the left of this edit
+        size_t originalToIndex = edit.start;
+        size_t originalCount = originalToIndex - originalFromIndex;
+        if (originalCount > 0)
+        {
+            Piece tmp;
+            BufferString *text = BufferString::substr(myString, originalFromIndex, originalCount);
+            toDelete.push_back(text);
+
+            tmp.text = text;
+            tmp.hasLineStarts = false; // TODO
+            tmp.lineStarts = NULL;
+            tmp.lineStartsCount = 0;
+            tmp.lineStartsOffset = 0;
+
+            pieces.push_back(tmp);
+            piecesTextLength += tmp.text->length();
+        }
+        originalFromIndex = edit.start + edit.length;
+
+        // chars introduced by this edit
+        if (edit.text->length() > 0)
+        {
+            Piece tmp;
+
+            tmp.text = edit.text;
+            tmp.hasLineStarts = false;
+            tmp.lineStarts = NULL;
+            tmp.lineStartsCount = 0;
+            tmp.lineStartsOffset = 0;
+
+            pieces.push_back(tmp);
+            piecesTextLength += tmp.text->length();
+        }
+    }
+
+    // maintain the chars that survive to the right of the last edit
+    size_t originalToIndex = chars_.length();
+    size_t originalCount = originalToIndex - originalFromIndex;
+    if (originalCount > 0)
+    {
+        Piece tmp;
+        BufferString *text = BufferString::substr(myString, originalFromIndex, originalCount);
+        toDelete.push_back(text);
+
+        tmp.text = text;
+        tmp.hasLineStarts = false; // TODO
+        tmp.lineStarts = NULL;
+        tmp.lineStartsCount = 0;
+        tmp.lineStartsOffset = 0;
+
+        pieces.push_back(tmp);
+        piecesTextLength += tmp.text->length();
+        // memcpy(target + newLength - originalCount, chars_.data() + originalFromIndex, sizeof(uint16_t) * originalCount);
+    }
+
+    printf("piecesTextLength: %lu\n", piecesTextLength);
+
+    size_t targetDataLength = piecesTextLength > maxLeafLength ? idealLeafLength : piecesTextLength;
+    size_t targetDataOffset = 0;
+    uint16_t *targetData = new uint16_t[targetDataLength];
+
+    printf("targetDataLength: %lu\n", targetDataLength);
+
+    size_t pieceIndex = 0;
+    size_t pieceCount = pieces.size();
+    while (pieceIndex < pieceCount)
+    {
+        Piece& piece = pieces[pieceIndex];
+
+        const BufferString *pieceText = piece.text;
+
+
+        // printf("PIECE: ");
+        // pieceText->print();
+        // printf("\n");
+
+        size_t pieceLength = pieceText->length();
+        size_t pieceOffset = 0;
+        while (pieceOffset < pieceLength)
+        {
+            if (targetDataOffset >= targetDataLength)
+            {
+                result->push_back(new BufferPiece(targetData, targetDataLength));
+                targetDataLength = piecesTextLength > maxLeafLength ? idealLeafLength : piecesTextLength;
+                targetDataOffset = 0;
+                targetData = new uint16_t[targetDataLength];
+            }
+            size_t writingCnt = min(pieceLength - pieceOffset, targetDataLength - targetDataOffset);
+            // printf("WRITING %lu\n", writingCnt);
+            pieceText->write(targetData + targetDataOffset, pieceOffset, writingCnt);
+
+            // check that the buffer piece does not end in a \r or high surrogate
+            pieceOffset += writingCnt;
+            targetDataOffset += writingCnt;
+            piecesTextLength -= writingCnt;
+
+            if (targetDataOffset == targetDataLength && piecesTextLength > 0)
+            {
+                uint16_t lastChar = targetData[targetDataLength - 1];
+                if (lastChar == '\r' || (0xD800 <= lastChar && lastChar <= 0xDBFF))
+                {
+                    // move lastChar over to next buffer piece
+                    targetDataLength -= 1;
+                    pieceOffset -= 1;
+                    targetDataOffset -= 1;
+                    piecesTextLength += 1;
+                }
+                printf("REACHED END OF BUFFER PIECE\n");
+            }
+        }
+
+        // printf("writinCnt: %lu\n", writingCnt);
+        // assert(false);
+
+        pieceIndex++;
+    }
+
+    // todo: delete
+
+    result->push_back(new BufferPiece(targetData, targetDataLength));
+    // return result;
+
+    for (size_t i = 0, len = toDelete.size(); i < len; i++)
+    {
+        delete toDelete[i];
+    }
+}
+
 void BufferPiece::assertInvariants()
 {
     const size_t charsLength = chars_.length();
@@ -636,9 +823,9 @@ void BufferPiece::assertInvariants()
     }
 }
 
-timespec time_diff(timespec start, timespec end)
+struct timespec time_diff(struct timespec start, struct timespec end)
 {
-	timespec temp;
+	struct timespec temp;
 	if ((end.tv_nsec-start.tv_nsec)<0) {
 		temp.tv_sec = end.tv_sec-start.tv_sec-1;
 		temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
@@ -649,12 +836,12 @@ timespec time_diff(timespec start, timespec end)
 	return temp;
 }
 
-void print_diff(const char *pre, timespec start)
+void print_diff(const char *pre, struct timespec start)
 {
-    timespec end;
+    struct timespec end;
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end);
 
-    timespec diff = time_diff(start, end);
+    struct timespec diff = time_diff(start, end);
     size_t ns = 1000000000 * diff.tv_sec + diff.tv_nsec;
 
     printf("%s", pre);

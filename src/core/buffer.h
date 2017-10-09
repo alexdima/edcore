@@ -47,7 +47,7 @@ struct OffsetLenEdit2
     size_t initialIndex;
     size_t offset;
     size_t length;
-    BufferString *text;
+    const BufferString *text;
 };
 typedef struct OffsetLenEdit2 OffsetLenEdit2;
 
@@ -61,6 +61,26 @@ struct InternalOffsetLenEdit
     size_t dataLength;
 };
 typedef struct InternalOffsetLenEdit InternalOffsetLenEdit;
+
+struct InternalOffsetLenEdit2
+{
+    size_t startLeafIndex;
+    size_t startInnerOffset;
+    size_t endLeafIndex;
+    size_t endInnerOffset;
+    const BufferString *text;
+};
+typedef struct InternalOffsetLenEdit2 InternalOffsetLenEdit2;
+
+
+// struct InternalLeafOffsetLenEdit
+// {
+//     size_t leafIndex;
+//     size_t start;
+//     size_t length;
+//     const BufferString *text;
+// };
+// typedef struct InternalLeafOffsetLenEdit InternalLeafOffsetLenEdit;
 
 class Buffer
 {

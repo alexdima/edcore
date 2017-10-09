@@ -140,7 +140,7 @@ void EdBuffer::InsertOneOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &arg
     // printf("mem usage: %lf KB -> %lf KB\n", ((double)memUsageBefore) / 1024, ((double)memUsageAfter) / 1024);
 }
 
-bool compareEdits(edcore::OffsetLenEdit &a, edcore::OffsetLenEdit &b)
+bool compareEdits(edcore::OffsetLenEdit2 &a, edcore::OffsetLenEdit2 &b)
 {
     if (a.offset == b.offset)
     {
@@ -163,11 +163,11 @@ public:
     }
 
     void write(uint16_t *buffer, size_t start, size_t length) const {
-        source_->Write(buffer, start, length);
+        source_->Write(buffer, start, length, v8::String::WriteOptions::NO_NULL_TERMINATION);
     }
 
     void writeOneByte(uint8_t *buffer, size_t start, size_t length) const {
-        source_->WriteOneByte(buffer, start, length);
+        source_->WriteOneByte(buffer, start, length, v8::String::WriteOptions::NO_NULL_TERMINATION);
     }
 
     bool isOneByte() const {
@@ -200,7 +200,7 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
     const size_t maxPosition = obj->actual_->length();
 
     size_t totalDataLength = 0;
-    vector<edcore::OffsetLenEdit> edits(_edits->Length());
+    vector<edcore::OffsetLenEdit2> edits(_edits->Length());
     for (size_t i = 0; i < _edits->Length(); i++)
     {
         v8::Local<v8::Value> _element = _edits->Get(i);
@@ -262,8 +262,9 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
         edits[i].length = length;
         v8::Local<v8::String> text = v8::Local<v8::String>::Cast(text_);
         // v8::String::Value utf16Value(text);
-        edits[i].data = NULL;//*utf16Value;
-        edits[i].dataLength = text->Length();//utf16Value->length();
+        edits[i].text = NULL;
+        // edits[i].data = NULL;//*utf16Value;
+        // edits[i].dataLength = text->Length();//utf16Value->length();
 
         totalDataLength += text->Length();
     }
@@ -274,8 +275,8 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
     // Check that there are no overlapping edits
     for (size_t i = 1; i < edits.size(); i++)
     {
-        edcore::OffsetLenEdit &prev = edits[i - 1];
-        edcore::OffsetLenEdit &curr = edits[i];
+        edcore::OffsetLenEdit2 &prev = edits[i - 1];
+        edcore::OffsetLenEdit2 &curr = edits[i];
         if (prev.offset + prev.length > curr.offset)
         {
             isolate->ThrowException(v8::Exception::Error(
@@ -284,29 +285,33 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
         }
     }
 
+    // vector<v8StringAsBufferString*> toDelete(edits.size());
     // Extract data
     // printf("totalDataLength: %lu\n", totalDataLength);
-    uint16_t *allData = new uint16_t[totalDataLength];
-    uint16_t *currData = allData;
+    // uint16_t *allData = new uint16_t[totalDataLength];
+    // uint16_t *currData = allData;
     for (size_t i = 0; i < edits.size(); i++)
     {
-        edcore::OffsetLenEdit &edit = edits[i];
+        edcore::OffsetLenEdit2 &edit = edits[i];
         v8::Local<v8::Value> _element = _edits->Get(edit.initialIndex);
         v8::Local<v8::Object> element = v8::Local<v8::Object>::Cast(_element);
         v8::Local<v8::Value> text_ = element->GetRealNamedProperty(ctx, textStr).ToLocalChecked();
         v8::Local<v8::String> text = v8::Local<v8::String>::Cast(text_);
-        v8::String::Value utf16Value(text);
 
-        const uint16_t *utf16Data = *utf16Value;
-        // for (size_t j = 0; j < text->Length(); j++)
-        // {
-        //     printf("  -> %lu\n", utf16Data[j]);
-        // }
+        edit.text = new v8StringAsBufferString(text);
 
-        memcpy(currData, utf16Data, sizeof(uint16_t) * text->Length());
-        edit.data = currData;
+        // v8::String::Value utf16Value(text);
 
-        currData += text->Length();
+        // const uint16_t *utf16Data = *utf16Value;
+        // // for (size_t j = 0; j < text->Length(); j++)
+        // // {
+        // //     printf("  -> %lu\n", utf16Data[j]);
+        // // }
+
+        // memcpy(currData, utf16Data, sizeof(uint16_t) * text->Length());
+        // edit.data = currData;
+
+        // currData += text->Length();
         // v8::Local<v8::Value> text_;
         // if (!maybeText_.ToLocal(&text_) || !text_->IsString())
         // {
@@ -318,14 +323,19 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
 
     // assert(false);
 
-    timespec start;
+    struct timespec start;
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
 
     obj->actual_->replaceOffsetLen(edits);
 
+    for (size_t i = 0, len = edits.size(); i < len; i++)
+    {
+        delete edits[i].text;
+    }
+
     edcore::print_diff("actual->replaceOffsetLen", start);
 
-    delete []allData;
+    // delete []allData;
 }
 
 void EdBuffer::AssertInvariants(const v8::FunctionCallbackInfo<v8::Value> &args)

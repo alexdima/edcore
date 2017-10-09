@@ -8,16 +8,16 @@ import { buildBufferFromFixture, readFixture, buildBufferFromString } from './ut
 import { EdBuffer } from '../../index';
 import { IOffsetLengthEdit, getRandomInt, generateEdits, EditType } from './utils';
 
-const GENERATE_TESTS = false;
+const GENERATE_TESTS = true;
 const PRINT_TIMES = true;
 const ASSERT_INVARIANTS = true;
 
 // const FILE_NAME = 'checker.txt';
-const FILE_NAME = 'checker-400.txt';
+const FILE_NAME = 'checker-10.txt';
 const MIN_PARALLEL_EDITS_CNT = 1;
 const MAX_PARALLEL_EDITS_CNT = 1;
 const MIN_CONSECUTIVE_EDITS_CNT = 1;
-const MAX_CONSECUTIVE_EDITS_CNT = 10;
+const MAX_CONSECUTIVE_EDITS_CNT = 1;
 const MIN_CHUNK_SIZE = 10;
 const MAX_CHUNK_SIZE = 1 << 16;
 const EDIT_TYPES = EditType.Inserts;
@@ -87,6 +87,9 @@ suite('ReplaceOffsetLen', () => {
 
     function assertFixtureOffsetLenEdits(fileName: string, chunkSize: number, edits: IOffsetLengthEdit[][]): void {
         const buff = buildBufferFromFixture(fileName, chunkSize);
+        if (ASSERT_INVARIANTS) {
+            buff.AssertInvariants();
+        }
         const initialContent = readFixture(fileName);
         _assertOffsetLenEdits(buff, initialContent, edits);
     }
@@ -294,7 +297,7 @@ suite('ReplaceOffsetLen', () => {
     });
 
     suite('speed', () => {
-        test.only('copy-paste checker.txt', () => {
+        test('copy-paste checker.txt', () => {
             const buff = buildBufferFromFixture('checker.txt');
             const initialContent = readFixture('checker.txt');
 
@@ -522,7 +525,37 @@ suite('ReplaceOffsetLen', () => {
                 }]]);
         });
 
-        // GENERATE_TESTS=false;
+        test('gen20', () => {
+            runTest("checker-10.txt", 12435, [
+                [{
+                    offset: 189,
+                    length: 11,
+                    text: 'eesfuopnzzphpjzyghusg\r\nixflgeryrn\r\natcvkjdvcmqwqxipkvhtiuldxztdrbuhygwmiqtaoyzymzantqkdbgg\nfxhvkf\ro\nxfatpi\rwomfrh'
+                }]
+            ]);
+        });
+
+        test('gen21', () => {
+            runTest("checker-10.txt", 6423, [
+                [{
+                    "offset":181,
+                    "length":29,
+                    "text":"wtnmycaxnrurzivyjkyippadpzybyofdxpbpmtjgamol\r\nnkcnbnflbxdff\nknapesqpyymhvvpakuufkrcavfpmifrfifrbzgqhsiumzxxbj\nwh\n"
+                }]
+            ]);
+        });
+
+        test('gen22', () => {
+            runTest("checker-10.txt", 12, [
+                [{
+                    "offset":17,
+                    "length":89,
+                    "text":"bhreuynbkqwyuwxdopidqjgmotmkux\r\nbdtwaeaqeltqlh\rtyylhdghxomvfwtnwqgvqtxhvhdcqdffyxboahyvnzbcinwegttribtobjaginwuex"
+                }]
+            ]);
+        })
+
+        GENERATE_TESTS=false;
     });
 
     (function () {
@@ -543,13 +576,13 @@ suite('ReplaceOffsetLen', () => {
             }
 
             run(): void {
-                // console.log(this._chunkSize);
+                console.log(this._chunkSize);
                 for (let i = 0; i < this._editsCnt; i++) {
                     let edits = generateEdits(EDIT_TYPES, this._content, MIN_PARALLEL_EDITS_CNT, MAX_PARALLEL_EDITS_CNT);
                     if (edits.length === 0) {
                         continue;
                     }
-                    // console.log(edits);
+                    console.log(edits);
                     this._edits.push(edits);
                     this._content = applyOffsetLengthEdits(this._content, edits);
 

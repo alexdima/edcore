@@ -1,6 +1,7 @@
 {
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "C++ Launch",
             "type": "cppdbg",
@@ -15,6 +16,40 @@
             "externalConsole": false,
             "linux": {
                 "program": "/usr/bin/node",
+                "MIMode": "gdb",
+                "setupCommands": [
+                    {
+                        "description": "Enable pretty-printing for gdb",
+                        "text": "-enable-pretty-printing",
+                        "ignoreFailures": true
+                    }
+                ]
+            },
+            "osx": {
+                "MIMode": "lldb"
+            },
+            "windows": {
+                "MIMode": "gdb",
+                "setupCommands": [
+                    {
+                        "description": "Enable pretty-printing for gdb",
+                        "text": "-enable-pretty-printing",
+                        "ignoreFailures": true
+                    }
+                ]
+            }
+        },
+        {
+            "name": "C++ Launch 2",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/main-test/a.out",
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}/main-test",
+            "environment": [],
+            "externalConsole": false,
+            "linux": {
+                // "program": "/usr/bin/node",
                 "MIMode": "gdb",
                 "setupCommands": [
                     {

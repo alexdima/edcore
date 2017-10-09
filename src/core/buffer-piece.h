@@ -9,8 +9,10 @@
 #include <memory>
 #include <vector>
 #include <cstring>
+#include <time.h>
 
 #include "array.h"
+#include "buffer-string.h"
 
 using namespace std;
 
@@ -29,6 +31,15 @@ struct LeafOffsetLenEdit
     size_t resultStart;
 };
 typedef struct LeafOffsetLenEdit LeafOffsetLenEdit;
+
+struct LeafOffsetLenEdit2
+{
+    size_t start;
+    size_t length;
+    const BufferString *text;
+};
+typedef struct LeafOffsetLenEdit2 LeafOffsetLenEdit2;
+
 
 class BufferPiece
 {
@@ -51,6 +62,8 @@ class BufferPiece
     void split(size_t idealLeafLength, vector<BufferPiece*> &dest) const;
     void replaceOffsetLen(vector<LeafOffsetLenEdit> &edits);
 
+    void replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t minLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const;
+
     void assertInvariants();
 
   private:
@@ -67,8 +80,8 @@ class BufferPiece
     void _applyEditsAllocate(vector<LeafOffsetLenEdit> &edits, size_t newLength);
 };
 
-timespec time_diff(timespec start, timespec end);
-void print_diff(const char *pre, timespec start);
+struct timespec time_diff(struct timespec start, struct timespec end);
+void print_diff(const char *pre, struct timespec start);
 }
 
 #endif
