@@ -44,10 +44,10 @@ class BufferPiece
     virtual uint16_t charAt(size_t index) const = 0;
     virtual size_t memUsage() const = 0;
 
-    virtual void replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const = 0;
     virtual void assertInvariants() const = 0;
     virtual void write(uint16_t *buffer, size_t start, size_t length) const = 0;
 
+    static void replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result);
     static BufferPiece *deleteLastChar2(const BufferPiece *target);
     static BufferPiece *insertFirstChar2(const BufferPiece *target, uint16_t character);
     static BufferPiece * join2(const BufferPiece *first, const BufferPiece *second);
@@ -77,8 +77,6 @@ public:
         const uint16_t *src = chars_.data();
         memcpy(buffer, src + start, sizeof(*buffer) * length);
     }
-
-    void replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const;
 
     void assertInvariants() const;
 

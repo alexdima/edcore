@@ -208,7 +208,7 @@ BufferPiece * BufferPiece::join2(const BufferPiece *first, const BufferPiece *se
 class BufferPieceString : public BufferString
 {
 public:
-    BufferPieceString(const TwoBytesBufferPiece *target) { target_ = target; }
+    BufferPieceString(const BufferPiece *target) { target_ = target; }
     size_t length() const { return target_->length(); }
     void write(uint16_t *buffer, size_t start, size_t length) const {
         target_->write(buffer, start, length);
@@ -217,7 +217,7 @@ public:
     bool isOneByte() const { return false; /* TODO! */ }
     bool containsOnlyOneByte() const { return false; /* TODO! */ }
 private:
-    const TwoBytesBufferPiece *target_;
+    const BufferPiece *target_;
 };
 
 BufferString * recordString(BufferString *str, size_t index, vector<BufferString*> &toDelete)
@@ -226,12 +226,12 @@ BufferString * recordString(BufferString *str, size_t index, vector<BufferString
     return str;
 }
 
-void TwoBytesBufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const
+void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result)
 {
     const size_t editsSize = edits.size();
     assert(editsSize > 0);
 
-    const size_t originalCharsLength = chars_.length();
+    const size_t originalCharsLength = target->length();
     if (editsSize == 1 && edits[0].text->length() == 0 && edits[0].start == 0 && edits[0].length == originalCharsLength)
     {
         // special case => deleting everything
@@ -239,7 +239,7 @@ void TwoBytesBufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, si
     }
 
     vector<BufferString*> toDelete(editsSize + 2);
-    BufferString *myString = recordString(new BufferPieceString(this), 0, toDelete);
+    BufferString *myString = recordString(new BufferPieceString(target), 0, toDelete);
 
     vector<const BufferString *> pieces(2 * editsSize + 1);
     size_t originalFromIndex = 0;
