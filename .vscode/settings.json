@@ -19,7 +19,9 @@
         "array": "cpp",
         "*.tcc": "cpp",
         "system_error": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "cstring": "cpp",
+        "iostream": "cpp"
     },
     "search.exclude": {
         "**/node_modules": true,

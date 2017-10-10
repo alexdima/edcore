@@ -29,8 +29,6 @@ class EdBuffer : public node::ObjectWrap
     static void GetLength(const v8::FunctionCallbackInfo<v8::Value> &args);
     static void GetLineCount(const v8::FunctionCallbackInfo<v8::Value> &args);
     static void GetLineContent(const v8::FunctionCallbackInfo<v8::Value> &args);
-    static void DeleteOneOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args);
-    static void InsertOneOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args);
     static void ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args);
     static void AssertInvariants(const v8::FunctionCallbackInfo<v8::Value> &args);
 };

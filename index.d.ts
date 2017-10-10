@@ -18,8 +18,6 @@ export declare class EdBuffer {
     GetLength(): number;
     GetLineCount(): number;
     GetLineContent(lineNumber: number): string;
-    DeleteOneOffsetLen(offset: number, length: number): void;
-    InsertOneOffsetLen(offset: number, text: string): void;
     ReplaceOffsetLen(edits: IOffsetLenEdit[]): void;
 }
 

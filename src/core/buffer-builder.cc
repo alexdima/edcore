@@ -93,11 +93,10 @@ void BufferBuilder::Finish()
 
         BufferPiece *lastPiece = _rawPieces[_rawPieces.size() - 1];
         size_t prevDataLen = lastPiece->length();
-        const uint16_t *prevData = lastPiece->data();
 
         size_t dataLen = prevDataLen + 1;
         uint16_t *data = new uint16_t[dataLen];
-        memcpy(data, prevData, sizeof(uint16_t) * prevDataLen);
+        lastPiece->write(data, 0, prevDataLen);
         data[dataLen - 1] = _previousChar;
 
         delete lastPiece;
