@@ -12,72 +12,11 @@
 namespace edcore
 {
 
-TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *___data, size_t len)
+TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t length)
 {
-    assert(___data != NULL);
-    chars_.assign(___data, len);
-
-
-    const size_t length = chars_.length();
-    const uint16_t *data = chars_.data();
-
-    // // Do a first pass to count the number of line starts
-    // size_t lineStartsCount = 0;
-    // for (size_t i = 0; i < length; i++)
-    // {
-    //     const uint16_t chr = data[i];
-
-    //     if (chr == '\r')
-    //     {
-    //         if (i + 1 < length && data[i + 1] == '\n')
-    //         {
-    //             // \r\n... case
-    //             lineStartsCount++;
-    //             i++; // skip \n
-    //         }
-    //         else
-    //         {
-    //             // \r... case
-    //             lineStartsCount++;
-    //         }
-    //     }
-    //     else if (chr == '\n')
-    //     {
-    //         lineStartsCount++;
-    //     }
-    // }
-
-    // LINE_START_T *lineStarts = new LINE_START_T[lineStartsCount];
-
-    // size_t dest = 0;
-    // for (size_t i = 0; i < length; i++)
-    // {
-    //     const uint16_t chr = data[i];
-
-    //     if (chr == '\r')
-    //     {
-    //         if (i + 1 < length && data[i + 1] == '\n')
-    //         {
-    //             // \r\n... case
-    //             lineStarts[dest++] = i + 2;
-    //             i++; // skip \n
-    //         }
-    //         else
-    //         {
-    //             // \r... case
-    //             lineStarts[dest++] = i + 1;
-    //         }
-    //     }
-    //     else if (chr == '\n')
-    //     {
-    //         lineStarts[dest++] = i + 1;
-    //     }
-    // }
-
-    // lineStarts_.assign(lineStarts, lineStartsCount);
-
-
-
+    assert(data != NULL);
+    chars_ = data;
+    charsLength_ = length;
 
     vector<LINE_START_T> lineStarts;
 
@@ -110,12 +49,14 @@ TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *___data, size_t len)
 
 TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength)
 {
-    chars_.assign(data, dataLength);
+    chars_ = data;
+    charsLength_ = dataLength;
     lineStarts_.assign(lineStarts, lineStartsLength);
 }
 
 TwoBytesBufferPiece::~TwoBytesBufferPiece()
 {
+    delete []chars_;
 }
 
 BufferPiece *BufferPiece::deleteLastChar2(const BufferPiece *target)
@@ -323,17 +264,16 @@ void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetL
 
 void TwoBytesBufferPiece::assertInvariants() const
 {
-    const size_t charsLength = chars_.length();
     const size_t lineStartsLength = lineStarts_.length();
 
-    assert(chars_.data() != NULL);
+    assert(chars_ != NULL);
     assert(lineStarts_.data() != NULL);
 
     for (size_t i = 0; i < lineStartsLength; i++)
     {
         LINE_START_T lineStart = lineStarts_[i];
 
-        assert(lineStart > 0 && lineStart <= charsLength);
+        assert(lineStart > 0 && lineStart <= charsLength_);
 
         if (i > 0)
         {
@@ -344,7 +284,7 @@ void TwoBytesBufferPiece::assertInvariants() const
         uint16_t charBefore = chars_[lineStart - 1];
         assert(charBefore == '\n' || charBefore == '\r');
 
-        if (charBefore == '\r' && lineStart < charsLength)
+        if (charBefore == '\r' && lineStart < charsLength_)
         {
             uint16_t charAfter = chars_[lineStart];
             assert(charAfter != '\n');

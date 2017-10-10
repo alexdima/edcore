@@ -68,21 +68,21 @@ public:
     TwoBytesBufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength);
     ~TwoBytesBufferPiece();
 
-    size_t memUsage() const { return (sizeof(TwoBytesBufferPiece) + chars_.memUsage() + lineStarts_.memUsage()); }
-    size_t length() const { return chars_.length(); }
+    size_t memUsage() const { return (sizeof(TwoBytesBufferPiece) + (charsLength_ * sizeof(*chars_)) + lineStarts_.memUsage()); }
+    size_t length() const { return charsLength_; }
     uint16_t charAt(size_t index) const { return chars_[index]; }
 
     void write(uint16_t *buffer, size_t start, size_t length) const {
-        assert(start + length <= chars_.length());
-        const uint16_t *src = chars_.data();
-        memcpy(buffer, src + start, sizeof(*buffer) * length);
+        assert(start + length <= charsLength_);
+        memcpy(buffer, chars_ + start, sizeof(*buffer) * length);
     }
 
     void assertInvariants() const;
 
 private:
 
-    MyArray<uint16_t> chars_;
+    uint16_t *chars_;
+    size_t charsLength_;
 };
 
 struct timespec time_diff(struct timespec start, struct timespec end);
