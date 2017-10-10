@@ -5,6 +5,7 @@
 
 #include "ed-buffer-builder.h"
 #include "ed-buffer.h"
+#include "ed-buffer-string.h"
 
 #include <cstring>
 
@@ -15,7 +16,7 @@ EdBufferBuilder::EdBufferBuilder()
 
 edcore::Buffer *EdBufferBuilder::BuildBuffer()
 {
-    return this->actual_->Build();
+    return this->actual_->build();
 }
 
 EdBufferBuilder::~EdBufferBuilder()
@@ -28,27 +29,23 @@ void EdBufferBuilder::AcceptChunk(const v8::FunctionCallbackInfo<v8::Value> &arg
     v8::Isolate *isolate = args.GetIsolate();
     EdBufferBuilder *obj = ObjectWrap::Unwrap<EdBufferBuilder>(args.Holder());
 
-    v8::Local<v8::String> chunk = v8::Local<v8::String>::Cast(args[0]);
-    if (!chunk->IsString())
+    if (!args[0]->IsString())
     {
         isolate->ThrowException(v8::Exception::TypeError(
             v8::String::NewFromUtf8(isolate, "Argument must be a string")));
         return;
     }
 
-    v8::String::Value utf16Value(chunk);
-    // uint16_t *myChunk = new uint16_t[10 * utf16Value.length()];
-    // printf("LEAKING %lu\n", 10 * utf16Value.length());
-    // myChunk = NULL;
-    // memcpy(myChunk, *utf16Value, sizeof(uint16_t) * utf16Value.length());
-    // printf("%p chunk\n", *utf16Value);
-    obj->actual_->AcceptChunk(*utf16Value, utf16Value.length());
+    v8::Local<v8::String> chunk = v8::Local<v8::String>::Cast(args[0]);
+    edcore::BufferString *str = new v8StringAsBufferString(chunk);
+    obj->actual_->acceptChunk(str);
+    delete str;
 }
 
 void EdBufferBuilder::Finish(const v8::FunctionCallbackInfo<v8::Value> &args)
 {
     EdBufferBuilder *obj = ObjectWrap::Unwrap<EdBufferBuilder>(args.Holder());
-    obj->actual_->Finish();
+    obj->actual_->finish();
 }
 
 void EdBufferBuilder::Build(const v8::FunctionCallbackInfo<v8::Value> &args)

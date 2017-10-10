@@ -21,15 +21,15 @@ class BufferBuilder
 {
   public:
     BufferBuilder();
-    void AcceptChunk(const uint16_t *chunk, size_t chunkLen);
-    void Finish();
-    Buffer *Build();
+    void acceptChunk(const BufferString *str);
+    void finish();
+    Buffer *build();
 
   private:
-    vector<BufferPiece *> _rawPieces;
-    bool _hasPreviousChar;
-    uint16_t _previousChar;
-    double _averageChunkSize;
+    vector<BufferPiece *> rawPieces_;
+    bool hasPreviousChar_;
+    uint16_t previousChar_;
+    double averageChunkSize_;
 };
 }
 

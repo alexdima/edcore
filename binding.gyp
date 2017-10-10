@@ -12,6 +12,7 @@
         "src/core/buffer.h",
         "src/core/buffer-builder.cc",
         "src/core/buffer-builder.h",
+        "src/node/ed-buffer-string.h",
         "src/node/ed-buffer-builder.cc",
         "src/node/ed-buffer-builder.h",
         "src/node/ed-buffer.cc",

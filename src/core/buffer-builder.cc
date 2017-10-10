@@ -12,68 +12,63 @@ namespace edcore
 
 BufferBuilder::BufferBuilder()
 {
-    _hasPreviousChar = false;
-    _averageChunkSize = 0;
-    _previousChar = 0;
+    hasPreviousChar_ = false;
+    averageChunkSize_ = 0;
+    previousChar_ = 0;
 }
 
-void BufferBuilder::AcceptChunk(const uint16_t *chunk, size_t chunkLen)
+void BufferBuilder::acceptChunk(const BufferString *str)
 {
-    if (chunkLen == 0)
+    const size_t strLength = str->length();
+    if (strLength == 0)
     {
         // Nothing to do
         return;
     }
 
-    {
-        // Current pieces
-        const size_t rawPiecesCount = _rawPieces.size();
-        if (rawPiecesCount == 0)
-        {
-            _averageChunkSize = chunkLen;
-        }
-        else
-        {
-            _averageChunkSize = (_averageChunkSize * rawPiecesCount + chunkLen) / (rawPiecesCount + 1);
-        }
-    }
+    // Current pieces
+    const size_t rawPiecesCount = rawPieces_.size();
+    averageChunkSize_ = (averageChunkSize_ * rawPiecesCount + strLength) / (rawPiecesCount + 1);
 
     bool holdBackLastChar = false;
-    uint16_t lastChar = chunk[chunkLen - 1];
+
+    uint16_t lastChar;
+    str->write(&lastChar, strLength - 1, 1);
+
     if (lastChar == 13 || (lastChar >= 0xd800 && lastChar <= 0xdbff))
     {
         // last character is \r or a high surrogate => keep it back
         holdBackLastChar = true;
     }
 
-    size_t dataLen = (_hasPreviousChar ? 1 : 0) + chunkLen - (holdBackLastChar ? 1 : 0);
+    size_t dataLen = (hasPreviousChar_ ? 1 : 0) + strLength - (holdBackLastChar ? 1 : 0);
     uint16_t *data = new uint16_t[dataLen];
-    if (_hasPreviousChar)
+    if (hasPreviousChar_)
     {
-        data[0] = _previousChar;
+        data[0] = previousChar_;
     }
-    memcpy(data + (_hasPreviousChar ? 1 : 0), chunk, sizeof(uint16_t) * (chunkLen - (holdBackLastChar ? 1 : 0)));
+    str->write(data + (hasPreviousChar_ ? 1 : 0), 0, strLength - (holdBackLastChar ? 1 : 0));
 
-    _rawPieces.push_back(new TwoBytesBufferPiece(data, dataLen));
-    _hasPreviousChar = holdBackLastChar;
-    _previousChar = lastChar;
+    rawPieces_.push_back(new TwoBytesBufferPiece(data, dataLen));
+    hasPreviousChar_ = holdBackLastChar;
+    previousChar_ = lastChar;
 }
 
-void BufferBuilder::Finish()
+void BufferBuilder::finish()
 {
-    if (_rawPieces.size() == 0)
+    if (rawPieces_.size() == 0)
     {
         // no chunks
 
         size_t dataLen;
         uint16_t *data;
 
-        if (_hasPreviousChar)
+        if (hasPreviousChar_)
         {
-            _hasPreviousChar = false;
+            hasPreviousChar_ = false;
             dataLen = 1;
             data = new uint16_t[1];
-            data[0] = _previousChar;
+            data[0] = previousChar_;
         }
         else
         {
@@ -81,39 +76,39 @@ void BufferBuilder::Finish()
             data = new uint16_t[0];
         }
 
-        _rawPieces.push_back(new TwoBytesBufferPiece(data, dataLen));
+        rawPieces_.push_back(new TwoBytesBufferPiece(data, dataLen));
 
         return;
     }
 
-    if (_hasPreviousChar)
+    if (hasPreviousChar_)
     {
-        _hasPreviousChar = false;
+        hasPreviousChar_ = false;
         // recreate last chunk
 
-        BufferPiece *lastPiece = _rawPieces[_rawPieces.size() - 1];
+        BufferPiece *lastPiece = rawPieces_[rawPieces_.size() - 1];
         size_t prevDataLen = lastPiece->length();
 
         size_t dataLen = prevDataLen + 1;
         uint16_t *data = new uint16_t[dataLen];
         lastPiece->write(data, 0, prevDataLen);
-        data[dataLen - 1] = _previousChar;
+        data[dataLen - 1] = previousChar_;
 
         delete lastPiece;
 
-        _rawPieces[_rawPieces.size() - 1] = new TwoBytesBufferPiece(data, dataLen);
+        rawPieces_[rawPieces_.size() - 1] = new TwoBytesBufferPiece(data, dataLen);
     }
 }
 
-Buffer *BufferBuilder::Build()
+Buffer *BufferBuilder::build()
 {
-    size_t averageChunkSize = (size_t)min(65536.0, max(128.0, _averageChunkSize));
+    size_t averageChunkSize = (size_t)min(65536.0, max(128.0, averageChunkSize_));
     size_t delta = averageChunkSize / 3;
     size_t min_ = averageChunkSize - delta;
     size_t max_ = 2 * min_;
 
-    // printf("%lf ==> %lu, %lu\n", _averageChunkSize, min_, max_);
+    // printf("%lf ==> %lu, %lu\n", averageChunkSize_, min_, max_);
 
-    return new Buffer(_rawPieces, min_, max_);
+    return new Buffer(rawPieces_, min_, max_);
 }
 }
