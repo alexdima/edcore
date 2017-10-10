@@ -62,7 +62,7 @@ class BufferPiece
     void split(size_t idealLeafLength, vector<BufferPiece*> &dest) const;
     void replaceOffsetLen(vector<LeafOffsetLenEdit> &edits);
 
-    void replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t minLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const;
+    void replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const;
 
     void assertInvariants();
 

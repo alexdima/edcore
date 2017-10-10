@@ -658,17 +658,6 @@ void BufferPiece::_applyEditsAllocate(vector<LeafOffsetLenEdit> &edits, size_t n
     chars_.assign(target, newLength);
 }
 
-struct Piece {
-
-    const BufferString *text;
-
-    bool hasLineStarts;
-    LINE_START_T *lineStarts;
-    size_t lineStartsCount;
-    size_t lineStartsOffset;
-};
-typedef struct Piece Piece;
-
 class BufferPieceString : public BufferString
 {
 public:
@@ -686,41 +675,31 @@ private:
     const BufferPiece *target_;
 };
 
-void setPiece(Piece &piece, const BufferString *text)
+BufferString * recordString(BufferString *str, size_t index, vector<BufferString*> &toDelete)
 {
-    piece.text = text;
-    piece.hasLineStarts = false; // TODO
-    piece.lineStarts = NULL;
-    piece.lineStartsCount = 0;
-    piece.lineStartsOffset = 0;
+    toDelete[index] = str;
+    return str;
 }
 
-void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t minLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const
+void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const
 {
-    struct timespec start;
-    assert(edits.size() > 0);
+    const size_t editsSize = edits.size();
+    assert(editsSize > 0);
 
-    if (edits.size() == 1 && edits[0].text->length() == 0 && edits[0].start == 0 && edits[0].length == chars_.length())
+    const size_t originalCharsLength = chars_.length();
+    if (editsSize == 1 && edits[0].text->length() == 0 && edits[0].start == 0 && edits[0].length == originalCharsLength)
     {
         // special case => deleting everything
         return;
     }
 
-    vector<BufferString*> toDelete;
+    vector<BufferString*> toDelete(editsSize + 2);
+    BufferString *myString = recordString(new BufferPieceString(this), 0, toDelete);
 
-    BufferString *myString = new BufferPieceString(this);
-    toDelete.push_back(myString);
-
+    vector<const BufferString *> pieces(2 * editsSize + 1);
     size_t originalFromIndex = 0;
-
-    // LINE_START_T *originalLineStarts = lineStarts_.data();
-    // size_t lineStartCount = lineStarts_.length();
-    // size_t lineStartIndex = 0;
-
-    vector<Piece> pieces(2 * edits.size() + 1);
     size_t piecesTextLength = 0;
-    // clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
-    for (size_t i = 0; i < edits.size(); i++)
+    for (size_t i = 0; i < editsSize; i++)
     {
         LeafOffsetLenEdit2 &edit = edits[i];
         // printf("~~~~leaf edit: %lu,%lu -> [%lu ~ ", edit.start, edit.length, edit.text->length());
@@ -728,85 +707,52 @@ void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t ide
         // printf("]\n");
 
         // maintain the chars that survive to the left of this edit
-        size_t originalToIndex = edit.start;
-        size_t originalCount = originalToIndex - originalFromIndex;
-        // if (originalCount > 0)
-        // {
-            BufferString *text = BufferString::substr(myString, originalFromIndex, originalCount);
-            toDelete.push_back(text);
+        BufferString *originalText = recordString(BufferString::substr(myString, originalFromIndex, edit.start - originalFromIndex), i + 1, toDelete);
+        pieces[2*i] = originalText;
+        piecesTextLength += originalText->length();
 
-            setPiece(pieces[2*i], text);
-            piecesTextLength += text->length();
-        // }
         originalFromIndex = edit.start + edit.length;
-
-        // chars introduced by this edit
-        // if (edit.text->length() > 0)
-        // {
-            setPiece(pieces[2*i+1], edit.text);
-            piecesTextLength += edit.text->length();
-        // }
+        pieces[2*i+1] = edit.text;
+        piecesTextLength += edit.text->length();
     }
 
     // maintain the chars that survive to the right of the last edit
-    size_t originalToIndex = chars_.length();
-    size_t originalCount = originalToIndex - originalFromIndex;
-    // if (originalCount > 0)
-    // {
-        BufferString *text = BufferString::substr(myString, originalFromIndex, originalCount);
-        toDelete.push_back(text);
+    BufferString *text = recordString(BufferString::substr(myString, originalFromIndex, originalCharsLength - originalFromIndex), editsSize + 1, toDelete);
+    pieces[2 * editsSize] = text;
+    piecesTextLength += text->length();
 
-        setPiece(pieces[pieces.size() - 1], text);
-        piecesTextLength += text->length();
-        // memcpy(target + newLength - originalCount, chars_.data() + originalFromIndex, sizeof(uint16_t) * originalCount);
-    // }
-    // print_diff("        creating pieces", start);
-
-    // assert(pieces[2].text->length() < 1000);
-
-    // printf("piecesTextLength: %lu\n", piecesTextLength);
-
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
     size_t targetDataLength = piecesTextLength > maxLeafLength ? idealLeafLength : piecesTextLength;
     size_t targetDataOffset = 0;
     uint16_t *targetData = new uint16_t[targetDataLength];
 
     for (size_t pieceIndex = 0, pieceCount = pieces.size(); pieceIndex < pieceCount; pieceIndex++)
     {
-        Piece& piece = pieces[pieceIndex];
-
-        const BufferString *pieceText = piece.text;
-
-        size_t pieceLength = pieceText->length();
+        const BufferString *pieceText = pieces[pieceIndex];
+        const size_t pieceLength = pieceText->length();
         if (pieceLength == 0)
         {
             continue;
         }
+
         size_t pieceOffset = 0;
         while (pieceOffset < pieceLength)
         {
-            // struct timespec start;
             if (targetDataOffset >= targetDataLength)
             {
-                // clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
                 result->push_back(new BufferPiece(targetData, targetDataLength));
-                // print_diff("            creating buffer piece", start);
 
                 targetDataLength = piecesTextLength > maxLeafLength ? idealLeafLength : piecesTextLength;
                 targetDataOffset = 0;
                 targetData = new uint16_t[targetDataLength];
             }
             size_t writingCnt = min(pieceLength - pieceOffset, targetDataLength - targetDataOffset);
-
-            // clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
             pieceText->write(targetData + targetDataOffset, pieceOffset, writingCnt);
-            // print_diff("            writing", start);
 
-            // check that the buffer piece does not end in a \r or high surrogate
             pieceOffset += writingCnt;
             targetDataOffset += writingCnt;
             piecesTextLength -= writingCnt;
 
+            // check that the buffer piece does not end in a \r or high surrogate
             if (targetDataOffset == targetDataLength && piecesTextLength > 0)
             {
                 uint16_t lastChar = targetData[targetDataLength - 1];
@@ -823,8 +769,6 @@ void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t ide
     }
 
     result->push_back(new BufferPiece(targetData, targetDataLength));
-
-    // print_diff("        creating buffer pieces", start);
 
     for (size_t i = 0, len = toDelete.size(); i < len; i++)
     {

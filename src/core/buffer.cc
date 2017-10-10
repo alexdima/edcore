@@ -936,7 +936,7 @@ void Buffer::flushLeafEdits(size_t accumulatedLeafIndex, vector<LeafOffsetLenEdi
     if (accumulatedLeafEdits.size() > 0)
     {
         LeafReplacement &rep = pushLeafReplacement(accumulatedLeafIndex, accumulatedLeafIndex, replacements);
-        leafs_[accumulatedLeafIndex]->replaceOffsetLen(accumulatedLeafEdits, idealLeafLength_, minLeafLength_, maxLeafLength_, rep.replacements);
+        leafs_[accumulatedLeafIndex]->replaceOffsetLen(accumulatedLeafEdits, idealLeafLength_, maxLeafLength_, rep.replacements);
     }
 
     accumulatedLeafEdits.clear();
