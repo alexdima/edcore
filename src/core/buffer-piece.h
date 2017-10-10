@@ -68,21 +68,16 @@ class TwoBytesBufferPiece : public BufferPiece
     TwoBytesBufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength);
     ~TwoBytesBufferPiece();
 
+    void assertInvariants() const;
+
     size_t memUsage() const { return (sizeof(TwoBytesBufferPiece) + (charsLength_ * sizeof(*chars_)) + lineStarts_.memUsage()); }
     size_t length() const { return charsLength_; }
     uint16_t charAt(size_t index) const { return chars_[index]; }
+    bool isOneByte() const { return false; }
 
-    void write(uint16_t *buffer, size_t start, size_t length) const
-    {
-        assert(start + length <= charsLength_);
-        memcpy(buffer, chars_ + start, sizeof(*buffer) * length);
-    }
-
-    void writeOneByte(uint8_t *buffer, size_t start, size_t length) const { assert(false); /* TODO! */ }
-    bool isOneByte() const { return false; /* TODO! */ }
-    bool containsOnlyOneByte() const { return false; /* TODO! */ }
-
-    void assertInvariants() const;
+    void write(uint16_t *buffer, size_t start, size_t length) const;
+    void writeOneByte(uint8_t *buffer, size_t start, size_t length) const;
+    bool containsOnlyOneByte() const;
 
   private:
     uint16_t *chars_;

@@ -236,6 +236,7 @@ TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t length)
 
 TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength)
 {
+    assert(data != NULL && lineStarts != NULL);
     chars_ = data;
     charsLength_ = dataLength;
     lineStarts_.assign(lineStarts, lineStartsLength);
@@ -275,6 +276,33 @@ void TwoBytesBufferPiece::assertInvariants() const
         }
     }
 }
+
+void TwoBytesBufferPiece::write(uint16_t *buffer, size_t start, size_t length) const
+{
+    assert(start + length <= charsLength_);
+    memcpy(buffer, chars_ + start, sizeof(*buffer) * length);
+}
+
+void TwoBytesBufferPiece::writeOneByte(uint8_t *buffer, size_t start, size_t length) const
+{
+    assert(start + length <= charsLength_);
+    for (size_t i = 0; i < length; i++)
+    {
+        buffer[i] = chars_[start + i];
+    }
+}
+
+bool TwoBytesBufferPiece::containsOnlyOneByte() const {
+    for (size_t i = 0; i < charsLength_; i++)
+    {
+        if (chars_[i] >= 256)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 
 struct timespec time_diff(struct timespec start, struct timespec end)
 {
