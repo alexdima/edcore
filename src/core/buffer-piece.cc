@@ -199,14 +199,9 @@ void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetL
     }
 }
 
-TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t length)
+template <typename T>
+void createLineStarts(const T *data, size_t length, vector<LINE_START_T> &lineStarts)
 {
-    assert(data != NULL);
-    chars_ = data;
-    charsLength_ = length;
-
-    vector<LINE_START_T> lineStarts;
-
     for (size_t i = 0; i < length; i++)
     {
         uint16_t chr = data[i];
@@ -230,7 +225,97 @@ TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t length)
             lineStarts.push_back(i + 1);
         }
     }
+}
 
+template <typename T>
+void doAssertInvariants(const T *chars, size_t charsLength, const LINE_START_T *lineStarts, size_t lineStartsLength)
+{
+    assert(chars != NULL);
+    assert(lineStarts != NULL);
+
+    for (size_t i = 0; i < lineStartsLength; i++)
+    {
+        LINE_START_T lineStart = lineStarts[i];
+
+        assert(lineStart > 0 && lineStart <= charsLength);
+
+        if (i > 0)
+        {
+            LINE_START_T prevLineStart = lineStarts[i - 1];
+            assert(lineStart > prevLineStart);
+        }
+
+        uint16_t charBefore = chars[lineStart - 1];
+        assert(charBefore == '\n' || charBefore == '\r');
+
+        if (charBefore == '\r' && lineStart < charsLength)
+        {
+            uint16_t charAfter = chars[lineStart];
+            assert(charAfter != '\n');
+        }
+    }
+}
+
+// ---- OneByteBufferPiece
+
+OneByteBufferPiece::OneByteBufferPiece(uint8_t *data, size_t length)
+{
+    assert(data != NULL);
+    chars_ = data;
+    charsLength_ = length;
+
+    vector<LINE_START_T> lineStarts;
+    createLineStarts(data, length, lineStarts);
+    lineStarts_.assign(lineStarts);
+}
+
+OneByteBufferPiece::OneByteBufferPiece(uint8_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength)
+{
+    assert(data != NULL && lineStarts != NULL);
+    chars_ = data;
+    charsLength_ = dataLength;
+    lineStarts_.assign(lineStarts, lineStartsLength);
+}
+
+OneByteBufferPiece::~OneByteBufferPiece()
+{
+    delete[] chars_;
+}
+
+void OneByteBufferPiece::assertInvariants() const
+{
+    doAssertInvariants(chars_, charsLength_, lineStarts_.data(), lineStarts_.length());
+}
+
+void OneByteBufferPiece::write(uint16_t *buffer, size_t start, size_t length) const
+{
+    assert(start + length <= charsLength_);
+    for (size_t i = 0; i < length; i++)
+    {
+        buffer[i] = chars_[start + i];
+    }
+}
+
+void OneByteBufferPiece::writeOneByte(uint8_t *buffer, size_t start, size_t length) const
+{
+    assert(start + length <= charsLength_);
+    memcpy(buffer, chars_ + start, sizeof(*buffer) * length);
+}
+
+bool OneByteBufferPiece::containsOnlyOneByte() const {
+    return true;
+}
+
+// ---- TwoBytesBufferPiece
+
+TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t length)
+{
+    assert(data != NULL);
+    chars_ = data;
+    charsLength_ = length;
+
+    vector<LINE_START_T> lineStarts;
+    createLineStarts(data, length, lineStarts);
     lineStarts_.assign(lineStarts);
 }
 
@@ -249,32 +334,7 @@ TwoBytesBufferPiece::~TwoBytesBufferPiece()
 
 void TwoBytesBufferPiece::assertInvariants() const
 {
-    const size_t lineStartsLength = lineStarts_.length();
-
-    assert(chars_ != NULL);
-    assert(lineStarts_.data() != NULL);
-
-    for (size_t i = 0; i < lineStartsLength; i++)
-    {
-        LINE_START_T lineStart = lineStarts_[i];
-
-        assert(lineStart > 0 && lineStart <= charsLength_);
-
-        if (i > 0)
-        {
-            LINE_START_T prevLineStart = lineStarts_[i - 1];
-            assert(lineStart > prevLineStart);
-        }
-
-        uint16_t charBefore = chars_[lineStart - 1];
-        assert(charBefore == '\n' || charBefore == '\r');
-
-        if (charBefore == '\r' && lineStart < charsLength_)
-        {
-            uint16_t charAfter = chars_[lineStart];
-            assert(charAfter != '\n');
-        }
-    }
+    doAssertInvariants(chars_, charsLength_, lineStarts_.data(), lineStarts_.length());
 }
 
 void TwoBytesBufferPiece::write(uint16_t *buffer, size_t start, size_t length) const
@@ -292,7 +352,8 @@ void TwoBytesBufferPiece::writeOneByte(uint8_t *buffer, size_t start, size_t len
     }
 }
 
-bool TwoBytesBufferPiece::containsOnlyOneByte() const {
+bool TwoBytesBufferPiece::containsOnlyOneByte() const
+{
     for (size_t i = 0; i < charsLength_; i++)
     {
         if (chars_[i] >= 256)
@@ -302,7 +363,6 @@ bool TwoBytesBufferPiece::containsOnlyOneByte() const {
     }
     return true;
 }
-
 
 struct timespec time_diff(struct timespec start, struct timespec end)
 {

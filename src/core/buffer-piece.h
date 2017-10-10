@@ -55,11 +55,28 @@ class BufferPiece : public BufferString
     MyArray<LINE_START_T> lineStarts_;
 };
 
-// class OneByteBufferPiece : public BufferPiece {
+class OneByteBufferPiece : public BufferPiece
+{
+  public:
+    OneByteBufferPiece(uint8_t *data, size_t len);
+    OneByteBufferPiece(uint8_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength);
+    ~OneByteBufferPiece();
 
-// private:
-//     uint8_t* chars_;
-// };
+    void assertInvariants() const;
+
+    size_t memUsage() const { return (sizeof(OneByteBufferPiece) + (charsLength_ * sizeof(*chars_)) + lineStarts_.memUsage()); }
+    size_t length() const { return charsLength_; }
+    uint16_t charAt(size_t index) const { return chars_[index]; }
+    bool isOneByte() const { return true; }
+
+    void write(uint16_t *buffer, size_t start, size_t length) const;
+    void writeOneByte(uint8_t *buffer, size_t start, size_t length) const;
+    bool containsOnlyOneByte() const;
+
+  private:
+    uint8_t *chars_;
+    size_t charsLength_;
+};
 
 class TwoBytesBufferPiece : public BufferPiece
 {
