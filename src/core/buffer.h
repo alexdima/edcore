@@ -82,6 +82,13 @@ typedef struct InternalOffsetLenEdit2 InternalOffsetLenEdit2;
 // };
 // typedef struct InternalLeafOffsetLenEdit InternalLeafOffsetLenEdit;
 
+struct LeafReplacement {
+    size_t startLeafIndex;
+    size_t endLeafIndex;
+    vector<BufferPiece*> *replacements;
+};
+typedef struct LeafReplacement LeafReplacement;
+
 class Buffer
 {
   public:
@@ -121,6 +128,10 @@ class Buffer
     void _updateSingleNode(size_t nodeIndex);
     void _rebuildNodes();
     size_t _nextNonEmptyLeafIndex(size_t leafIndex);
+
+    void resolveEdits(vector<OffsetLenEdit2> &_edits, vector<InternalOffsetLenEdit2> &edits, vector<BufferString*> &toDelete);
+    void flushLeafEdits(size_t accumulatedLeafIndex, vector<LeafOffsetLenEdit2> &accumulatedLeafEdits, vector<LeafReplacement> &replacements);
+    void appendLeaf(BufferPiece *leaf, vector<BufferPiece*> &leafs, BufferPiece *&prevLeaf);
 };
 }
 

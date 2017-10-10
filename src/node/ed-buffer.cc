@@ -163,11 +163,11 @@ public:
     }
 
     void write(uint16_t *buffer, size_t start, size_t length) const {
-        source_->Write(buffer, start, length, v8::String::WriteOptions::NO_NULL_TERMINATION);
+        source_->Write(buffer, start, length, v8::String::WriteOptions::NO_NULL_TERMINATION | v8::String::WriteOptions::HINT_MANY_WRITES_EXPECTED);
     }
 
     void writeOneByte(uint8_t *buffer, size_t start, size_t length) const {
-        source_->WriteOneByte(buffer, start, length, v8::String::WriteOptions::NO_NULL_TERMINATION);
+        source_->WriteOneByte(buffer, start, length, v8::String::WriteOptions::NO_NULL_TERMINATION | v8::String::WriteOptions::HINT_MANY_WRITES_EXPECTED);
     }
 
     bool isOneByte() const {
@@ -181,6 +181,10 @@ public:
 
 void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
 {
+    struct timespec start;
+
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
+
     v8::Isolate *isolate = args.GetIsolate();
     v8::Local<v8::Context> ctx = isolate->GetCurrentContext();
     EdBuffer *obj = ObjectWrap::Unwrap<EdBuffer>(args.Holder());
@@ -199,7 +203,10 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
 
     const size_t maxPosition = obj->actual_->length();
 
-    size_t totalDataLength = 0;
+    edcore::print_diff("boilerplate", start);
+
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
+
     vector<edcore::OffsetLenEdit2> edits(_edits->Length());
     for (size_t i = 0; i < _edits->Length(); i++)
     {
@@ -260,15 +267,12 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
         edits[i].initialIndex = i;
         edits[i].offset = offset;
         edits[i].length = length;
-        v8::Local<v8::String> text = v8::Local<v8::String>::Cast(text_);
-        // v8::String::Value utf16Value(text);
         edits[i].text = NULL;
-        // edits[i].data = NULL;//*utf16Value;
-        // edits[i].dataLength = text->Length();//utf16Value->length();
-
-        totalDataLength += text->Length();
     }
 
+    edcore::print_diff("initial edit extraction", start);
+
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
     // Sort edits
     std::sort(edits.begin(), edits.end(), compareEdits);
 
@@ -284,12 +288,9 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
             return;
         }
     }
+    edcore::print_diff("sort and check edits", start);
 
-    // vector<v8StringAsBufferString*> toDelete(edits.size());
-    // Extract data
-    // printf("totalDataLength: %lu\n", totalDataLength);
-    // uint16_t *allData = new uint16_t[totalDataLength];
-    // uint16_t *currData = allData;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
     for (size_t i = 0; i < edits.size(); i++)
     {
         edcore::OffsetLenEdit2 &edit = edits[i];
@@ -299,41 +300,23 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
         v8::Local<v8::String> text = v8::Local<v8::String>::Cast(text_);
 
         edit.text = new v8StringAsBufferString(text);
-
-        // v8::String::Value utf16Value(text);
-
-        // const uint16_t *utf16Data = *utf16Value;
-        // // for (size_t j = 0; j < text->Length(); j++)
-        // // {
-        // //     printf("  -> %lu\n", utf16Data[j]);
-        // // }
-
-        // memcpy(currData, utf16Data, sizeof(uint16_t) * text->Length());
-        // edit.data = currData;
-
-        // currData += text->Length();
-        // v8::Local<v8::Value> text_;
-        // if (!maybeText_.ToLocal(&text_) || !text_->IsString())
-        // {
-        //     isolate->ThrowException(v8::Exception::Error(
-        //         v8::String::NewFromUtf8(isolate, "Expected .text to be a string")));
-        //     return;
-        // }
     }
+    edcore::print_diff("extract edit strings", start);
 
     // assert(false);
 
-    struct timespec start;
+
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
 
     obj->actual_->replaceOffsetLen(edits);
+
+    edcore::print_diff("actual->replaceOffsetLen", start);
 
     for (size_t i = 0, len = edits.size(); i < len; i++)
     {
         delete edits[i].text;
     }
 
-    edcore::print_diff("actual->replaceOffsetLen", start);
 
     // delete []allData;
 }

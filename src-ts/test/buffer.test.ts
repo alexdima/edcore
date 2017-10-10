@@ -8,19 +8,20 @@ import { buildBufferFromFixture, readFixture, buildBufferFromString } from './ut
 import { EdBuffer } from '../../index';
 import { IOffsetLengthEdit, getRandomInt, generateEdits, EditType } from './utils';
 
-const GENERATE_TESTS = true;
+const GENERATE_TESTS = false;
 const PRINT_TIMES = true;
 const ASSERT_INVARIANTS = true;
 
 // const FILE_NAME = 'checker.txt';
+// const FILE_NAME = 'checker-400-CRLF.txt';
 const FILE_NAME = 'checker-10.txt';
 const MIN_PARALLEL_EDITS_CNT = 1;
 const MAX_PARALLEL_EDITS_CNT = 1;
-const MIN_CONSECUTIVE_EDITS_CNT = 1;
-const MAX_CONSECUTIVE_EDITS_CNT = 1;
+const MIN_CONSECUTIVE_EDITS_CNT = 2;
+const MAX_CONSECUTIVE_EDITS_CNT = 2;
 const MIN_CHUNK_SIZE = 10;
-const MAX_CHUNK_SIZE = 1 << 16;
-const EDIT_TYPES = EditType.Inserts;
+const MAX_CHUNK_SIZE = 20;//500;//1 << 16;
+const EDIT_TYPES = EditType.Special;// EditType.Inserts;
 
 suite('Loading', () => {
 
@@ -301,15 +302,18 @@ suite('ReplaceOffsetLen', () => {
             const buff = buildBufferFromFixture('checker.txt');
             const initialContent = readFixture('checker.txt');
 
-            const time = PRINT_TIMES ? process.hrtime() : null;
-            buff.ReplaceOffsetLen([{
-                offset: buff.GetLength(),
-                length: 0,
-                text: initialContent
-            }]);
-            const diff = PRINT_TIMES ? process.hrtime(time) : null;
-            if (PRINT_TIMES) {
-                console.log(`ReplaceOffsetLen took ${diff[0] * 1e9 + diff[1]} nanoseconds, i.e. ${(diff[0] * 1e9 + diff[1]) / 1e6} ms.`);
+            for (let i = 0; i < 2; i++)
+            {
+                const time = PRINT_TIMES ? process.hrtime() : null;
+                buff.ReplaceOffsetLen([{
+                    offset: buff.GetLength(),
+                    length: 0,
+                    text: initialContent
+                }]);
+                const diff = PRINT_TIMES ? process.hrtime(time) : null;
+                if (PRINT_TIMES) {
+                    console.log(`ReplaceOffsetLen took ${diff[0] * 1e9 + diff[1]} nanoseconds, i.e. ${(diff[0] * 1e9 + diff[1]) / 1e6} ms.`);
+                }
             }
         });
     });
@@ -553,9 +557,94 @@ suite('ReplaceOffsetLen', () => {
                     "text":"bhreuynbkqwyuwxdopidqjgmotmkux\r\nbdtwaeaqeltqlh\rtyylhdghxomvfwtnwqgvqtxhvhdcqdffyxboahyvnzbcinwegttribtobjaginwuex"
                 }]
             ]);
-        })
+        });
 
-        GENERATE_TESTS=false;
+        test('gen23', () => {
+            runTest("checker-10.txt", 42608, [
+                [ { offset: 164,
+                    length: 35,
+                    text: 'vrosqoqxvoaztvntdwrwrnid\r\ncbuhfwzqavsoewpviorya\nxtzvhzip\r\nczegernssuzzdrzlmbvlorncowtavkcfoh\rbr\r\n\ndm' },
+                  { offset: 199,
+                    length: 25,
+                    text: 'gtrglbklyorosvspqvprlfmasjwefxesjjictnbqzicvtnmgbqsretczrnkiuvaxju\nxa\nixrbmfkpwiadxwjcvxmkilkmffhotzjgpsrzmrjviw\r' } ]
+            ]);
+        });
+
+        test('gen24', () => {
+            runTest("checker-400-CRLF.txt", 938, [
+                [
+                    {"offset":33,"length":131,"text":""},
+                    {"offset":424,"length":10498,"text":""},
+                    {"offset":11060,"length":2197,"text":""}
+                ],
+                [
+                    {"offset":553,"length":3012,"text":""},
+                    {"offset":6937,"length":3239,"text":""}
+                ],
+                [
+                    {"offset":1510,"length":4,"text":""},
+                    {"offset":1519,"length":201,"text":""},
+                    {"offset":1763,"length":1600,"text":""}
+                ],
+                [
+                    {"offset":33,"length":13,"text":""},
+                    {"offset":74,"length":25,"text":""},
+                    {"offset":132,"length":261,"text":""},
+                    {"offset":1023,"length":438,"text":""},
+                    {"offset":1642,"length":230,"text":""}
+                ],
+                [
+                    {"offset":238,"length":20,"text":""},
+                    {"offset":302,"length":158,"text":""},
+                    {"offset":729,"length":88,"text":""}
+                ],
+                [
+                    {"offset":0,"length":0,"text":""},
+                    {"offset":2,"length":0,"text":""},
+                    {"offset":14,"length":4,"text":""},
+                    {"offset":24,"length":4,"text":""},
+                    {"offset":50,"length":36,"text":""},
+                    {"offset":114,"length":9,"text":""},
+                    {"offset":253,"length":204,"text":""},
+                    {"offset":726,"length":28,"text":"u"},
+                    {"offset":755,"length":110,"text":""}
+                ],
+                [
+                    {"offset":2,"length":0,"text":""},
+                    {"offset":4,"length":15,"text":""},
+                    {"offset":24,"length":48,"text":""},
+                    {"offset":126,"length":292,"text":""}
+                ],
+                [
+                    {"offset":101,"length":12,"text":""},
+                    {"offset":138,"length":179,"text":"\n"}
+                ]
+            ]);
+        });
+
+        test('gen25', () => {
+            runTest("checker-10.txt", 14, [
+                [
+                    {"offset":205,"length":5,"text":"zde\n\r"}
+                ],
+                [
+                    {"offset":62,"length":118,"text":"k"},
+                    {"offset":210,"length":10,"text":"\ndbm"}
+                ]
+            ]);
+        });
+
+        test('gen26', () => {
+            runTest("checker-10.txt", 11, [
+                [{"offset":38,"length":79,"text":"n\nb\r"}],
+                [{"offset":42,"length":72,"text":"\nccf\rc"}]
+            ]);
+        });
+
+
+        // runTest("checker-400-CRLF.txt", 938, [[{"offset":33,"length":131,"text":""},{"offset":424,"length":10498,"text":""},{"offset":11060,"length":2197,"text":""}],[{"offset":553,"length":3012,"text":""},{"offset":6937,"length":3239,"text":""}],[{"offset":1510,"length":4,"text":""},{"offset":1519,"length":201,"text":""},{"offset":1763,"length":1600,"text":""}],[{"offset":33,"length":13,"text":""},{"offset":74,"length":25,"text":""},{"offset":132,"length":261,"text":""},{"offset":1023,"length":438,"text":""},{"offset":1642,"length":230,"text":""}],[{"offset":238,"length":20,"text":""},{"offset":302,"length":158,"text":""},{"offset":729,"length":88,"text":""}],[{"offset":0,"length":0,"text":""},{"offset":2,"length":0,"text":""},{"offset":14,"length":4,"text":""},{"offset":24,"length":4,"text":""},{"offset":50,"length":36,"text":""},{"offset":114,"length":9,"text":""},{"offset":253,"length":204,"text":""},{"offset":726,"length":28,"text":"u"},{"offset":755,"length":110,"text":""}],[{"offset":2,"length":0,"text":""},{"offset":4,"length":15,"text":""},{"offset":24,"length":48,"text":""},{"offset":126,"length":292,"text":""}],[{"offset":101,"length":12,"text":""},{"offset":138,"length":179,"text":"\n"}]]);
+
+        // GENERATE_TESTS=false;
     });
 
     (function () {
@@ -576,13 +665,13 @@ suite('ReplaceOffsetLen', () => {
             }
 
             run(): void {
-                console.log(this._chunkSize);
+                // console.log(this._chunkSize);
                 for (let i = 0; i < this._editsCnt; i++) {
                     let edits = generateEdits(EDIT_TYPES, this._content, MIN_PARALLEL_EDITS_CNT, MAX_PARALLEL_EDITS_CNT);
                     if (edits.length === 0) {
                         continue;
                     }
-                    console.log(edits);
+                    // console.log(edits);
                     this._edits.push(edits);
                     this._content = applyOffsetLengthEdits(this._content, edits);
 
@@ -605,7 +694,7 @@ suite('ReplaceOffsetLen', () => {
             }
         }
 
-        const GENERATE_CNT = GENERATE_TESTS ? 20000 : -1;
+        const GENERATE_CNT = GENERATE_TESTS ? 200000 : -1;
         for (let i = GENERATE_CNT; i > 0; i--) {
             // if (global.gc) {
             //     // if (i % 100 === 0) {

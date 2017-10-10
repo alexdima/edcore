@@ -10,4 +10,5 @@ fi
 cd $ROOT
 
 make BUILDTYPE=Debug -C build
+# make BUILDTYPE=Release -C build
 ./node_modules/.bin/mocha "$@"
