@@ -216,7 +216,11 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
 
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
 
+    // printf("mem usage before edit: %lu B = %lf KB\n", obj->actual_->memUsage(), ((double)obj->actual_->memUsage()) / 1024);
+
     obj->actual_->replaceOffsetLen(edits);
+
+    // printf("mem usage after edit: %lu B = %lf KB\n", obj->actual_->memUsage(), ((double)obj->actual_->memUsage()) / 1024);
 
     // edcore::print_diff("actual->replaceOffsetLen", start);
 

@@ -46,14 +46,22 @@ BufferPiece *BufferPiece::deleteLastChar2(const BufferPiece *target)
         newLineStartsLength = targetLineStartsLength;
     }
 
-    const size_t newCharsLength = targetCharsLength - 1;
-    uint16_t *newData = new uint16_t[newCharsLength];
-    target->write(newData, 0, newCharsLength);
-
     LINE_START_T *newLineStarts = new LINE_START_T[newLineStartsLength];
     memcpy(newLineStarts, targetLineStarts, sizeof(*newLineStarts) * newLineStartsLength);
 
-    return new TwoByteBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
+    const size_t newCharsLength = targetCharsLength - 1;
+    if (target->isOneByte())
+    {
+        uint8_t *newData = new uint8_t[newCharsLength];
+        target->writeOneByte(newData, 0, newCharsLength);
+        return new OneByteBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
+    }
+    else
+    {
+        uint16_t *newData = new uint16_t[newCharsLength];
+        target->write(newData, 0, newCharsLength);
+        return new TwoByteBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
+    }
 }
 
 BufferPiece *BufferPiece::insertFirstChar2(const BufferPiece *target, uint16_t character)
@@ -63,10 +71,6 @@ BufferPiece *BufferPiece::insertFirstChar2(const BufferPiece *target, uint16_t c
     const LINE_START_T *targetLineStarts = target->lineStarts();
     const bool insertLineStart = ((character == '\r' && (targetLineStartsLength == 0 || targetLineStarts[0] != 1 || target->charAt(0) != '\n')) || (character == '\n'));
 
-    const size_t newCharsLength = targetCharsLength + 1;
-    uint16_t *newData = new uint16_t[newCharsLength];
-    target->write(newData + 1, 0, targetCharsLength);
-    newData[0] = character;
 
     const size_t newLineStartsLength = (insertLineStart ? targetLineStartsLength + 1 : targetLineStartsLength);
     LINE_START_T *newLineStarts = new LINE_START_T[newLineStartsLength];
@@ -87,26 +91,35 @@ BufferPiece *BufferPiece::insertFirstChar2(const BufferPiece *target, uint16_t c
         }
     }
 
-    return new TwoByteBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
+    const size_t newCharsLength = targetCharsLength + 1;
+    if (target->isOneByte() && character < 256)
+    {
+        uint8_t *newData = new uint8_t[newCharsLength];
+        target->writeOneByte(newData + 1, 0, targetCharsLength);
+        newData[0] = character;
+        return new OneByteBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
+    }
+    else
+    {
+        uint16_t *newData = new uint16_t[newCharsLength];
+        target->write(newData + 1, 0, targetCharsLength);
+        newData[0] = character;
+        return new TwoByteBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
+    }
 }
 
 BufferPiece *BufferPiece::join2(const BufferPiece *first, const BufferPiece *second)
 {
     const size_t firstCharsLength = first->length();
     const size_t secondCharsLength = second->length();
-    const size_t newCharsLength = firstCharsLength + secondCharsLength;
-
-    uint16_t *newData = new uint16_t[newCharsLength];
-    first->write(newData, 0, firstCharsLength);
-    second->write(newData + firstCharsLength, 0, secondCharsLength);
 
     const size_t firstLineStartsLength = first->newLineCount();
     const size_t secondLineStartsLength = second->newLineCount();
-    const size_t newLineStartsLength = firstLineStartsLength + secondLineStartsLength;
 
     const LINE_START_T *firstLineStarts = first->lineStarts();
     const LINE_START_T *secondLineStarts = second->lineStarts();
 
+    const size_t newLineStartsLength = firstLineStartsLength + secondLineStartsLength;
     LINE_START_T *newLineStarts = new LINE_START_T[newLineStartsLength];
     memcpy(newLineStarts, firstLineStarts, sizeof(*newLineStarts) * firstLineStartsLength);
     for (size_t i = 0; i < secondLineStartsLength; i++)
@@ -114,7 +127,21 @@ BufferPiece *BufferPiece::join2(const BufferPiece *first, const BufferPiece *sec
         newLineStarts[i + firstLineStartsLength] = secondLineStarts[i] + firstCharsLength;
     }
 
-    return new TwoByteBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
+    const size_t newCharsLength = firstCharsLength + secondCharsLength;
+    if (first->isOneByte() && second->isOneByte())
+    {
+        uint8_t *newData = new uint8_t[newCharsLength];
+        first->writeOneByte(newData, 0, firstCharsLength);
+        second->writeOneByte(newData + firstCharsLength, 0, secondCharsLength);
+        return new OneByteBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
+    }
+    else
+    {
+        uint16_t *newData = new uint16_t[newCharsLength];
+        first->write(newData, 0, firstCharsLength);
+        second->write(newData + firstCharsLength, 0, secondCharsLength);
+        return new TwoByteBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
+    }
 }
 
 BufferString *recordString(BufferString *str, size_t index, vector<BufferString *> &toDelete)
@@ -140,9 +167,12 @@ void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetL
     vector<const BufferString *> pieces(2 * editsSize + 1);
     size_t originalFromIndex = 0;
     size_t piecesTextLength = 0;
+    bool resultIsOneByte = target->isOneByte();
     for (size_t i = 0; i < editsSize; i++)
     {
         LeafOffsetLenEdit2 &edit = edits[i];
+
+        resultIsOneByte = resultIsOneByte && edit.text->containsOnlyOneByte();
         // printf("~~~~leaf edit: %lu,%lu -> [%lu ~ ", edit.start, edit.length, edit.text->length());
         // edit.text->print();
         // printf("]\n");
@@ -164,7 +194,17 @@ void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetL
 
     size_t targetDataLength = piecesTextLength > maxLeafLength ? idealLeafLength : piecesTextLength;
     size_t targetDataOffset = 0;
-    uint16_t *targetData = new uint16_t[targetDataLength];
+
+    uint8_t *oneByteData = NULL;
+    uint16_t *twoByteData = NULL;
+    if (resultIsOneByte)
+    {
+        oneByteData = new uint8_t[targetDataLength];
+    }
+    else
+    {
+        twoByteData = new uint16_t[targetDataLength];
+    }
 
     for (size_t pieceIndex = 0, pieceCount = pieces.size(); pieceIndex < pieceCount; pieceIndex++)
     {
@@ -180,14 +220,35 @@ void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetL
         {
             if (targetDataOffset >= targetDataLength)
             {
-                result->push_back(new TwoByteBufferPiece(targetData, targetDataLength));
+                if (resultIsOneByte)
+                {
+                    result->push_back(new OneByteBufferPiece(oneByteData, targetDataLength));
+                }
+                else
+                {
+                    result->push_back(new TwoByteBufferPiece(twoByteData, targetDataLength));
+                }
 
                 targetDataLength = piecesTextLength > maxLeafLength ? idealLeafLength : piecesTextLength;
                 targetDataOffset = 0;
-                targetData = new uint16_t[targetDataLength];
+                if (resultIsOneByte)
+                {
+                    oneByteData = new uint8_t[targetDataLength];
+                }
+                else
+                {
+                    twoByteData = new uint16_t[targetDataLength];
+                }
             }
             size_t writingCnt = min(pieceLength - pieceOffset, targetDataLength - targetDataOffset);
-            pieceText->write(targetData + targetDataOffset, pieceOffset, writingCnt);
+            if (resultIsOneByte)
+            {
+                pieceText->writeOneByte(oneByteData + targetDataOffset, pieceOffset, writingCnt);
+            }
+            else
+            {
+                pieceText->write(twoByteData + targetDataOffset, pieceOffset, writingCnt);
+            }
 
             pieceOffset += writingCnt;
             targetDataOffset += writingCnt;
@@ -196,7 +257,15 @@ void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetL
             // check that the buffer piece does not end in a \r or high surrogate
             if (targetDataOffset == targetDataLength && piecesTextLength > 0)
             {
-                uint16_t lastChar = targetData[targetDataLength - 1];
+                uint16_t lastChar;
+                if (resultIsOneByte)
+                {
+                    lastChar = oneByteData[targetDataLength - 1];
+                }
+                else
+                {
+                    lastChar = twoByteData[targetDataLength - 1];
+                }
                 if (lastChar == '\r' || (0xD800 <= lastChar && lastChar <= 0xDBFF))
                 {
                     // move lastChar over to next buffer piece
@@ -209,7 +278,14 @@ void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetL
         }
     }
 
-    result->push_back(new TwoByteBufferPiece(targetData, targetDataLength));
+    if (resultIsOneByte)
+    {
+        result->push_back(new OneByteBufferPiece(oneByteData, targetDataLength));
+    }
+    else
+    {
+        result->push_back(new TwoByteBufferPiece(twoByteData, targetDataLength));
+    }
 
     for (size_t i = 0, len = toDelete.size(); i < len; i++)
     {
