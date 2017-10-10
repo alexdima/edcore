@@ -45,8 +45,8 @@ class BufferPiece
 
     size_t memUsage() const;
 
-    uint16_t deleteLastChar();
-    void insertFirstChar(uint16_t character);
+    BufferPiece *deleteLastChar2() const;
+    BufferPiece *insertFirstChar2(uint16_t character) const;
     void join(const BufferPiece *other);
     void replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const;
 
@@ -66,6 +66,18 @@ class BufferPiece
 
     void _rebuildLineStarts();
 };
+
+// class OneByteBufferPiece : public BufferPiece {
+
+// private:
+//     MyArray<uint8_t> chars_;
+// };
+
+// class TwoBytesBufferPiece: public BufferPiece {
+
+// private:
+//     MyArray<uint16_t> chars_;
+// };
 
 struct timespec time_diff(struct timespec start, struct timespec end);
 void print_diff(const char *pre, struct timespec start);

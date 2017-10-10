@@ -130,39 +130,62 @@ BufferPiece::~BufferPiece()
 {
 }
 
-uint16_t BufferPiece::deleteLastChar()
+BufferPiece *BufferPiece::deleteLastChar2() const
 {
     const size_t charsLength = chars_.length();
     const size_t lineStartsLength = lineStarts_.length();
 
-    assert(charsLength > 0);
-
-    const uint16_t ret = chars_[charsLength - 1];
-
+    size_t newLineStartsLength;
     if (lineStartsLength > 0 && lineStarts_[lineStartsLength - 1] == charsLength)
     {
-        lineStarts_.deleteLast();
+        newLineStartsLength = lineStartsLength - 1;
     }
-    chars_.deleteLast();
+    else
+    {
+        newLineStartsLength = lineStartsLength;
+    }
 
-    return ret;
+    const size_t newCharsLength = charsLength - 1;
+    uint16_t *data = new uint16_t[newCharsLength];
+    this->write(data, 0, newCharsLength);
+
+    LINE_START_T *lineStarts = new LINE_START_T[newLineStartsLength];
+    memcpy(lineStarts, lineStarts_.data(), sizeof(*lineStarts) * newLineStartsLength);
+
+    return new BufferPiece(data, newCharsLength, lineStarts, newLineStartsLength);
 }
 
-void BufferPiece::insertFirstChar(uint16_t character)
+BufferPiece *BufferPiece::insertFirstChar2(uint16_t character) const
 {
+    const size_t charsLength = chars_.length();
     const size_t lineStartsLength = lineStarts_.length();
-    const bool insertLineStart = (character == '\r' && (lineStartsLength == 0 || lineStarts_[0] != 1 || chars_[0] != '\n'));
+    const bool insertLineStart = (
+        (character == '\r' && (lineStartsLength == 0 || lineStarts_[0] != 1 || chars_[0] != '\n'))
+        || (character == '\n')
+    );
 
-    for (size_t i = 0; i < lineStartsLength; i++)
-    {
-        lineStarts_[i] += 1;
+    const size_t newCharsLength = charsLength + 1;
+    uint16_t *data = new uint16_t[newCharsLength];
+    this->write(data + 1, 0, charsLength);
+    data[0] = character;
+
+    const size_t newLineStartsLength = (insertLineStart ? lineStartsLength + 1 : lineStartsLength);
+    LINE_START_T *lineStarts = new LINE_START_T[newLineStartsLength];
+
+    if (insertLineStart) {
+        lineStarts[0] = 1;
+        for (size_t i = 0; i < lineStartsLength; i++)
+        {
+            lineStarts[i + 1] = lineStarts_[i] + 1;
+        }
+    } else {
+        for (size_t i = 0; i < lineStartsLength; i++)
+        {
+            lineStarts[i] = lineStarts_[i] + 1;
+        }
     }
 
-    if (insertLineStart)
-    {
-        lineStarts_.insertFirstElement(1);
-    }
-    chars_.insertFirstElement(character);
+    return new BufferPiece(data, newCharsLength, lineStarts, newLineStartsLength);
 }
 
 void BufferPiece::join(const BufferPiece *other)

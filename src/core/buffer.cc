@@ -461,9 +461,15 @@ void Buffer::appendLeaf(BufferPiece *leaf, vector<BufferPiece*> &leafs, BufferPi
         (lastChar >= 0xd800 && lastChar <= 0xdbff)
         || (lastChar == '\r' && firstChar == '\n')
     ) {
-        // assert(false);
-        prevLeaf->deleteLastChar();
-        leaf->insertFirstChar(lastChar);
+        BufferPiece *modifiedPrevLeaf = prevLeaf->deleteLastChar2();
+        delete prevLeaf;
+
+        leafs[leafs.size() - 1] = modifiedPrevLeaf;
+        prevLeaf = modifiedPrevLeaf;
+
+        BufferPiece *modifiedLeaf = leaf->insertFirstChar2(lastChar);
+        delete leaf;
+        leaf = modifiedLeaf;
     }
 
     leafs.push_back(leaf);

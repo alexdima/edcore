@@ -52,7 +52,10 @@ class MyArray
 
     ~MyArray()
     {
-        delete[] data_;
+        if (data_ != NULL)
+        {
+            delete[] data_;
+        }
     }
 
     T *data() const { return data_; }
@@ -60,11 +63,6 @@ class MyArray
     size_t memUsage() const { return sizeof(MyArray) + capacity_ * sizeof(T); }
 
     T &operator[](size_t index) const { return data_[index]; }
-
-    void deleteLast()
-    {
-        length_--;
-    }
 
     void insertFirstElement(T element)
     {
