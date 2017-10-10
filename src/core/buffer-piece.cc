@@ -12,30 +12,12 @@
 namespace edcore
 {
 
-size_t BufferPiece::memUsage() const
+TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *___data, size_t len)
 {
-    return (
-        sizeof(BufferPiece) +
-        chars_.memUsage() +
-        lineStarts_.memUsage());
-}
+    assert(___data != NULL);
+    chars_.assign(___data, len);
 
-BufferPiece::BufferPiece(uint16_t *data, size_t len)
-{
-    assert(data != NULL);
 
-    chars_.assign(data, len);
-    _rebuildLineStarts();
-}
-
-BufferPiece::BufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength)
-{
-    chars_.assign(data, dataLength);
-    lineStarts_.assign(lineStarts, lineStartsLength);
-}
-
-void BufferPiece::_rebuildLineStarts()
-{
     const size_t length = chars_.length();
     const uint16_t *data = chars_.data();
 
@@ -126,11 +108,17 @@ void BufferPiece::_rebuildLineStarts()
     lineStarts_.assign(lineStarts);
 }
 
-BufferPiece::~BufferPiece()
+TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength)
+{
+    chars_.assign(data, dataLength);
+    lineStarts_.assign(lineStarts, lineStartsLength);
+}
+
+TwoBytesBufferPiece::~TwoBytesBufferPiece()
 {
 }
 
-BufferPiece *BufferPiece::deleteLastChar2() const
+BufferPiece *TwoBytesBufferPiece::deleteLastChar2() const
 {
     const size_t charsLength = chars_.length();
     const size_t lineStartsLength = lineStarts_.length();
@@ -152,10 +140,10 @@ BufferPiece *BufferPiece::deleteLastChar2() const
     LINE_START_T *lineStarts = new LINE_START_T[newLineStartsLength];
     memcpy(lineStarts, lineStarts_.data(), sizeof(*lineStarts) * newLineStartsLength);
 
-    return new BufferPiece(data, newCharsLength, lineStarts, newLineStartsLength);
+    return new TwoBytesBufferPiece(data, newCharsLength, lineStarts, newLineStartsLength);
 }
 
-BufferPiece *BufferPiece::insertFirstChar2(uint16_t character) const
+BufferPiece *TwoBytesBufferPiece::insertFirstChar2(uint16_t character) const
 {
     const size_t charsLength = chars_.length();
     const size_t lineStartsLength = lineStarts_.length();
@@ -185,13 +173,13 @@ BufferPiece *BufferPiece::insertFirstChar2(uint16_t character) const
         }
     }
 
-    return new BufferPiece(data, newCharsLength, lineStarts, newLineStartsLength);
+    return new TwoBytesBufferPiece(data, newCharsLength, lineStarts, newLineStartsLength);
 }
 
-BufferPiece * BufferPiece::join2(const BufferPiece *other) const
+BufferPiece * TwoBytesBufferPiece::join2(const BufferPiece *other) const
 {
     const size_t charsLength = chars_.length();
-    const size_t otherCharsLength = other->chars_.length();
+    const size_t otherCharsLength = other->length();
     const size_t newCharsLength = charsLength + otherCharsLength;
 
     uint16_t *data = new uint16_t[newCharsLength];
@@ -199,23 +187,24 @@ BufferPiece * BufferPiece::join2(const BufferPiece *other) const
     other->write(data + charsLength, 0, otherCharsLength);
 
     const size_t lineStartsLength = lineStarts_.length();
-    const size_t otherLineStartsLength = other->lineStarts_.length();
+    const size_t otherLineStartsLength = other->newLineCount();
     const size_t newLineStartsLength = lineStartsLength + otherLineStartsLength;
 
     LINE_START_T *lineStarts = new LINE_START_T[newLineStartsLength];
     memcpy(lineStarts, lineStarts_.data(), sizeof(*lineStarts) * lineStartsLength);
+    const LINE_START_T *otherLineStarts = other->lineStarts();
     for (size_t i = 0; i < otherLineStartsLength; i++)
     {
-        lineStarts[i + lineStartsLength] = other->lineStarts_[i] + charsLength;
+        lineStarts[i + lineStartsLength] = otherLineStarts[i] + charsLength;
     }
 
-    return new BufferPiece(data, newCharsLength, lineStarts, newLineStartsLength);
+    return new TwoBytesBufferPiece(data, newCharsLength, lineStarts, newLineStartsLength);
 }
 
 class BufferPieceString : public BufferString
 {
 public:
-    BufferPieceString(const BufferPiece *target) { target_ = target; }
+    BufferPieceString(const TwoBytesBufferPiece *target) { target_ = target; }
     size_t length() const { return target_->length(); }
     void write(uint16_t *buffer, size_t start, size_t length) const {
         target_->write(buffer, start, length);
@@ -224,7 +213,7 @@ public:
     bool isOneByte() const { return false; /* TODO! */ }
     bool containsOnlyOneByte() const { return false; /* TODO! */ }
 private:
-    const BufferPiece *target_;
+    const TwoBytesBufferPiece *target_;
 };
 
 BufferString * recordString(BufferString *str, size_t index, vector<BufferString*> &toDelete)
@@ -233,7 +222,7 @@ BufferString * recordString(BufferString *str, size_t index, vector<BufferString
     return str;
 }
 
-void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const
+void TwoBytesBufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const
 {
     const size_t editsSize = edits.size();
     assert(editsSize > 0);
@@ -291,7 +280,7 @@ void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t ide
         {
             if (targetDataOffset >= targetDataLength)
             {
-                result->push_back(new BufferPiece(targetData, targetDataLength));
+                result->push_back(new TwoBytesBufferPiece(targetData, targetDataLength));
 
                 targetDataLength = piecesTextLength > maxLeafLength ? idealLeafLength : piecesTextLength;
                 targetDataOffset = 0;
@@ -320,7 +309,7 @@ void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t ide
         }
     }
 
-    result->push_back(new BufferPiece(targetData, targetDataLength));
+    result->push_back(new TwoBytesBufferPiece(targetData, targetDataLength));
 
     for (size_t i = 0, len = toDelete.size(); i < len; i++)
     {
@@ -328,7 +317,7 @@ void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t ide
     }
 }
 
-void BufferPiece::assertInvariants() const
+void TwoBytesBufferPiece::assertInvariants() const
 {
     const size_t charsLength = chars_.length();
     const size_t lineStartsLength = lineStarts_.length();

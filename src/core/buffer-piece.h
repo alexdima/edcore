@@ -34,34 +34,27 @@ typedef struct LeafOffsetLenEdit2 LeafOffsetLenEdit2;
 class BufferPiece
 {
   public:
-    BufferPiece(uint16_t *data, size_t len);
-    ~BufferPiece();
+    virtual ~BufferPiece() {};
 
-    size_t length() const { return chars_.length(); }
-    uint16_t charAt(size_t index) const { return chars_[index]; }
+    virtual size_t length() const = 0;
+    virtual uint16_t charAt(size_t index) const = 0;
 
     size_t newLineCount() const { return lineStarts_.length(); }
     LINE_START_T lineStartFor(size_t relativeLineIndex) const { return lineStarts_[relativeLineIndex]; }
+    const LINE_START_T* lineStarts() const { return lineStarts_.data(); }
 
-    size_t memUsage() const;
+    virtual size_t memUsage() const = 0;
 
-    BufferPiece *deleteLastChar2() const;
-    BufferPiece *insertFirstChar2(uint16_t character) const;
-    BufferPiece * join2(const BufferPiece *other) const;
-    void replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const;
+    virtual BufferPiece *deleteLastChar2() const = 0;
+    virtual BufferPiece *insertFirstChar2(uint16_t character) const = 0;
+    virtual BufferPiece * join2(const BufferPiece *other) const = 0;
+    virtual void replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const = 0;
 
-    void assertInvariants() const;
+    virtual void assertInvariants() const = 0;
 
-    void write(uint16_t *buffer, size_t start, size_t length) const {
-        assert(start + length <= chars_.length());
-        const uint16_t *src = chars_.data();
-        memcpy(buffer, src + start, sizeof(*buffer) * length);
-    }
+    virtual void write(uint16_t *buffer, size_t start, size_t length) const = 0;
 
-  private:
-    BufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength);
-
-    MyArray<uint16_t> chars_;
+  protected:
     MyArray<LINE_START_T> lineStarts_;
 
     void _rebuildLineStarts();
@@ -70,14 +63,36 @@ class BufferPiece
 // class OneByteBufferPiece : public BufferPiece {
 
 // private:
-//     MyArray<uint8_t> chars_;
+//     uint8_t* chars_;
 // };
 
-// class TwoBytesBufferPiece: public BufferPiece {
+class TwoBytesBufferPiece: public BufferPiece {
+public:
+    TwoBytesBufferPiece(uint16_t *data, size_t len);
+    ~TwoBytesBufferPiece();
 
-// private:
-//     MyArray<uint16_t> chars_;
-// };
+    size_t memUsage() const { return (sizeof(TwoBytesBufferPiece) + chars_.memUsage() + lineStarts_.memUsage()); }
+    size_t length() const { return chars_.length(); }
+    uint16_t charAt(size_t index) const { return chars_[index]; }
+
+    void write(uint16_t *buffer, size_t start, size_t length) const {
+        assert(start + length <= chars_.length());
+        const uint16_t *src = chars_.data();
+        memcpy(buffer, src + start, sizeof(*buffer) * length);
+    }
+
+    BufferPiece *deleteLastChar2() const;
+    BufferPiece *insertFirstChar2(uint16_t character) const;
+    BufferPiece * join2(const BufferPiece *other) const;
+    void replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const;
+
+    void assertInvariants() const;
+
+private:
+
+    MyArray<uint16_t> chars_;
+    TwoBytesBufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength);
+};
 
 struct timespec time_diff(struct timespec start, struct timespec end);
 void print_diff(const char *pre, struct timespec start);
