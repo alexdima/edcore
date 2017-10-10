@@ -188,25 +188,28 @@ BufferPiece *BufferPiece::insertFirstChar2(uint16_t character) const
     return new BufferPiece(data, newCharsLength, lineStarts, newLineStartsLength);
 }
 
-void BufferPiece::join(const BufferPiece *other)
+BufferPiece * BufferPiece::join2(const BufferPiece *other) const
 {
     const size_t charsLength = chars_.length();
     const size_t otherCharsLength = other->chars_.length();
+    const size_t newCharsLength = charsLength + otherCharsLength;
+
+    uint16_t *data = new uint16_t[newCharsLength];
+    this->write(data, 0, charsLength);
+    other->write(data + charsLength, 0, otherCharsLength);
+
+    const size_t lineStartsLength = lineStarts_.length();
     const size_t otherLineStartsLength = other->lineStarts_.length();
+    const size_t newLineStartsLength = lineStartsLength + otherLineStartsLength;
 
-    if (otherCharsLength == 0)
-    {
-        // nothing to append
-        return;
-    }
-
+    LINE_START_T *lineStarts = new LINE_START_T[newLineStartsLength];
+    memcpy(lineStarts, lineStarts_.data(), sizeof(*lineStarts) * lineStartsLength);
     for (size_t i = 0; i < otherLineStartsLength; i++)
     {
-        other->lineStarts_[i] += charsLength;
+        lineStarts[i + lineStartsLength] = other->lineStarts_[i] + charsLength;
     }
 
-    lineStarts_.append(other->lineStarts_.data(), otherLineStartsLength);
-    chars_.append(other->chars_.data(), otherCharsLength);
+    return new BufferPiece(data, newCharsLength, lineStarts, newLineStartsLength);
 }
 
 class BufferPieceString : public BufferString
@@ -325,7 +328,7 @@ void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t ide
     }
 }
 
-void BufferPiece::assertInvariants()
+void BufferPiece::assertInvariants() const
 {
     const size_t charsLength = chars_.length();
     const size_t lineStartsLength = lineStarts_.length();

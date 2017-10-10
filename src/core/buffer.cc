@@ -446,8 +446,11 @@ void Buffer::appendLeaf(BufferPiece *leaf, vector<BufferPiece*> &leafs, BufferPi
 
     if ((prevLeafLength < minLeafLength_ || currLeafLength < minLeafLength_) && prevLeafLength + currLeafLength <= maxLeafLength_)
     {
-        // should join
-        prevLeaf->join(leaf);
+        BufferPiece *modifiedPrevLeaf = prevLeaf->join2(leaf);
+        delete prevLeaf;
+
+        leafs[leafs.size() - 1] = modifiedPrevLeaf;
+        prevLeaf = modifiedPrevLeaf;
 
         // this leaf must be deleted
         delete leaf;

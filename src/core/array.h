@@ -63,46 +63,6 @@ class MyArray
     size_t memUsage() const { return sizeof(MyArray) + capacity_ * sizeof(T); }
 
     T &operator[](size_t index) const { return data_[index]; }
-
-    void insertFirstElement(T element)
-    {
-        if (length_ + 1 <= capacity_)
-        {
-            // fits in place
-            memmove(data_ + 0 + 1, data_ + 0, sizeof(T) * length_);
-        }
-        else
-        {
-            size_t newCapacity = length_ + 1;
-            T *newData = new T[newCapacity];
-            memcpy(newData, data_, sizeof(T) * 0);
-            memcpy(newData + 0 + 1, data_ + 0, sizeof(T) * length_);
-
-            delete[] data_;
-            data_ = newData;
-            capacity_ = newCapacity;
-        }
-
-        data_[0] = element;
-        length_ = length_ + 1;
-    }
-
-    void append(const T *source, size_t sourceLength)
-    {
-        if (length_ + sourceLength > capacity_)
-        {
-            size_t newCapacity = length_ + sourceLength;
-            T *newData = new T[newCapacity];
-            memcpy(newData, data_, sizeof(T) * length_);
-
-            delete[] data_;
-            data_ = newData;
-            capacity_ = newCapacity;
-        }
-
-        memcpy(data_ + length_, source, sizeof(T) * sourceLength);
-        length_ = length_ + sourceLength;
-    }
 };
 }
 

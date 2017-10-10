@@ -47,10 +47,10 @@ class BufferPiece
 
     BufferPiece *deleteLastChar2() const;
     BufferPiece *insertFirstChar2(uint16_t character) const;
-    void join(const BufferPiece *other);
+    BufferPiece * join2(const BufferPiece *other) const;
     void replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const;
 
-    void assertInvariants();
+    void assertInvariants() const;
 
     void write(uint16_t *buffer, size_t start, size_t length) const {
         assert(start + length <= chars_.length());
