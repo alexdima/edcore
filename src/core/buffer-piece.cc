@@ -824,7 +824,7 @@ void BufferPiece::replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t ide
 
     result->push_back(new BufferPiece(targetData, targetDataLength));
 
-    print_diff("        creating buffer pieces", start);
+    // print_diff("        creating buffer pieces", start);
 
     for (size_t i = 0, len = toDelete.size(); i < len; i++)
     {

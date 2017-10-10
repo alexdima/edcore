@@ -35,16 +35,20 @@ function getRandomEOL(): string {
 }
 
 function generateFile(length: number): string {
-    let result = '';
-    while (result.length < length) {
-        let line = getRandomString(0, Math.min(100, length - result.length))
-        if (result.length + line.length >= length) {
-            result += line;
-        } else {
-            result += line + getRandomEOL();
+    let result: string[] = [];
+    let resultLength = 0;
+    while (resultLength < length) {
+        let line = getRandomString(0, Math.min(100, length - resultLength))
+        result.push(line);
+        resultLength += line.length;
+
+        if (resultLength + line.length < length) {
+            const eol = getRandomEOL();
+            result.push(eol);
+            resultLength += eol.length;
         }
     }
-    return result;
+    return result.join('');
 }
 
 export const enum EditType { Special, Regular, Inserts, Deletes };
@@ -88,7 +92,7 @@ export function generateEdits(editType: EditType, content: string, minCnt: numbe
                     ? Math.round(0.60 * maxOffset)
                     : editType === EditType.Deletes
                         ? Math.round(0.05 * maxOffset)
-                        : 50
+                        : 0.5 * maxOffset
             );
             let textLength = getRandomInt(minTextLength, maxTextLength);
             text = generateFile(textLength);

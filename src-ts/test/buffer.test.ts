@@ -9,7 +9,7 @@ import { EdBuffer } from '../../index';
 import { IOffsetLengthEdit, getRandomInt, generateEdits, EditType } from './utils';
 
 const GENERATE_TESTS = false;
-const PRINT_TIMES = true;
+const PRINT_TIMES = false;
 const ASSERT_INVARIANTS = true;
 
 // const FILE_NAME = 'checker.txt';
@@ -17,11 +17,11 @@ const ASSERT_INVARIANTS = true;
 const FILE_NAME = 'checker-10.txt';
 const MIN_PARALLEL_EDITS_CNT = 1;
 const MAX_PARALLEL_EDITS_CNT = 1;
-const MIN_CONSECUTIVE_EDITS_CNT = 2;
-const MAX_CONSECUTIVE_EDITS_CNT = 2;
+const MIN_CONSECUTIVE_EDITS_CNT = 1;
+const MAX_CONSECUTIVE_EDITS_CNT = 1;
 const MIN_CHUNK_SIZE = 10;
-const MAX_CHUNK_SIZE = 20;//500;//1 << 16;
-const EDIT_TYPES = EditType.Special;// EditType.Inserts;
+const MAX_CHUNK_SIZE = 1 << 16;
+const EDIT_TYPES = EditType.Regular;// EditType.Inserts;
 
 suite('Loading', () => {
 
@@ -302,7 +302,7 @@ suite('ReplaceOffsetLen', () => {
             const buff = buildBufferFromFixture('checker.txt');
             const initialContent = readFixture('checker.txt');
 
-            for (let i = 0; i < 2; i++)
+            for (let i = 0; i < 1; i++)
             {
                 const time = PRINT_TIMES ? process.hrtime() : null;
                 buff.ReplaceOffsetLen([{
@@ -694,7 +694,7 @@ suite('ReplaceOffsetLen', () => {
             }
         }
 
-        const GENERATE_CNT = GENERATE_TESTS ? 200000 : -1;
+        const GENERATE_CNT = GENERATE_TESTS ? 20000 : -1;
         for (let i = GENERATE_CNT; i > 0; i--) {
             // if (global.gc) {
             //     // if (i % 100 === 0) {

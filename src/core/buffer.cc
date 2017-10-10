@@ -540,7 +540,7 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
         edit.endLeafIndex = tmp.leafIndex;
         edit.endInnerOffset = tmp.offset - tmp.leafStartOffset;
     }
-    print_diff("locateLeafs", start);
+    // print_diff("locateLeafs", start);
 
     // for (size_t i = 0; i < edits.size(); i++) {
     //     printf("replace @ ([%lu,%lu,%lu],%lu) -> [%lu]\n", edits[i].start.offset, edits[i].start.leafIndex, edits[i].start.leafStartOffset, edits[i].length, edits[i].dataLength);
@@ -617,7 +617,7 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
         lastDirtyIndex = max(lastDirtyIndex, accumulatedLeafIndex);
     }
 
-    print_diff("edits", start);
+    // print_diff("edits", start);
 
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
     // Check that a leaf doesn't end in \r and the next one begins in \n
@@ -663,7 +663,7 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
         nextLeaf->insertFirstChar(lastChar);
         lastDirtyIndex = max(lastDirtyIndex, nextLeafIndex);
     }
-    print_diff("\\r high surrogate check", start);
+    // print_diff("\\r high surrogate check", start);
 
     size_t analyzeFrom = max(1UL, firstDirtyIndex);
     size_t analyzeTo = min(lastDirtyIndex + 2, initialLeafLength);
@@ -745,14 +745,14 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit> &_edits)
 
         leafs_.assign(leafs);
 
-        print_diff("split&join", start);
+        // print_diff("split&join", start);
 
         size_t newNodesCount = 1 << log2(leafs_.length());
         if (newNodesCount != nodesCount_)
         {
             clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
             _rebuildNodes();
-            print_diff("_rebuildNodes", start);
+            // print_diff("_rebuildNodes", start);
             return;
         }
 
@@ -1002,7 +1002,7 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit2> &_edits)
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
     vector<InternalOffsetLenEdit2> edits;
     resolveEdits(_edits, edits, toDelete);
-    print_diff("    resolving edits", start);
+    // print_diff("    resolving edits", start);
 
     size_t accumulatedLeafIndex = 0;
     vector<LeafOffsetLenEdit2> accumulatedLeafEdits;
@@ -1050,7 +1050,7 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit2> &_edits)
     {
         delete toDelete[i];
     }
-    print_diff("    applying edits", start);
+    // print_diff("    applying edits", start);
 
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
 
@@ -1095,7 +1095,7 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit2> &_edits)
         // leafs.push_back(leafs_[leafIndex]);
         leafIndex++;
     }
-    print_diff("    recreating leafs", start);
+    // print_diff("    recreating leafs", start);
 
     if (leafs.size() == 0) {
         // don't leave behind an empty leafs array
@@ -1108,7 +1108,7 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit2> &_edits)
 
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
     _rebuildNodes();
-    print_diff("    rebuilding nodes", start);
+    // print_diff("    rebuilding nodes", start);
 }
 
 

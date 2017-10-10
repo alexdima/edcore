@@ -203,7 +203,7 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
 
     const size_t maxPosition = obj->actual_->length();
 
-    edcore::print_diff("boilerplate", start);
+    // edcore::print_diff("boilerplate", start);
 
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
 
@@ -270,7 +270,7 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
         edits[i].text = NULL;
     }
 
-    edcore::print_diff("initial edit extraction", start);
+    // edcore::print_diff("initial edit extraction", start);
 
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
     // Sort edits
@@ -288,7 +288,7 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
             return;
         }
     }
-    edcore::print_diff("sort and check edits", start);
+    // edcore::print_diff("sort and check edits", start);
 
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
     for (size_t i = 0; i < edits.size(); i++)
@@ -301,7 +301,7 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
 
         edit.text = new v8StringAsBufferString(text);
     }
-    edcore::print_diff("extract edit strings", start);
+    // edcore::print_diff("extract edit strings", start);
 
     // assert(false);
 
@@ -310,7 +310,7 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
 
     obj->actual_->replaceOffsetLen(edits);
 
-    edcore::print_diff("actual->replaceOffsetLen", start);
+    // edcore::print_diff("actual->replaceOffsetLen", start);
 
     for (size_t i = 0, len = edits.size(); i < len; i++)
     {
