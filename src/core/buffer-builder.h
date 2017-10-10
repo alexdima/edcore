@@ -30,6 +30,9 @@ class BufferBuilder
     bool hasPreviousChar_;
     uint16_t previousChar_;
     double averageChunkSize_;
+
+    void acceptChunk1(const BufferString *str, bool allowEmptyStrings);
+    void acceptChunk2(const BufferString *str);
 };
 }
 

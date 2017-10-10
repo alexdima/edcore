@@ -12,6 +12,18 @@
 namespace edcore
 {
 
+BufferString *BufferString::createFromSingle(uint16_t character)
+{
+    if (character < 256)
+    {
+        return new SingleOneByteString(character);
+    }
+    else
+    {
+        return new SingleTwoByteString(character);
+    }
+}
+
 BufferString *BufferString::empty()
 {
     static EmptyString value;
@@ -20,13 +32,13 @@ BufferString *BufferString::empty()
 
 BufferString *BufferString::carriageReturn()
 {
-    static SingleByteString value('\r');
+    static SingleOneByteString value('\r');
     return &value;
 }
 
 BufferString *BufferString::lineFeed()
 {
-    static SingleByteString value('\n');
+    static SingleOneByteString value('\n');
     return &value;
 }
 
@@ -61,7 +73,6 @@ void ConcatString::write(uint16_t *buffer, size_t start, size_t length) const
 
 void ConcatString::writeOneByte(uint8_t *buffer, size_t start, size_t length) const
 {
-    assert(false); // broken
     assert(start + length <= this->length());
 
     const size_t leftLength = left_->length();
@@ -69,13 +80,13 @@ void ConcatString::writeOneByte(uint8_t *buffer, size_t start, size_t length) co
     size_t leftCnt = 0;
     if (start < leftLength)
     {
-        leftCnt = leftLength - start;
+        leftCnt = min(leftLength - start, length);
         left_->writeOneByte(buffer, start, leftCnt);
     }
 
     if (leftCnt < length)
     {
-        right_->writeOneByte(buffer + leftCnt, start - leftCnt, length - leftCnt);
+        right_->writeOneByte(buffer + leftCnt, (start >= leftLength ? start - leftLength : 0), length - leftCnt);
     }
 }
 

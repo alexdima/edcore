@@ -12,6 +12,24 @@
 namespace edcore
 {
 
+BufferPiece *BufferPiece::createFromString(const BufferString *str)
+{
+    const size_t strLength = str->length();
+
+    if (str->containsOnlyOneByte())
+    {
+        uint8_t *oneByteData = new uint8_t[strLength];
+        str->writeOneByte(oneByteData, 0, strLength);
+        return new OneByteBufferPiece(oneByteData, strLength);
+    }
+    else
+    {
+        uint16_t *twoByteData = new uint16_t[strLength];
+        str->write(twoByteData, 0, strLength);
+        return new TwoByteBufferPiece(twoByteData, strLength);
+    }
+}
+
 BufferPiece *BufferPiece::deleteLastChar2(const BufferPiece *target)
 {
     const size_t targetCharsLength = target->length();
@@ -35,7 +53,7 @@ BufferPiece *BufferPiece::deleteLastChar2(const BufferPiece *target)
     LINE_START_T *newLineStarts = new LINE_START_T[newLineStartsLength];
     memcpy(newLineStarts, targetLineStarts, sizeof(*newLineStarts) * newLineStartsLength);
 
-    return new TwoBytesBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
+    return new TwoByteBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
 }
 
 BufferPiece *BufferPiece::insertFirstChar2(const BufferPiece *target, uint16_t character)
@@ -69,7 +87,7 @@ BufferPiece *BufferPiece::insertFirstChar2(const BufferPiece *target, uint16_t c
         }
     }
 
-    return new TwoBytesBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
+    return new TwoByteBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
 }
 
 BufferPiece *BufferPiece::join2(const BufferPiece *first, const BufferPiece *second)
@@ -96,7 +114,7 @@ BufferPiece *BufferPiece::join2(const BufferPiece *first, const BufferPiece *sec
         newLineStarts[i + firstLineStartsLength] = secondLineStarts[i] + firstCharsLength;
     }
 
-    return new TwoBytesBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
+    return new TwoByteBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
 }
 
 BufferString *recordString(BufferString *str, size_t index, vector<BufferString *> &toDelete)
@@ -162,7 +180,7 @@ void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetL
         {
             if (targetDataOffset >= targetDataLength)
             {
-                result->push_back(new TwoBytesBufferPiece(targetData, targetDataLength));
+                result->push_back(new TwoByteBufferPiece(targetData, targetDataLength));
 
                 targetDataLength = piecesTextLength > maxLeafLength ? idealLeafLength : piecesTextLength;
                 targetDataOffset = 0;
@@ -191,7 +209,7 @@ void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetL
         }
     }
 
-    result->push_back(new TwoBytesBufferPiece(targetData, targetDataLength));
+    result->push_back(new TwoByteBufferPiece(targetData, targetDataLength));
 
     for (size_t i = 0, len = toDelete.size(); i < len; i++)
     {
@@ -306,9 +324,9 @@ bool OneByteBufferPiece::containsOnlyOneByte() const {
     return true;
 }
 
-// ---- TwoBytesBufferPiece
+// ---- TwoByteBufferPiece
 
-TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t length)
+TwoByteBufferPiece::TwoByteBufferPiece(uint16_t *data, size_t length)
 {
     assert(data != NULL);
     chars_ = data;
@@ -319,7 +337,7 @@ TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t length)
     lineStarts_.assign(lineStarts);
 }
 
-TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength)
+TwoByteBufferPiece::TwoByteBufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength)
 {
     assert(data != NULL && lineStarts != NULL);
     chars_ = data;
@@ -327,23 +345,23 @@ TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t dataLength, LINE
     lineStarts_.assign(lineStarts, lineStartsLength);
 }
 
-TwoBytesBufferPiece::~TwoBytesBufferPiece()
+TwoByteBufferPiece::~TwoByteBufferPiece()
 {
     delete[] chars_;
 }
 
-void TwoBytesBufferPiece::assertInvariants() const
+void TwoByteBufferPiece::assertInvariants() const
 {
     doAssertInvariants(chars_, charsLength_, lineStarts_.data(), lineStarts_.length());
 }
 
-void TwoBytesBufferPiece::write(uint16_t *buffer, size_t start, size_t length) const
+void TwoByteBufferPiece::write(uint16_t *buffer, size_t start, size_t length) const
 {
     assert(start + length <= charsLength_);
     memcpy(buffer, chars_ + start, sizeof(*buffer) * length);
 }
 
-void TwoBytesBufferPiece::writeOneByte(uint8_t *buffer, size_t start, size_t length) const
+void TwoByteBufferPiece::writeOneByte(uint8_t *buffer, size_t start, size_t length) const
 {
     assert(start + length <= charsLength_);
     for (size_t i = 0; i < length; i++)
@@ -352,7 +370,7 @@ void TwoBytesBufferPiece::writeOneByte(uint8_t *buffer, size_t start, size_t len
     }
 }
 
-bool TwoBytesBufferPiece::containsOnlyOneByte() const
+bool TwoByteBufferPiece::containsOnlyOneByte() const
 {
     for (size_t i = 0; i < charsLength_; i++)
     {

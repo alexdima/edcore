@@ -597,8 +597,8 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit2> &_edits)
     if (leafs.size() == 0)
     {
         // don't leave behind an empty leafs array
-        uint16_t *tmp = new uint16_t[0];
-        BufferPiece *tmp2 = new TwoBytesBufferPiece(tmp, 0);
+        uint8_t *tmp = new uint8_t[0];
+        BufferPiece *tmp2 = new OneByteBufferPiece(tmp, 0);
         leafs.push_back(tmp2);
     }
 

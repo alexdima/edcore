@@ -46,10 +46,11 @@ class BufferPiece : public BufferString
     virtual void assertInvariants() const = 0;
     // virtual void write(uint16_t *buffer, size_t start, size_t length) const = 0;
 
-    static void replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece *> *result);
+    static BufferPiece *createFromString(const BufferString *str);
     static BufferPiece *deleteLastChar2(const BufferPiece *target);
     static BufferPiece *insertFirstChar2(const BufferPiece *target, uint16_t character);
     static BufferPiece *join2(const BufferPiece *first, const BufferPiece *second);
+    static void replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece *> *result);
 
   protected:
     MyArray<LINE_START_T> lineStarts_;
@@ -78,16 +79,16 @@ class OneByteBufferPiece : public BufferPiece
     size_t charsLength_;
 };
 
-class TwoBytesBufferPiece : public BufferPiece
+class TwoByteBufferPiece : public BufferPiece
 {
   public:
-    TwoBytesBufferPiece(uint16_t *data, size_t len);
-    TwoBytesBufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength);
-    ~TwoBytesBufferPiece();
+    TwoByteBufferPiece(uint16_t *data, size_t len);
+    TwoByteBufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength);
+    ~TwoByteBufferPiece();
 
     void assertInvariants() const;
 
-    size_t memUsage() const { return (sizeof(TwoBytesBufferPiece) + (charsLength_ * sizeof(*chars_)) + lineStarts_.memUsage()); }
+    size_t memUsage() const { return (sizeof(TwoByteBufferPiece) + (charsLength_ * sizeof(*chars_)) + lineStarts_.memUsage()); }
     size_t length() const { return charsLength_; }
     uint16_t charAt(size_t index) const { return chars_[index]; }
     bool isOneByte() const { return false; }

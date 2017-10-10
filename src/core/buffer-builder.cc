@@ -17,6 +17,13 @@ BufferBuilder::BufferBuilder()
     previousChar_ = 0;
 }
 
+uint16_t getLastCharacter(const BufferString *str)
+{
+    uint16_t lastChar;
+    str->write(&lastChar, str->length() - 1, 1);
+    return lastChar;
+}
+
 void BufferBuilder::acceptChunk(const BufferString *str)
 {
     const size_t strLength = str->length();
@@ -30,73 +37,77 @@ void BufferBuilder::acceptChunk(const BufferString *str)
     const size_t rawPiecesCount = rawPieces_.size();
     averageChunkSize_ = (averageChunkSize_ * rawPiecesCount + strLength) / (rawPiecesCount + 1);
 
-    bool holdBackLastChar = false;
-
-    uint16_t lastChar;
-    str->write(&lastChar, strLength - 1, 1);
-
+    uint16_t lastChar = getLastCharacter(str);
     if (lastChar == 13 || (lastChar >= 0xd800 && lastChar <= 0xdbff))
     {
         // last character is \r or a high surrogate => keep it back
-        holdBackLastChar = true;
+        BufferString *tmp = BufferString::substr(str, 0, str->length() - 1);
+        acceptChunk1(tmp, false);
+        delete tmp;
+        hasPreviousChar_ = true;
+        previousChar_ = lastChar;
+    }
+    else
+    {
+        acceptChunk1(str, false);
+        hasPreviousChar_ = false;
+        previousChar_ = lastChar;
+    }
+}
+
+void BufferBuilder::acceptChunk1(const BufferString *str, bool allowEmptyStrings)
+{
+    const size_t strLength = str->length();
+    if (!allowEmptyStrings && strLength == 0)
+    {
+        // Nothing to do
+        return;
     }
 
-    size_t dataLen = (hasPreviousChar_ ? 1 : 0) + strLength - (holdBackLastChar ? 1 : 0);
-    uint16_t *data = new uint16_t[dataLen];
     if (hasPreviousChar_)
     {
-        data[0] = previousChar_;
+        BufferString *tmp1 = BufferString::createFromSingle(previousChar_);
+        BufferString *tmp2 = BufferString::concat(tmp1, str);
+        acceptChunk2(tmp2);
+        delete tmp2;
+        delete tmp1;
     }
-    str->write(data + (hasPreviousChar_ ? 1 : 0), 0, strLength - (holdBackLastChar ? 1 : 0));
+    else
+    {
+        acceptChunk2(str);
+    }
+}
 
-    rawPieces_.push_back(new TwoBytesBufferPiece(data, dataLen));
-    hasPreviousChar_ = holdBackLastChar;
-    previousChar_ = lastChar;
+void BufferBuilder::acceptChunk2(const BufferString *str)
+{
+    rawPieces_.push_back(BufferPiece::createFromString(str));
 }
 
 void BufferBuilder::finish()
 {
     if (rawPieces_.size() == 0)
     {
-        // no chunks
-
-        size_t dataLen;
-        uint16_t *data;
-
-        if (hasPreviousChar_)
-        {
-            hasPreviousChar_ = false;
-            dataLen = 1;
-            data = new uint16_t[1];
-            data[0] = previousChar_;
-        }
-        else
-        {
-            dataLen = 0;
-            data = new uint16_t[0];
-        }
-
-        rawPieces_.push_back(new TwoBytesBufferPiece(data, dataLen));
-
+        // no chunks => forcefully go through accept chunk
+        acceptChunk1(BufferString::empty(), true);
         return;
     }
 
     if (hasPreviousChar_)
     {
         hasPreviousChar_ = false;
+
         // recreate last chunk
-
         BufferPiece *lastPiece = rawPieces_[rawPieces_.size() - 1];
-        size_t prevDataLen = lastPiece->length();
 
-        size_t dataLen = prevDataLen + 1;
-        uint16_t *data = new uint16_t[dataLen];
-        lastPiece->write(data, 0, prevDataLen);
-        data[dataLen - 1] = previousChar_;
+        BufferString *tmp1 = BufferString::createFromSingle(previousChar_);
+        BufferPiece *tmp2 = BufferPiece::createFromString(tmp1);
+        delete tmp1;
 
+        BufferPiece *newLastPiece = BufferPiece::join2(lastPiece, tmp2);
         delete lastPiece;
+        delete tmp2;
 
-        rawPieces_[rawPieces_.size() - 1] = new TwoBytesBufferPiece(data, dataLen);
+        rawPieces_[rawPieces_.size() - 1] = newLastPiece;
     }
 }
 

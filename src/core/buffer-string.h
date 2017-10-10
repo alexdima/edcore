@@ -44,6 +44,8 @@ class BufferString
      */
     virtual bool containsOnlyOneByte() const = 0;
 
+    static BufferString *createFromSingle(uint16_t character);
+
     static BufferString *concat(const BufferString *a, const BufferString *b);
 
     static BufferString *substr(const BufferString *target, size_t start, size_t length);
@@ -81,10 +83,10 @@ class BufferString
     }
 };
 
-class SingleByteString : public BufferString
+class SingleOneByteString : public BufferString
 {
   public:
-    SingleByteString(uint8_t character) { character_ = character; }
+    SingleOneByteString(uint8_t character) { character_ = character; }
     size_t length() const { return 1; }
     void write(uint16_t *buffer, size_t start, size_t length) const { buffer[0] = character_; }
     void writeOneByte(uint8_t *buffer, size_t start, size_t length) const { buffer[0] = character_; }
@@ -93,6 +95,20 @@ class SingleByteString : public BufferString
 
   private:
     uint8_t character_;
+};
+
+class SingleTwoByteString : public BufferString
+{
+  public:
+    SingleTwoByteString(uint16_t character) { character_ = character; }
+    size_t length() const { return 1; }
+    void write(uint16_t *buffer, size_t start, size_t length) const { buffer[0] = character_; }
+    void writeOneByte(uint8_t *buffer, size_t start, size_t length) const { buffer[0] = character_; }
+    bool isOneByte() const { return false; }
+    bool containsOnlyOneByte() const { return false; }
+
+  private:
+    uint16_t character_;
 };
 
 class EmptyString : public BufferString
