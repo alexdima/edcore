@@ -38,14 +38,16 @@ class BufferPiece
     ~BufferPiece();
 
     size_t length() const { return chars_.length(); }
-    const LINE_START_T *lineStarts() const { return lineStarts_.data(); }
+    uint16_t charAt(size_t index) const { return chars_[index]; }
+
     size_t newLineCount() const { return lineStarts_.length(); }
+    LINE_START_T lineStartFor(size_t relativeLineIndex) const { return lineStarts_[relativeLineIndex]; }
+
     size_t memUsage() const;
 
     uint16_t deleteLastChar();
     void insertFirstChar(uint16_t character);
     void join(const BufferPiece *other);
-
     void replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const;
 
     void assertInvariants();
@@ -54,12 +56,6 @@ class BufferPiece
         assert(start + length <= chars_.length());
         const uint16_t *src = chars_.data();
         memcpy(buffer, src + start, sizeof(*buffer) * length);
-    }
-
-    uint16_t charAt(size_t index)
-    {
-        assert(index < chars_.length());
-        return chars_[index];
     }
 
   private:
