@@ -19,7 +19,7 @@ namespace edcore
 class BufferString
 {
   public:
-    virtual ~BufferString() {} ;
+    virtual ~BufferString(){};
     /**
      * Returns the number of characters in this string.
      */
@@ -44,24 +44,24 @@ class BufferString
      */
     virtual bool containsOnlyOneByte() const = 0;
 
-    static BufferString* concat(const BufferString*a, const BufferString*b);
+    static BufferString *concat(const BufferString *a, const BufferString *b);
 
-    static BufferString* substr(const BufferString*target, size_t start, size_t length);
+    static BufferString *substr(const BufferString *target, size_t start, size_t length);
 
     /**
      * A zero length string.
      */
-    static BufferString* empty();
+    static BufferString *empty();
 
     /**
      * A string containing carriage return (\r).
      */
-    static BufferString* carriageReturn();
+    static BufferString *carriageReturn();
 
     /**
      * A string containing line feed (\n).
      */
-    static BufferString* lineFeed();
+    static BufferString *lineFeed();
 
     void print() const
     {
@@ -76,8 +76,8 @@ class BufferString
         }
         chars[len] = 0;
         printf("<<%s>>", chars);
-        delete []target;
-        delete []chars;
+        delete[] target;
+        delete[] chars;
     }
 };
 
@@ -98,7 +98,7 @@ class SingleByteString : public BufferString
 class EmptyString : public BufferString
 {
   public:
-    EmptyString() {};
+    EmptyString(){};
     size_t length() const { return 0; }
     void write(uint16_t *buffer, size_t start, size_t length) const {}
     void writeOneByte(uint8_t *buffer, size_t start, size_t length) const {}
@@ -108,29 +108,39 @@ class EmptyString : public BufferString
 
 class ConcatString : public BufferString
 {
-public:
-    ConcatString(const BufferString *left, const BufferString *right) { left_ = left; right_ = right; }
+  public:
+    ConcatString(const BufferString *left, const BufferString *right)
+    {
+        left_ = left;
+        right_ = right;
+    }
     size_t length() const { return left_->length() + right_->length(); }
     void write(uint16_t *buffer, size_t start, size_t length) const;
     void writeOneByte(uint8_t *buffer, size_t start, size_t length) const;
     bool isOneByte() const { return left_->isOneByte() && right_->isOneByte(); }
     bool containsOnlyOneByte() const { return left_->containsOnlyOneByte() && right_->containsOnlyOneByte(); }
 
-private:
+  private:
     const BufferString *left_;
     const BufferString *right_;
 };
 
 class SubString : public BufferString
 {
-public:
-    SubString(const BufferString *target, size_t start, size_t length) { target_ = target; start_ = start; length_ = length; }
+  public:
+    SubString(const BufferString *target, size_t start, size_t length)
+    {
+        target_ = target;
+        start_ = start;
+        length_ = length;
+    }
     size_t length() const { return length_; }
     void write(uint16_t *buffer, size_t start, size_t length) const;
     void writeOneByte(uint8_t *buffer, size_t start, size_t length) const;
     bool isOneByte() const { return target_->isOneByte(); /* TODO! a substring could become one byte */ }
     bool containsOnlyOneByte() const { return target_->containsOnlyOneByte(); /* TODO! a substring could become one byte */ }
-private:
+
+  private:
     const BufferString *target_;
     size_t start_;
     size_t length_;

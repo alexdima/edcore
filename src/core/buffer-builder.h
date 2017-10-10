@@ -26,7 +26,7 @@ class BufferBuilder
     Buffer *Build();
 
   private:
-    vector<BufferPiece*> _rawPieces;
+    vector<BufferPiece *> _rawPieces;
     bool _hasPreviousChar;
     uint16_t _previousChar;
     double _averageChunkSize;

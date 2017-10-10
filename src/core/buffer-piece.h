@@ -30,15 +30,14 @@ struct LeafOffsetLenEdit2
 };
 typedef struct LeafOffsetLenEdit2 LeafOffsetLenEdit2;
 
-
 class BufferPiece
 {
   public:
-    virtual ~BufferPiece() {};
+    virtual ~BufferPiece(){};
 
     size_t newLineCount() const { return lineStarts_.length(); }
     LINE_START_T lineStartFor(size_t relativeLineIndex) const { return lineStarts_[relativeLineIndex]; }
-    const LINE_START_T* lineStarts() const { return lineStarts_.data(); }
+    const LINE_START_T *lineStarts() const { return lineStarts_.data(); }
 
     virtual size_t length() const = 0;
     virtual uint16_t charAt(size_t index) const = 0;
@@ -47,10 +46,10 @@ class BufferPiece
     virtual void assertInvariants() const = 0;
     virtual void write(uint16_t *buffer, size_t start, size_t length) const = 0;
 
-    static void replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result);
+    static void replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece *> *result);
     static BufferPiece *deleteLastChar2(const BufferPiece *target);
     static BufferPiece *insertFirstChar2(const BufferPiece *target, uint16_t character);
-    static BufferPiece * join2(const BufferPiece *first, const BufferPiece *second);
+    static BufferPiece *join2(const BufferPiece *first, const BufferPiece *second);
 
   protected:
     MyArray<LINE_START_T> lineStarts_;
@@ -62,8 +61,9 @@ class BufferPiece
 //     uint8_t* chars_;
 // };
 
-class TwoBytesBufferPiece: public BufferPiece {
-public:
+class TwoBytesBufferPiece : public BufferPiece
+{
+  public:
     TwoBytesBufferPiece(uint16_t *data, size_t len);
     TwoBytesBufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength);
     ~TwoBytesBufferPiece();
@@ -72,15 +72,15 @@ public:
     size_t length() const { return charsLength_; }
     uint16_t charAt(size_t index) const { return chars_[index]; }
 
-    void write(uint16_t *buffer, size_t start, size_t length) const {
+    void write(uint16_t *buffer, size_t start, size_t length) const
+    {
         assert(start + length <= charsLength_);
         memcpy(buffer, chars_ + start, sizeof(*buffer) * length);
     }
 
     void assertInvariants() const;
 
-private:
-
+  private:
     uint16_t *chars_;
     size_t charsLength_;
 };

@@ -89,30 +89,36 @@ bool compareEdits(edcore::OffsetLenEdit2 &a, edcore::OffsetLenEdit2 &b)
 
 class v8StringAsBufferString : public edcore::BufferString
 {
-private:
+  private:
     v8::Local<v8::String> source_;
-public:
-    v8StringAsBufferString(v8::Local<v8::String> &source): source_(source)
+
+  public:
+    v8StringAsBufferString(v8::Local<v8::String> &source) : source_(source)
     {
     }
 
-    size_t length() const {
+    size_t length() const
+    {
         return source_->Length();
     }
 
-    void write(uint16_t *buffer, size_t start, size_t length) const {
+    void write(uint16_t *buffer, size_t start, size_t length) const
+    {
         source_->Write(buffer, start, length, v8::String::WriteOptions::NO_NULL_TERMINATION | v8::String::WriteOptions::HINT_MANY_WRITES_EXPECTED);
     }
 
-    void writeOneByte(uint8_t *buffer, size_t start, size_t length) const {
+    void writeOneByte(uint8_t *buffer, size_t start, size_t length) const
+    {
         source_->WriteOneByte(buffer, start, length, v8::String::WriteOptions::NO_NULL_TERMINATION | v8::String::WriteOptions::HINT_MANY_WRITES_EXPECTED);
     }
 
-    bool isOneByte() const {
+    bool isOneByte() const
+    {
         return source_->IsOneByte();
     }
 
-    bool containsOnlyOneByte() const {
+    bool containsOnlyOneByte() const
+    {
         return source_->ContainsOnlyOneByte();
     }
 };
@@ -243,7 +249,6 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
 
     // assert(false);
 
-
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
 
     obj->actual_->replaceOffsetLen(edits);
@@ -254,7 +259,6 @@ void EdBuffer::ReplaceOffsetLen(const v8::FunctionCallbackInfo<v8::Value> &args)
     {
         delete edits[i].text;
     }
-
 
     // delete []allData;
 }

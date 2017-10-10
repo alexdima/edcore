@@ -12,58 +12,11 @@
 namespace edcore
 {
 
-TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t length)
-{
-    assert(data != NULL);
-    chars_ = data;
-    charsLength_ = length;
-
-    vector<LINE_START_T> lineStarts;
-
-    for (size_t i = 0; i < length; i++)
-    {
-        uint16_t chr = data[i];
-
-        if (chr == '\r')
-        {
-            if (i + 1 < length && data[i + 1] == '\n')
-            {
-                // \r\n... case
-                lineStarts.push_back(i + 2);
-                i++; // skip \n
-            }
-            else
-            {
-                // \r... case
-                lineStarts.push_back(i + 1);
-            }
-        }
-        else if (chr == '\n')
-        {
-            lineStarts.push_back(i + 1);
-        }
-    }
-
-    lineStarts_.assign(lineStarts);
-}
-
-TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength)
-{
-    chars_ = data;
-    charsLength_ = dataLength;
-    lineStarts_.assign(lineStarts, lineStartsLength);
-}
-
-TwoBytesBufferPiece::~TwoBytesBufferPiece()
-{
-    delete []chars_;
-}
-
 BufferPiece *BufferPiece::deleteLastChar2(const BufferPiece *target)
 {
     const size_t targetCharsLength = target->length();
     const size_t targetLineStartsLength = target->newLineCount();
-    const LINE_START_T* targetLineStarts = target->lineStarts();
+    const LINE_START_T *targetLineStarts = target->lineStarts();
 
     size_t newLineStartsLength;
     if (targetLineStartsLength > 0 && targetLineStarts[targetLineStartsLength - 1] == targetCharsLength)
@@ -89,11 +42,8 @@ BufferPiece *BufferPiece::insertFirstChar2(const BufferPiece *target, uint16_t c
 {
     const size_t targetCharsLength = target->length();
     const size_t targetLineStartsLength = target->newLineCount();
-    const LINE_START_T* targetLineStarts = target->lineStarts();
-    const bool insertLineStart = (
-        (character == '\r' && (targetLineStartsLength == 0 || targetLineStarts[0] != 1 || target->charAt(0) != '\n'))
-        || (character == '\n')
-    );
+    const LINE_START_T *targetLineStarts = target->lineStarts();
+    const bool insertLineStart = ((character == '\r' && (targetLineStartsLength == 0 || targetLineStarts[0] != 1 || target->charAt(0) != '\n')) || (character == '\n'));
 
     const size_t newCharsLength = targetCharsLength + 1;
     uint16_t *newData = new uint16_t[newCharsLength];
@@ -103,13 +53,16 @@ BufferPiece *BufferPiece::insertFirstChar2(const BufferPiece *target, uint16_t c
     const size_t newLineStartsLength = (insertLineStart ? targetLineStartsLength + 1 : targetLineStartsLength);
     LINE_START_T *newLineStarts = new LINE_START_T[newLineStartsLength];
 
-    if (insertLineStart) {
+    if (insertLineStart)
+    {
         newLineStarts[0] = 1;
         for (size_t i = 0; i < targetLineStartsLength; i++)
         {
             newLineStarts[i + 1] = targetLineStarts[i] + 1;
         }
-    } else {
+    }
+    else
+    {
         for (size_t i = 0; i < targetLineStartsLength; i++)
         {
             newLineStarts[i] = targetLineStarts[i] + 1;
@@ -119,7 +72,7 @@ BufferPiece *BufferPiece::insertFirstChar2(const BufferPiece *target, uint16_t c
     return new TwoBytesBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
 }
 
-BufferPiece * BufferPiece::join2(const BufferPiece *first, const BufferPiece *second)
+BufferPiece *BufferPiece::join2(const BufferPiece *first, const BufferPiece *second)
 {
     const size_t firstCharsLength = first->length();
     const size_t secondCharsLength = second->length();
@@ -148,26 +101,28 @@ BufferPiece * BufferPiece::join2(const BufferPiece *first, const BufferPiece *se
 
 class BufferPieceString : public BufferString
 {
-public:
+  public:
     BufferPieceString(const BufferPiece *target) { target_ = target; }
     size_t length() const { return target_->length(); }
-    void write(uint16_t *buffer, size_t start, size_t length) const {
+    void write(uint16_t *buffer, size_t start, size_t length) const
+    {
         target_->write(buffer, start, length);
     }
     void writeOneByte(uint8_t *buffer, size_t start, size_t length) const { assert(false); /* TODO! */ }
     bool isOneByte() const { return false; /* TODO! */ }
     bool containsOnlyOneByte() const { return false; /* TODO! */ }
-private:
+
+  private:
     const BufferPiece *target_;
 };
 
-BufferString * recordString(BufferString *str, size_t index, vector<BufferString*> &toDelete)
+BufferString *recordString(BufferString *str, size_t index, vector<BufferString *> &toDelete)
 {
     toDelete[index] = str;
     return str;
 }
 
-void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result)
+void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece *> *result)
 {
     const size_t editsSize = edits.size();
     assert(editsSize > 0);
@@ -179,7 +134,7 @@ void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetL
         return;
     }
 
-    vector<BufferString*> toDelete(editsSize + 2);
+    vector<BufferString *> toDelete(editsSize + 2);
     BufferString *myString = recordString(new BufferPieceString(target), 0, toDelete);
 
     vector<const BufferString *> pieces(2 * editsSize + 1);
@@ -194,11 +149,11 @@ void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetL
 
         // maintain the chars that survive to the left of this edit
         BufferString *originalText = recordString(BufferString::substr(myString, originalFromIndex, edit.start - originalFromIndex), i + 1, toDelete);
-        pieces[2*i] = originalText;
+        pieces[2 * i] = originalText;
         piecesTextLength += originalText->length();
 
         originalFromIndex = edit.start + edit.length;
-        pieces[2*i+1] = edit.text;
+        pieces[2 * i + 1] = edit.text;
         piecesTextLength += edit.text->length();
     }
 
@@ -262,6 +217,53 @@ void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetL
     }
 }
 
+TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t length)
+{
+    assert(data != NULL);
+    chars_ = data;
+    charsLength_ = length;
+
+    vector<LINE_START_T> lineStarts;
+
+    for (size_t i = 0; i < length; i++)
+    {
+        uint16_t chr = data[i];
+
+        if (chr == '\r')
+        {
+            if (i + 1 < length && data[i + 1] == '\n')
+            {
+                // \r\n... case
+                lineStarts.push_back(i + 2);
+                i++; // skip \n
+            }
+            else
+            {
+                // \r... case
+                lineStarts.push_back(i + 1);
+            }
+        }
+        else if (chr == '\n')
+        {
+            lineStarts.push_back(i + 1);
+        }
+    }
+
+    lineStarts_.assign(lineStarts);
+}
+
+TwoBytesBufferPiece::TwoBytesBufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength)
+{
+    chars_ = data;
+    charsLength_ = dataLength;
+    lineStarts_.assign(lineStarts, lineStartsLength);
+}
+
+TwoBytesBufferPiece::~TwoBytesBufferPiece()
+{
+    delete[] chars_;
+}
+
 void TwoBytesBufferPiece::assertInvariants() const
 {
     const size_t lineStartsLength = lineStarts_.length();
@@ -294,15 +296,18 @@ void TwoBytesBufferPiece::assertInvariants() const
 
 struct timespec time_diff(struct timespec start, struct timespec end)
 {
-	struct timespec temp;
-	if ((end.tv_nsec-start.tv_nsec)<0) {
-		temp.tv_sec = end.tv_sec-start.tv_sec-1;
-		temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
-	} else {
-		temp.tv_sec = end.tv_sec-start.tv_sec;
-		temp.tv_nsec = end.tv_nsec-start.tv_nsec;
-	}
-	return temp;
+    struct timespec temp;
+    if ((end.tv_nsec - start.tv_nsec) < 0)
+    {
+        temp.tv_sec = end.tv_sec - start.tv_sec - 1;
+        temp.tv_nsec = 1000000000 + end.tv_nsec - start.tv_nsec;
+    }
+    else
+    {
+        temp.tv_sec = end.tv_sec - start.tv_sec;
+        temp.tv_nsec = end.tv_nsec - start.tv_nsec;
+    }
+    return temp;
 }
 
 void print_diff(const char *pre, struct timespec start)

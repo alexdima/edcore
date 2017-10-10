@@ -301,7 +301,7 @@ bool Buffer::findLine(size_t lineNumber, BufferCursor &start, BufferCursor &end)
     return true;
 }
 
-void Buffer::resolveEdits(vector<OffsetLenEdit2> &_edits, vector<InternalOffsetLenEdit2> &edits, vector<BufferString*> &toDelete)
+void Buffer::resolveEdits(vector<OffsetLenEdit2> &_edits, vector<InternalOffsetLenEdit2> &edits, vector<BufferString *> &toDelete)
 {
     // Check if we must merge adjacent edits
     size_t mergedCnt = 1;
@@ -309,7 +309,8 @@ void Buffer::resolveEdits(vector<OffsetLenEdit2> &_edits, vector<InternalOffsetL
     {
         OffsetLenEdit2 &prevEdit = _edits[i - 1];
         OffsetLenEdit2 &edit = _edits[i];
-        if (prevEdit.offset + prevEdit.length == edit.offset) {
+        if (prevEdit.offset + prevEdit.length == edit.offset)
+        {
             continue;
         }
         mergedCnt++;
@@ -318,21 +319,26 @@ void Buffer::resolveEdits(vector<OffsetLenEdit2> &_edits, vector<InternalOffsetL
     vector<OffsetLenEdit2> *actual;
 
     vector<OffsetLenEdit2> _merged;
-    if (mergedCnt != _edits.size()) {
+    if (mergedCnt != _edits.size())
+    {
         _merged.resize(mergedCnt);
         size_t dest = 0;
 
         OffsetLenEdit2 prev = _edits[0];
-        for (size_t i = 1; i < _edits.size(); i++) {
+        for (size_t i = 1; i < _edits.size(); i++)
+        {
             OffsetLenEdit2 curr = _edits[i];
 
-            if (prev.offset + prev.length == curr.offset) {
+            if (prev.offset + prev.length == curr.offset)
+            {
                 // merge into `prev`
                 prev.length = prev.length + curr.length;
-                BufferString* newText = BufferString::concat(prev.text, curr.text);
+                BufferString *newText = BufferString::concat(prev.text, curr.text);
                 toDelete.push_back(newText);
                 prev.text = newText;
-            } else {
+            }
+            else
+            {
                 _merged[dest++] = prev;
                 prev = curr;
             }
@@ -340,7 +346,9 @@ void Buffer::resolveEdits(vector<OffsetLenEdit2> &_edits, vector<InternalOffsetL
         _merged[dest++] = prev;
 
         actual = &_merged;
-    } else {
+    }
+    else
+    {
         actual = &_edits;
     }
 
@@ -364,7 +372,7 @@ void Buffer::resolveEdits(vector<OffsetLenEdit2> &_edits, vector<InternalOffsetL
             if (charBefore == '\r')
             {
                 // include the replacement of \r in the edit
-                BufferString* newText = BufferString::concat(BufferString::carriageReturn(), edit.text);
+                BufferString *newText = BufferString::concat(BufferString::carriageReturn(), edit.text);
                 toDelete.push_back(newText);
                 edit.text = newText;
 
@@ -385,7 +393,7 @@ void Buffer::resolveEdits(vector<OffsetLenEdit2> &_edits, vector<InternalOffsetL
             if (charAfter == '\n')
             {
                 // include the replacement of \n in the edit
-                BufferString* newText = BufferString::concat(edit.text, BufferString::lineFeed());
+                BufferString *newText = BufferString::concat(edit.text, BufferString::lineFeed());
                 toDelete.push_back(newText);
                 edit.text = newText;
 
@@ -397,7 +405,7 @@ void Buffer::resolveEdits(vector<OffsetLenEdit2> &_edits, vector<InternalOffsetL
     }
 }
 
-LeafReplacement& pushLeafReplacement(size_t startLeafIndex, size_t endLeafIndex, vector<LeafReplacement> &replacements)
+LeafReplacement &pushLeafReplacement(size_t startLeafIndex, size_t endLeafIndex, vector<LeafReplacement> &replacements)
 {
     LeafReplacement tmp;
     replacements.push_back(tmp);
@@ -405,7 +413,7 @@ LeafReplacement& pushLeafReplacement(size_t startLeafIndex, size_t endLeafIndex,
     LeafReplacement &res = replacements[replacements.size() - 1];
     res.startLeafIndex = startLeafIndex;
     res.endLeafIndex = endLeafIndex;
-    res.replacements = new vector<BufferPiece*>();
+    res.replacements = new vector<BufferPiece *>();
     return res;
 }
 
@@ -432,7 +440,7 @@ void pushLeafEdits(size_t start, size_t length, const BufferString *text, vector
     }
 }
 
-void Buffer::appendLeaf(BufferPiece *leaf, vector<BufferPiece*> &leafs, BufferPiece *&prevLeaf)
+void Buffer::appendLeaf(BufferPiece *leaf, vector<BufferPiece *> &leafs, BufferPiece *&prevLeaf)
 {
     if (prevLeaf == NULL)
     {
@@ -461,9 +469,8 @@ void Buffer::appendLeaf(BufferPiece *leaf, vector<BufferPiece*> &leafs, BufferPi
     uint16_t firstChar = leaf->charAt(0);
 
     if (
-        (lastChar >= 0xd800 && lastChar <= 0xdbff)
-        || (lastChar == '\r' && firstChar == '\n')
-    ) {
+        (lastChar >= 0xd800 && lastChar <= 0xdbff) || (lastChar == '\r' && firstChar == '\n'))
+    {
         BufferPiece *modifiedPrevLeaf = BufferPiece::deleteLastChar2(prevLeaf);
         delete prevLeaf;
 
@@ -484,7 +491,7 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit2> &_edits)
     struct timespec start;
 
     const size_t initialLeafLength = leafs_.length();
-    vector<BufferString*> toDelete;
+    vector<BufferString *> toDelete;
 
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
     vector<InternalOffsetLenEdit2> edits;
@@ -521,7 +528,8 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit2> &_edits)
             accumulatedLeafIndex = endLeafIndex;
 
             // delete leafs in the middle
-            if (startLeafIndex + 1 < endLeafIndex) {
+            if (startLeafIndex + 1 < endLeafIndex)
+            {
                 pushLeafReplacement(startLeafIndex + 1, endLeafIndex - 1, replacements);
             }
 
@@ -541,7 +549,7 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit2> &_edits)
 
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
 
-    vector<BufferPiece*> leafs;
+    vector<BufferPiece *> leafs;
     size_t leafIndex = 0;
     BufferPiece *prevLeaf = NULL;
 
@@ -550,17 +558,19 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit2> &_edits)
     {
         size_t replaceStartLeafIndex = replacements[i].startLeafIndex;
         size_t replaceEndLeafIndex = replacements[i].endLeafIndex;
-        vector<BufferPiece*> innerLeafs = *(replacements[i].replacements);
+        vector<BufferPiece *> innerLeafs = *(replacements[i].replacements);
 
         // add leafs to the left of this replace op.
-        while (leafIndex < replaceStartLeafIndex) {
+        while (leafIndex < replaceStartLeafIndex)
+        {
             appendLeaf(leafs_[leafIndex], leafs, prevLeaf);
             // leafs.push_back(leafs_[leafIndex]);
             leafIndex++;
         }
 
         // delete leafs that get replaced.
-        while (leafIndex <= replaceEndLeafIndex) {
+        while (leafIndex <= replaceEndLeafIndex)
+        {
             delete leafs_[leafIndex];
             leafIndex++;
         }
@@ -584,7 +594,8 @@ void Buffer::replaceOffsetLen(vector<OffsetLenEdit2> &_edits)
     }
     // print_diff("    recreating leafs", start);
 
-    if (leafs.size() == 0) {
+    if (leafs.size() == 0)
+    {
         // don't leave behind an empty leafs array
         uint16_t *tmp = new uint16_t[0];
         BufferPiece *tmp2 = new TwoBytesBufferPiece(tmp, 0);
