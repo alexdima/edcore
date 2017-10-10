@@ -30,7 +30,7 @@ struct LeafOffsetLenEdit2
 };
 typedef struct LeafOffsetLenEdit2 LeafOffsetLenEdit2;
 
-class BufferPiece
+class BufferPiece : public BufferString
 {
   public:
     virtual ~BufferPiece(){};
@@ -44,7 +44,7 @@ class BufferPiece
     virtual size_t memUsage() const = 0;
 
     virtual void assertInvariants() const = 0;
-    virtual void write(uint16_t *buffer, size_t start, size_t length) const = 0;
+    // virtual void write(uint16_t *buffer, size_t start, size_t length) const = 0;
 
     static void replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece *> *result);
     static BufferPiece *deleteLastChar2(const BufferPiece *target);
@@ -77,6 +77,10 @@ class TwoBytesBufferPiece : public BufferPiece
         assert(start + length <= charsLength_);
         memcpy(buffer, chars_ + start, sizeof(*buffer) * length);
     }
+
+    void writeOneByte(uint8_t *buffer, size_t start, size_t length) const { assert(false); /* TODO! */ }
+    bool isOneByte() const { return false; /* TODO! */ }
+    bool containsOnlyOneByte() const { return false; /* TODO! */ }
 
     void assertInvariants() const;
 

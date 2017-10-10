@@ -99,23 +99,6 @@ BufferPiece *BufferPiece::join2(const BufferPiece *first, const BufferPiece *sec
     return new TwoBytesBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
 }
 
-class BufferPieceString : public BufferString
-{
-  public:
-    BufferPieceString(const BufferPiece *target) { target_ = target; }
-    size_t length() const { return target_->length(); }
-    void write(uint16_t *buffer, size_t start, size_t length) const
-    {
-        target_->write(buffer, start, length);
-    }
-    void writeOneByte(uint8_t *buffer, size_t start, size_t length) const { assert(false); /* TODO! */ }
-    bool isOneByte() const { return false; /* TODO! */ }
-    bool containsOnlyOneByte() const { return false; /* TODO! */ }
-
-  private:
-    const BufferPiece *target_;
-};
-
 BufferString *recordString(BufferString *str, size_t index, vector<BufferString *> &toDelete)
 {
     toDelete[index] = str;
@@ -134,8 +117,7 @@ void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetL
         return;
     }
 
-    vector<BufferString *> toDelete(editsSize + 2);
-    BufferString *myString = recordString(new BufferPieceString(target), 0, toDelete);
+    vector<BufferString *> toDelete(editsSize + 1);
 
     vector<const BufferString *> pieces(2 * editsSize + 1);
     size_t originalFromIndex = 0;
@@ -148,7 +130,7 @@ void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetL
         // printf("]\n");
 
         // maintain the chars that survive to the left of this edit
-        BufferString *originalText = recordString(BufferString::substr(myString, originalFromIndex, edit.start - originalFromIndex), i + 1, toDelete);
+        BufferString *originalText = recordString(BufferString::substr(target, originalFromIndex, edit.start - originalFromIndex), i, toDelete);
         pieces[2 * i] = originalText;
         piecesTextLength += originalText->length();
 
@@ -158,7 +140,7 @@ void BufferPiece::replaceOffsetLen(const BufferPiece *target, vector<LeafOffsetL
     }
 
     // maintain the chars that survive to the right of the last edit
-    BufferString *text = recordString(BufferString::substr(myString, originalFromIndex, originalCharsLength - originalFromIndex), editsSize + 1, toDelete);
+    BufferString *text = recordString(BufferString::substr(target, originalFromIndex, originalCharsLength - originalFromIndex), editsSize, toDelete);
     pieces[2 * editsSize] = text;
     piecesTextLength += text->length();
 
