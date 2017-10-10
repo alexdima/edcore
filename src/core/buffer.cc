@@ -446,7 +446,7 @@ void Buffer::appendLeaf(BufferPiece *leaf, vector<BufferPiece*> &leafs, BufferPi
 
     if ((prevLeafLength < minLeafLength_ || currLeafLength < minLeafLength_) && prevLeafLength + currLeafLength <= maxLeafLength_)
     {
-        BufferPiece *modifiedPrevLeaf = prevLeaf->join2(leaf);
+        BufferPiece *modifiedPrevLeaf = BufferPiece::join2(prevLeaf, leaf);
         delete prevLeaf;
 
         leafs[leafs.size() - 1] = modifiedPrevLeaf;
@@ -464,13 +464,13 @@ void Buffer::appendLeaf(BufferPiece *leaf, vector<BufferPiece*> &leafs, BufferPi
         (lastChar >= 0xd800 && lastChar <= 0xdbff)
         || (lastChar == '\r' && firstChar == '\n')
     ) {
-        BufferPiece *modifiedPrevLeaf = prevLeaf->deleteLastChar2();
+        BufferPiece *modifiedPrevLeaf = BufferPiece::deleteLastChar2(prevLeaf);
         delete prevLeaf;
 
         leafs[leafs.size() - 1] = modifiedPrevLeaf;
         prevLeaf = modifiedPrevLeaf;
 
-        BufferPiece *modifiedLeaf = leaf->insertFirstChar2(lastChar);
+        BufferPiece *modifiedLeaf = BufferPiece::insertFirstChar2(leaf, lastChar);
         delete leaf;
         leaf = modifiedLeaf;
     }

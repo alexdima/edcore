@@ -36,28 +36,24 @@ class BufferPiece
   public:
     virtual ~BufferPiece() {};
 
-    virtual size_t length() const = 0;
-    virtual uint16_t charAt(size_t index) const = 0;
-
     size_t newLineCount() const { return lineStarts_.length(); }
     LINE_START_T lineStartFor(size_t relativeLineIndex) const { return lineStarts_[relativeLineIndex]; }
     const LINE_START_T* lineStarts() const { return lineStarts_.data(); }
 
+    virtual size_t length() const = 0;
+    virtual uint16_t charAt(size_t index) const = 0;
     virtual size_t memUsage() const = 0;
 
-    virtual BufferPiece *deleteLastChar2() const = 0;
-    virtual BufferPiece *insertFirstChar2(uint16_t character) const = 0;
-    virtual BufferPiece * join2(const BufferPiece *other) const = 0;
     virtual void replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const = 0;
-
     virtual void assertInvariants() const = 0;
-
     virtual void write(uint16_t *buffer, size_t start, size_t length) const = 0;
+
+    static BufferPiece *deleteLastChar2(const BufferPiece *target);
+    static BufferPiece *insertFirstChar2(const BufferPiece *target, uint16_t character);
+    static BufferPiece * join2(const BufferPiece *first, const BufferPiece *second);
 
   protected:
     MyArray<LINE_START_T> lineStarts_;
-
-    void _rebuildLineStarts();
 };
 
 // class OneByteBufferPiece : public BufferPiece {
@@ -69,6 +65,7 @@ class BufferPiece
 class TwoBytesBufferPiece: public BufferPiece {
 public:
     TwoBytesBufferPiece(uint16_t *data, size_t len);
+    TwoBytesBufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength);
     ~TwoBytesBufferPiece();
 
     size_t memUsage() const { return (sizeof(TwoBytesBufferPiece) + chars_.memUsage() + lineStarts_.memUsage()); }
@@ -81,9 +78,6 @@ public:
         memcpy(buffer, src + start, sizeof(*buffer) * length);
     }
 
-    BufferPiece *deleteLastChar2() const;
-    BufferPiece *insertFirstChar2(uint16_t character) const;
-    BufferPiece * join2(const BufferPiece *other) const;
     void replaceOffsetLen(vector<LeafOffsetLenEdit2> &edits, size_t idealLeafLength, size_t maxLeafLength, vector<BufferPiece*>* result) const;
 
     void assertInvariants() const;
@@ -91,7 +85,6 @@ public:
 private:
 
     MyArray<uint16_t> chars_;
-    TwoBytesBufferPiece(uint16_t *data, size_t dataLength, LINE_START_T *lineStarts, size_t lineStartsLength);
 };
 
 struct timespec time_diff(struct timespec start, struct timespec end);

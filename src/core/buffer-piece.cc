@@ -118,87 +118,91 @@ TwoBytesBufferPiece::~TwoBytesBufferPiece()
 {
 }
 
-BufferPiece *TwoBytesBufferPiece::deleteLastChar2() const
+BufferPiece *BufferPiece::deleteLastChar2(const BufferPiece *target)
 {
-    const size_t charsLength = chars_.length();
-    const size_t lineStartsLength = lineStarts_.length();
+    const size_t targetCharsLength = target->length();
+    const size_t targetLineStartsLength = target->newLineCount();
+    const LINE_START_T* targetLineStarts = target->lineStarts();
 
     size_t newLineStartsLength;
-    if (lineStartsLength > 0 && lineStarts_[lineStartsLength - 1] == charsLength)
+    if (targetLineStartsLength > 0 && targetLineStarts[targetLineStartsLength - 1] == targetCharsLength)
     {
-        newLineStartsLength = lineStartsLength - 1;
+        newLineStartsLength = targetLineStartsLength - 1;
     }
     else
     {
-        newLineStartsLength = lineStartsLength;
+        newLineStartsLength = targetLineStartsLength;
     }
 
-    const size_t newCharsLength = charsLength - 1;
-    uint16_t *data = new uint16_t[newCharsLength];
-    this->write(data, 0, newCharsLength);
+    const size_t newCharsLength = targetCharsLength - 1;
+    uint16_t *newData = new uint16_t[newCharsLength];
+    target->write(newData, 0, newCharsLength);
 
-    LINE_START_T *lineStarts = new LINE_START_T[newLineStartsLength];
-    memcpy(lineStarts, lineStarts_.data(), sizeof(*lineStarts) * newLineStartsLength);
+    LINE_START_T *newLineStarts = new LINE_START_T[newLineStartsLength];
+    memcpy(newLineStarts, targetLineStarts, sizeof(*newLineStarts) * newLineStartsLength);
 
-    return new TwoBytesBufferPiece(data, newCharsLength, lineStarts, newLineStartsLength);
+    return new TwoBytesBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
 }
 
-BufferPiece *TwoBytesBufferPiece::insertFirstChar2(uint16_t character) const
+BufferPiece *BufferPiece::insertFirstChar2(const BufferPiece *target, uint16_t character)
 {
-    const size_t charsLength = chars_.length();
-    const size_t lineStartsLength = lineStarts_.length();
+    const size_t targetCharsLength = target->length();
+    const size_t targetLineStartsLength = target->newLineCount();
+    const LINE_START_T* targetLineStarts = target->lineStarts();
     const bool insertLineStart = (
-        (character == '\r' && (lineStartsLength == 0 || lineStarts_[0] != 1 || chars_[0] != '\n'))
+        (character == '\r' && (targetLineStartsLength == 0 || targetLineStarts[0] != 1 || target->charAt(0) != '\n'))
         || (character == '\n')
     );
 
-    const size_t newCharsLength = charsLength + 1;
-    uint16_t *data = new uint16_t[newCharsLength];
-    this->write(data + 1, 0, charsLength);
-    data[0] = character;
+    const size_t newCharsLength = targetCharsLength + 1;
+    uint16_t *newData = new uint16_t[newCharsLength];
+    target->write(newData + 1, 0, targetCharsLength);
+    newData[0] = character;
 
-    const size_t newLineStartsLength = (insertLineStart ? lineStartsLength + 1 : lineStartsLength);
-    LINE_START_T *lineStarts = new LINE_START_T[newLineStartsLength];
+    const size_t newLineStartsLength = (insertLineStart ? targetLineStartsLength + 1 : targetLineStartsLength);
+    LINE_START_T *newLineStarts = new LINE_START_T[newLineStartsLength];
 
     if (insertLineStart) {
-        lineStarts[0] = 1;
-        for (size_t i = 0; i < lineStartsLength; i++)
+        newLineStarts[0] = 1;
+        for (size_t i = 0; i < targetLineStartsLength; i++)
         {
-            lineStarts[i + 1] = lineStarts_[i] + 1;
+            newLineStarts[i + 1] = targetLineStarts[i] + 1;
         }
     } else {
-        for (size_t i = 0; i < lineStartsLength; i++)
+        for (size_t i = 0; i < targetLineStartsLength; i++)
         {
-            lineStarts[i] = lineStarts_[i] + 1;
+            newLineStarts[i] = targetLineStarts[i] + 1;
         }
     }
 
-    return new TwoBytesBufferPiece(data, newCharsLength, lineStarts, newLineStartsLength);
+    return new TwoBytesBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
 }
 
-BufferPiece * TwoBytesBufferPiece::join2(const BufferPiece *other) const
+BufferPiece * BufferPiece::join2(const BufferPiece *first, const BufferPiece *second)
 {
-    const size_t charsLength = chars_.length();
-    const size_t otherCharsLength = other->length();
-    const size_t newCharsLength = charsLength + otherCharsLength;
+    const size_t firstCharsLength = first->length();
+    const size_t secondCharsLength = second->length();
+    const size_t newCharsLength = firstCharsLength + secondCharsLength;
 
-    uint16_t *data = new uint16_t[newCharsLength];
-    this->write(data, 0, charsLength);
-    other->write(data + charsLength, 0, otherCharsLength);
+    uint16_t *newData = new uint16_t[newCharsLength];
+    first->write(newData, 0, firstCharsLength);
+    second->write(newData + firstCharsLength, 0, secondCharsLength);
 
-    const size_t lineStartsLength = lineStarts_.length();
-    const size_t otherLineStartsLength = other->newLineCount();
-    const size_t newLineStartsLength = lineStartsLength + otherLineStartsLength;
+    const size_t firstLineStartsLength = first->newLineCount();
+    const size_t secondLineStartsLength = second->newLineCount();
+    const size_t newLineStartsLength = firstLineStartsLength + secondLineStartsLength;
 
-    LINE_START_T *lineStarts = new LINE_START_T[newLineStartsLength];
-    memcpy(lineStarts, lineStarts_.data(), sizeof(*lineStarts) * lineStartsLength);
-    const LINE_START_T *otherLineStarts = other->lineStarts();
-    for (size_t i = 0; i < otherLineStartsLength; i++)
+    const LINE_START_T *firstLineStarts = first->lineStarts();
+    const LINE_START_T *secondLineStarts = second->lineStarts();
+
+    LINE_START_T *newLineStarts = new LINE_START_T[newLineStartsLength];
+    memcpy(newLineStarts, firstLineStarts, sizeof(*newLineStarts) * firstLineStartsLength);
+    for (size_t i = 0; i < secondLineStartsLength; i++)
     {
-        lineStarts[i + lineStartsLength] = otherLineStarts[i] + charsLength;
+        newLineStarts[i + firstLineStartsLength] = secondLineStarts[i] + firstCharsLength;
     }
 
-    return new TwoBytesBufferPiece(data, newCharsLength, lineStarts, newLineStartsLength);
+    return new TwoBytesBufferPiece(newData, newCharsLength, newLineStarts, newLineStartsLength);
 }
 
 class BufferPieceString : public BufferString
