@@ -50,6 +50,34 @@ void EdBuffer::GetLineCount(const v8::FunctionCallbackInfo<v8::Value> &args)
     args.GetReturnValue().Set(v8::Number::New(isolate, obj->actual_->lineCount()));
 }
 
+void EdBuffer::GetOffsetAt(const v8::FunctionCallbackInfo<v8::Value> &args)
+{
+    v8::Isolate *isolate = args.GetIsolate();
+    EdBuffer *obj = ObjectWrap::Unwrap<EdBuffer>(args.Holder());
+
+    if (!args[0]->IsNumber() || !args[1]->IsNumber())
+    {
+        isolate->ThrowException(v8::Exception::TypeError(
+            v8::String::NewFromUtf8(isolate, "Arguments must be numbers")));
+        return;
+    }
+
+    size_t lineNumber = args[0]->NumberValue();
+    size_t column = args[1]->NumberValue();
+
+    edcore::BufferCursor start, end;
+    if (!obj->actual_->findLine(lineNumber, start, end))
+    {
+        isolate->ThrowException(v8::Exception::Error(
+            v8::String::NewFromUtf8(isolate, "Line not found")));
+        return;
+    }
+
+    size_t offset = start.offset + column - 1;
+    v8::MaybeLocal<v8::Number> res = v8::Number::New(isolate, offset);
+    args.GetReturnValue().Set(res.ToLocalChecked() /*TODO*/);
+}
+
 void EdBuffer::GetLineContent(const v8::FunctionCallbackInfo<v8::Value> &args)
 {
     v8::Isolate *isolate = args.GetIsolate();
@@ -287,6 +315,7 @@ void EdBuffer::Init(v8::Local<v8::Object> exports)
     // Prototype
     NODE_SET_PROTOTYPE_METHOD(tpl, "GetLength", GetLength);
     NODE_SET_PROTOTYPE_METHOD(tpl, "GetLineCount", GetLineCount);
+    NODE_SET_PROTOTYPE_METHOD(tpl, "GetOffsetAt", GetOffsetAt);
     NODE_SET_PROTOTYPE_METHOD(tpl, "GetLineContent", GetLineContent);
     NODE_SET_PROTOTYPE_METHOD(tpl, "ReplaceOffsetLen", ReplaceOffsetLen);
     NODE_SET_PROTOTYPE_METHOD(tpl, "AssertInvariants", AssertInvariants);

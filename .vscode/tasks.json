@@ -16,9 +16,10 @@
                 "-C",
                 "build"
             ],
-            "problemMatcher": [
-                "$gcc"
-            ],
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation": ["relative", "${workspaceFolder}/build"]
+            },
             "presentation": {
                 "echo": true,
                 "reveal": "never",
